@@ -323,6 +323,20 @@ restored when you come back. A demand is covered only when you click **✓ Mark 
 Ctrl+Enter), and you can **↩ Reopen** one. Any notes typed but never marked covered are still
 committed to their ticket when you close the sync, so nothing is lost.
 
+## Dates
+
+Everything displays **day-first: `DD-MM-YYYY`**.
+
+Dates are still *stored* as ISO `YYYY-MM-DD` — that's what makes date sorting and all the
+since/until comparisons work — so only the display changes. Two helpers (`fmtDate`, `fmtMonth`)
+handle it at render time.
+
+The date-picker fields need a workaround worth knowing about: a native `<input type="date">`
+always renders in the **browser's** locale (`mm/dd/yyyy` on an en-US machine), and neither the
+`lang` attribute nor CSS can reorder it — both were tested and neither works. So the app masks
+the native text and paints a `dd-mm-yyyy` label over it. The input element itself is untouched,
+so its value stays ISO and the calendar picker still works normally.
+
 ## Light / dark theme
 
 A ☀/🌙 toggle in the header. The whole app is driven by CSS variables, so the switch

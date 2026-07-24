@@ -527,6 +527,16 @@
   .chtip.on{opacity:1}
 
   /* effort / capacity */
+  /* day-first date pickers — see enhanceDateFields(). The native mm/dd/yyyy text is
+     masked and a dd-mm-yyyy label painted over it; the input itself is untouched so
+     its value stays ISO and the calendar picker still works. */
+  .dwrap{position:relative;display:block}
+  .dwrap>input[type="date"]::-webkit-datetime-edit{opacity:0}
+  .dwrap>.dlabel{position:absolute;left:9px;top:50%;transform:translateY(-50%);pointer-events:none;
+    font-size:13px;color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:.2px}
+  .dwrap>.dlabel.ph{color:var(--faint)}
+  table .dwrap>.dlabel{left:7px;font-size:12.5px}
+
   .capbar{height:24px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);overflow:hidden;display:flex;margin:8px 0 4px}
   .capbar .seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--on-accent);white-space:nowrap;overflow:hidden}
   .capbar .seg.appr{background:var(--green)} .capbar .seg.pend{background:var(--amber)}
@@ -661,6 +671,16 @@ function quarterMonths(q){const [y,qn]=q.split("-Q");const st=(parseInt(qn,10)-1
 function shiftQuarter(q,d){let [y,qn]=q.split("-Q");y=parseInt(y,10);qn=parseInt(qn,10)+d;while(qn>4){qn-=4;y++;}while(qn<1){qn+=4;y--;}return y+"-Q"+qn;}
 function quarterLabel(q){const [y,qn]=q.split("-Q");return "Q"+qn+" "+y;}
 function monthLabel(m){const [y,mo]=String(m).split("-");return (MONTH_ABBR[parseInt(mo,10)-1]||"?")+" "+y;}
+/* ---------- date DISPLAY (day-first) ----------
+   Dates are STORED as ISO YYYY-MM-DD everywhere — that's what makes `a.date < b.date`
+   sorting and the since/until comparisons work, so storage never changes. These two
+   are display-only, used at render time. */
+function fmtDate(iso){const s=String(iso==null?"":iso);
+  if(!/^\d{4}-\d{2}-\d{2}/.test(s))return esc(s);
+  return s.slice(8,10)+"-"+s.slice(5,7)+"-"+s.slice(0,4);}
+function fmtMonth(iso){const s=String(iso==null?"":iso);
+  if(!/^\d{4}-\d{2}/.test(s))return esc(s);
+  return (MONTH_ABBR[parseInt(s.slice(5,7),10)-1]||"?")+" "+s.slice(0,4);}
 
 /* my view of the ticket — deliberately short. Their status is free text (JIRA/SNOW vary). */
 const MY_STATUS={
@@ -1102,7 +1122,7 @@ function toast(m,err){const t=document.getElementById("toast");t.textContent=m;t
 function daysUntil(d){if(!d)return null;return Math.round((new Date(d+"T00:00:00")-new Date(todayStr()+"T00:00:00"))/86400000);}
 function daysSince(ts){if(!ts)return null;return Math.floor((Date.now()-ts)/86400000);}
 /* both halves local — mixing a UTC date with a local time reads as an off-by-one */
-function fmtTs(ts){const d=new Date(ts);return dstr(d)+" "+d.toTimeString().slice(0,5);}
+function fmtTs(ts){const d=new Date(ts);return fmtDate(dstr(d))+" "+d.toTimeString().slice(0,5);}
 function dueClass(d,st){if(!d||st==="done")return"";const n=daysUntil(d);if(n===null)return"";if(n<0)return"over";if(n<=3)return"soon";return"";}
 
 function teamOf(id){return state.settings.teams.find(t=>t.id===id)||{id:id,name:id||"—",mode:"managed"};}
@@ -1511,7 +1531,7 @@ function renderToday(){
     main:a.text,sub:teamOf(a.team).name,go:()=>{view="sync";activeSyncId=null;syncFocusId=null;renderApp();}})),""));
   /* vendor: approvals awaiting your email sign-off */
   cards.push(dashCard("✅ Approvals awaiting your sign-off",pendingApprovals().map(a=>{const t=a.ticketId?ticketByRef(a.ticketId):null;
-    return {main:(APPROVAL_KINDS[a.kind].icon+" ")+(a.title||(t?ticketLabel(t):"(untitled)")),sub:teamOf(a.team).name+" · "+a.requestedOn,
+    return {main:(APPROVAL_KINDS[a.kind].icon+" ")+(a.title||(t?ticketLabel(t):"(untitled)")),sub:teamOf(a.team).name+" · "+fmtDate(a.requestedOn),
       go:()=>{effortTeam=a.team;effortTab="approvals";view="effort";renderApp();}};}),"warn"));
   /* vendor: monthly hours you haven't approved */
   const pe=pendingEfforts();
@@ -1526,7 +1546,7 @@ function renderToday(){
     go:()=>{effortTeam=x.tm.id;effortTab="capacity";view="effort";renderApp();}})),""));
   /* slipped commitments */
   cards.push(dashCard("⚠ Slipped commitments",missed.map(t=>({
-    main:ticketLabel(t),sub:`ETA ${latestPromise(t).eta} · ${slipCount(t)?slipCount(t)+"× slipped":"missed"}`,go:()=>gotoTicket(t.id)
+    main:ticketLabel(t),sub:`ETA ${fmtDate(latestPromise(t).eta)} · ${slipCount(t)?slipCount(t)+"× slipped":"missed"}`,go:()=>gotoTicket(t.id)
   })),"alert"));
   /* blocked */
   cards.push(dashCard("🚧 Blocked",blocked.map(t=>{const h=openHurdles(t)[0];
@@ -1544,13 +1564,13 @@ function renderToday(){
     main:ticketLabel(t),sub:daysSince(lastUpdateTs(t))+"d",go:()=>gotoTicket(t.id,"updates")})),"warn"));
   /* action items owed */
   cards.push(dashCard("⚑ Open action points",openActionsAll().map(x=>({
-    main:x.action.text||"(untitled)",sub:(x.action.owner||"—")+(x.action.due?" · "+x.action.due:""),
+    main:x.action.text||"(untitled)",sub:(x.action.owner||"—")+(x.action.due?" · "+fmtDate(x.action.due):""),
     go:()=>{if(x.kind==="meeting"){activeMeetingId=x.owner.id;activeSyncId=null;}else{activeSyncId=x.owner.id;activeMeetingId=null;}
       syncFocusId=null;view="sync";renderApp();}})),""));
   /* due soon */
   const due=open.filter(t=>t.dueDate&&daysUntil(t.dueDate)<=7).sort((a,b)=>a.dueDate<b.dueDate?-1:1);
   cards.push(dashCard("📅 Due within a week",due.map(t=>({
-    main:ticketLabel(t),sub:t.dueDate,go:()=>gotoTicket(t.id)})),""));
+    main:ticketLabel(t),sub:fmtDate(t.dueDate),go:()=>gotoTicket(t.id)})),""));
   /* boss-relevant */
   const boss=state.tickets.filter(t=>t.bossRelevant&&isOpen(t));
   cards.push(dashCard("👔 Flagged for my boss",boss.map(t=>({
@@ -1558,7 +1578,7 @@ function renderToday(){
   /* closed but no resolution captured — this is how the knowledge base actually fills up */
   const noRes=state.tickets.filter(t=>t.myStatus==="done"&&!t.resolution);
   cards.push(dashCard("📝 Closed — resolution not captured",noRes.map(t=>({
-    main:ticketLabel(t),sub:t.closedDate||"",go:()=>gotoTicket(t.id,"resolution")})),"good"));
+    main:ticketLabel(t),sub:fmtDate(t.closedDate)||"",go:()=>gotoTicket(t.id,"resolution")})),"good"));
   /* open tickets that strongly resemble solved work — the highest-value nudge in the app */
   const known=state.tickets.filter(isOpen).map(t=>{
     if(patternForTicket(t.id))return null;
@@ -1571,7 +1591,7 @@ function renderToday(){
   /* epics whose headline has gone stale — the line his boss hears must stay current */
   const staleEpics=state.epics.filter(e=>!e.closed&&headlineStale(e));
   cards.push(dashCard("🎯 Epic status line needs refreshing",staleEpics.map(e=>({
-    main:e.name,sub:e.headline.text?"last updated "+e.headline.on:"never written",
+    main:e.name,sub:e.headline.text?"last updated "+fmtDate(e.headline.on):"never written",
     go:()=>{activeEpicId=e.id;view="epics";renderApp();}})),"warn"));
   /* epics he's marked healthier than the tickets suggest */
   const optimistic=state.epics.filter(e=>!e.closed&&healthDisagrees(e));
@@ -1587,13 +1607,13 @@ function renderToday(){
   const staleR=[];
   state.people.forEach(p=>p.skills.forEach(sk=>{if(ratingStale(sk))staleR.push({p,sk});}));
   cards.push(dashCard("🎚 Skill ratings over 6 months old",staleR.map(x=>({
-    main:x.p.name+" — "+x.sk.skill,sub:curRating(x.sk).rating+"/10 · "+curRating(x.sk).on,
+    main:x.p.name+" — "+x.sk.skill,sub:curRating(x.sk).rating+"/10 · "+fmtDate(curRating(x.sk).on),
     go:()=>{activePersonId=x.p.id;peopleMatrix=false;view="people";renderApp();}})),""));
 
   const live=state.syncs.filter(s=>!s.closed);
   const shown=cards.filter(Boolean);
   det.innerHTML=`<div class="dash">
-    <div class="dash-head"><h1>Today</h1><span class="faint">${todayStr()}</span></div>
+    <div class="dash-head"><h1>Today</h1><span class="faint">${fmtDate(todayStr())}</span></div>
     ${state.settings.encryption?"":`<div class="banner" id="encBanner">
       <span>🔓 <b>Not encrypted.</b> This file holds named colleagues, skill ratings and commitment history — worth protecting on a work laptop.</span>
       <button class="primary sm" id="bnEnc">Set master password</button></div>`}
@@ -1603,7 +1623,7 @@ function renderToday(){
     ${ncBits.map(b=>`<div class="nextcall">
         <div class="nc-main"><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px">Next ${esc(b.team.name)} sync</div>
         <div class="nc-when">${b.nx.inDays===0?"Today":b.nx.inDays===1?"Tomorrow":b.nx.dow+" · in "+b.nx.inDays+" days"}</div>
-        <div class="faint" style="font-size:12px">${esc(b.nx.date)} · ${queueFor(b.team.id).length} tickets to ask about</div></div>
+        <div class="faint" style="font-size:12px">${fmtDate(b.nx.date)} · ${queueFor(b.team.id).length} tickets to ask about</div></div>
         <button class="primary" data-prep="${esc(b.team.id)}">🎙 Prep this sync</button></div>`).join("")}
     ${shown.length?`<div class="dash-grid">${shown.map(c=>c.html).join("")}</div>`
       :`<div class="dashcard good"><h3>✓ All clear</h3><div class="dash-empty">Nothing needs your attention right now.</div></div>`}
@@ -1795,9 +1815,9 @@ function renderTicketDetail(){
         <button class="ghost" id="tkDel" title="Delete ticket">🗑</button>
       </div>
       <div class="dh-dates">
-        <span>Raised <b>${esc(t.raisedDate||"—")}</b></span>
-        <span>Due <b class="due ${dueClass(t.dueDate,t.myStatus)}">${esc(t.dueDate||"—")}</b></span>
-        ${t.closedDate?`<span>Closed <b>${esc(t.closedDate)}</b></span>`:""}
+        <span>Raised <b>${t.raisedDate?fmtDate(t.raisedDate):"—"}</b></span>
+        <span>Due <b class="due ${dueClass(t.dueDate,t.myStatus)}">${t.dueDate?fmtDate(t.dueDate):"—"}</b></span>
+        ${t.closedDate?`<span>Closed <b>${fmtDate(t.closedDate)}</b></span>`:""}
         <span>Last update <b>${t.updates.length?fmtTs(lastUpdateTs(t)):"never"}</b></span>
       </div>
       <div class="tabs">${tabs.map(([k,l,c])=>`<button class="tab ${activeTab===k?"active":""}" data-tab="${k}">${l}${c?`<span class="count">${c}</span>`:""}</button>`).join("")}</div>
@@ -1849,8 +1869,8 @@ function renderGateStrip(host,t,onChange){
     <div class="gaterow">
       ${t.gates.steps.map((st,i)=>`${i?`<span class="gatearrow">→</span>`:""}
         <span class="gstep ${st.done?"done":""} ${(!st.done&&nxt&&st.id===nxt.id)?"next":""}" data-gs="${st.id}"
-          title="${st.done?"passed "+esc(st.doneOn)+" — click to undo":"click when passed"}">
-          ${st.done?"✓ ":""}${esc(st.text)}${st.done&&st.doneOn?` <span class="gs-on">${esc(st.doneOn.slice(5))}</span>`:""}</span>`).join("")}
+          title="${st.done?"passed "+fmtDate(st.doneOn)+" — click to undo":"click when passed"}">
+          ${st.done?"✓ ":""}${esc(st.text)}${st.done&&st.doneOn?` <span class="gs-on">${fmtDate(st.doneOn).slice(0,5)}</span>`:""}</span>`).join("")}
     </div></div>`;
   host.querySelector("#gate-del").onclick=()=>{
     if(!confirm("Detach the gate checklist from this ticket? Its history goes with it."))return;
@@ -1901,10 +1921,10 @@ function tabWork(body,t){
         <span style="margin-left:auto"></span>
         <button class="sm" id="w-addp">＋ Log an ETA</button></div>
       ${t.promises.length?`
-        ${t.promises.length>1?`<div class="slipline" style="margin-bottom:8px">${t.promises.map((p,i)=>`${i?'<span class="arw">→</span>':""}<span>${esc(p.eta||"?")}</span>`).join("")}</div>`:""}
+        ${t.promises.length>1?`<div class="slipline" style="margin-bottom:8px">${t.promises.map((p,i)=>`${i?'<span class="arw">→</span>':""}<span>${p.eta?fmtDate(p.eta):"?"}</span>`).join("")}</div>`:""}
         ${t.promises.map((p,i)=>`<div class="promise ${i===t.promises.length-1?"latest":""} ${p.eta&&daysUntil(p.eta)<0&&t.myStatus!=="done"?"missed":""}" data-pid="${p.id}">
-          <span class="pe">${esc(p.eta||"—")}</span>
-          <span class="pg">told ${esc(p.givenOn)}</span>
+          <span class="pe">${p.eta?fmtDate(p.eta):"—"}</span>
+          <span class="pg">told ${fmtDate(p.givenOn)}</span>
           <span class="pn" data-pnote="${p.id}" style="cursor:text">${esc(p.note||"—")}</span>
           <button class="ghost sm" data-pdel="${p.id}">✕</button></div>`).join("")}`
         :`<div class="faint" style="font-size:12px">No ETA recorded yet. Log one each time they give you a date — that's what makes slippage visible later.</div>`}
@@ -1947,7 +1967,7 @@ function tabWork(body,t){
       ${approvalsForTicket(t.id).length?approvalsForTicket(t.id).map(a=>`<div class="actitem" style="margin-top:6px">
         <span class="mono" style="font-size:12px;flex:0 0 auto">${APPROVAL_KINDS[a.kind].icon} ${esc(APPROVAL_KINDS[a.kind].label)}</span>
         <span class="at">${esc(a.title||"—")}</span>
-        <span class="appstat ${a.status}">${a.status==="approved"?"✓ approved "+esc(a.decidedOn):a.status}</span>
+        <span class="appstat ${a.status}">${a.status==="approved"?"✓ approved "+fmtDate(a.decidedOn):a.status}</span>
         ${a.status==="pending"?`<button class="sm go" data-wapok="${a.id}">Approve</button>`:""}</div>`).join(""):""}`:""}`;
 
   const on=(sel,ev,fn)=>{const el=body.querySelector(sel);if(el)el[ev]=fn;};
@@ -2064,7 +2084,7 @@ function tabUpdates(body,t){
       const s=u.syncId?state.syncs.find(x=>x.id===u.syncId):null;
       return `<div class="upd"><div class="uts">${fmtTs(u.ts)}</div><div class="ubody">
         <div class="utxt" data-utxt="${u.id}">${linkify(u.text)}</div>
-        <div class="usrc">${s?`🎙 from ${esc(s.title||teamOf(s.team).name)} · ${esc(s.date)}`:"manual entry"}${u.by?" · "+esc(u.by):""}</div>
+        <div class="usrc">${s?`🎙 from ${esc(s.title||teamOf(s.team).name)} · ${fmtDate(s.date)}`:"manual entry"}${u.by?" · "+esc(u.by):""}</div>
       </div><button class="ghost sm nact" data-udel="${u.id}">✕</button></div>`;}).join("")
       :`<p class="faint" style="font-size:12px">No updates yet. Anything captured during a sync lands here automatically.</p>`}`;
   const ta=body.querySelector("#u-new");
@@ -2091,7 +2111,7 @@ function tabHurdles(body,t){
     </div>
     <div class="htxt" data-htxt="${h.id}">${linkify(h.text||"(describe the hurdle)")}</div>
     ${h.resolvedOn?`<div class="hres" data-hres="${h.id}">↳ ${esc(h.resolution||"how was it cleared?")}</div>`:""}
-    <div class="hmeta"><span>Raised ${esc(h.raisedOn)}</span>${h.resolvedOn?`<span>Cleared ${esc(h.resolvedOn)} · took ${Math.max(0,Math.round((new Date(h.resolvedOn)-new Date(h.raisedOn))/86400000))}d</span>`:`<span>${Math.max(0,-daysUntil(h.raisedOn))}d open</span>`}</div>
+    <div class="hmeta"><span>Raised ${fmtDate(h.raisedOn)}</span>${h.resolvedOn?`<span>Cleared ${fmtDate(h.resolvedOn)} · took ${Math.max(0,Math.round((new Date(h.resolvedOn)-new Date(h.raisedOn))/86400000))}d</span>`:`<span>${Math.max(0,-daysUntil(h.raisedOn))}d open</span>`}</div>
   </div>`;
   body.innerHTML=`
     <div class="sec-title"><h3>Open hurdles</h3><div class="ln"></div><button class="sm primary" id="h-add">＋ Add hurdle</button></div>
@@ -2219,7 +2239,7 @@ function queueReasons(t,team){
   const out=[];
   const last=lastClosedSync(team);
   const lastTs=last?new Date(last.date+"T23:59:59").getTime():0;
-  if(promiseMissed(t))out.push({w:100,cls:"bad",txt:"ETA missed ("+latestPromise(t).eta+")"});
+  if(promiseMissed(t))out.push({w:100,cls:"bad",txt:"ETA missed ("+fmtDate(latestPromise(t).eta)+")"});
   const oh=openHurdles(t);
   if(oh.length)out.push({w:50,cls:"",txt:"🚧 "+HURDLE_KINDS[oh[0].kind].label});
   if(!t.updates.length)out.push({w:40,cls:"",txt:"never updated"});
@@ -2228,7 +2248,7 @@ function queueReasons(t,team){
   if(isStalled(t))out.push({w:38,cls:"bad",txt:"🧊 no movement "+daysSince(lastMovementTs(t))+"d"});
   else if(ds>=state.settings.staleDays&&t.updates.length)out.push({w:28,cls:"info",txt:"🕰 "+ds+"d quiet"});
   if(t.createdAt>lastTs&&lastTs)out.push({w:25,cls:"info",txt:"new since last sync"});
-  if(t.dueDate){const d=daysUntil(t.dueDate);if(d!==null&&d<=7)out.push({w:d<0?60:20,cls:d<0?"bad":"",txt:d<0?"overdue":"due "+t.dueDate});}
+  if(t.dueDate){const d=daysUntil(t.dueDate);if(d!==null&&d<=7)out.push({w:d<0?60:20,cls:d<0?"bad":"",txt:d<0?"overdue":"due "+fmtDate(t.dueDate)});}
   if(statusDisagrees(t))out.push({w:45,cls:"bad",txt:"status mismatch"});
   return out;
 }
@@ -2267,7 +2287,7 @@ function openAgendaModal(prefTeam,prefTicketId){
 function startSync(team){
   const existing=state.syncs.find(s=>!s.closed&&s.team===team);
   if(existing){activeSyncId=existing.id;view="sync";renderApp();return;}
-  const s=normSync({team,date:todayStr(),title:teamOf(team).name+" sync — "+todayStr()});
+  const s=normSync({team,date:todayStr(),title:teamOf(team).name+" sync — "+fmtDate(todayStr())});
   state.syncs.unshift(s);activeSyncId=s.id;syncFocusId=null;markDirty();
   view="sync";renderApp();
 }
@@ -2311,7 +2331,7 @@ function renderSync(){
           ${carried.map(c=>`<div class="qrow carried" data-carry="${c.action.id}">
             <div class="qtitle" style="white-space:normal">${esc(c.action.text)}</div>
             <div class="qwhy"><span class="warnchip">${esc(c.action.owner||"unassigned")}</span>
-            ${c.action.due?`<span class="warnchip info">due ${esc(c.action.due)}</span>`:""}</div></div>`).join("")}`:""}
+            ${c.action.due?`<span class="warnchip info">due ${fmtDate(c.action.due)}</span>`:""}</div></div>`).join("")}`:""}
         ${(()=>{const tg=tpsForTeam(s.team);return tg.length?`<div class="qsec">Talking points</div>
           ${tg.flatMap(x=>x.tps.map(tp=>`<div class="qrow tp">
             <div class="qtop"><span class="tpbadge">🗣 ${esc(x.p.name)}</span>
@@ -2373,7 +2393,7 @@ function renderCapture(host,s,t){
         <h2>${esc(t.title||"(untitled)")}</h2>
         <div class="faint" style="font-size:12px;margin-top:4px">
           ${t.assignees.length?esc(t.assignees.map(personName).join(", "))+" · ":""}
-          last heard ${lastUp?fmtTs(lastUp.ts):"never"}${lp&&lp.eta?" · promised "+esc(lp.eta):""}</div>
+          last heard ${lastUp?fmtTs(lastUp.ts):"never"}${lp&&lp.eta?" · promised "+fmtDate(lp.eta):""}</div>
       </div>
       <button class="sm" id="cap-open" title="Open the full ticket">↗ Full ticket</button>
     </div>
@@ -2457,7 +2477,7 @@ function renderSyncNotes(host,s){
   const carried=carriedActions(s.team,s.id);
   host.innerHTML=`
     <div class="capture-head"><div style="flex:1">
-      <div class="dh-id">${teamPill(s.team)}<span class="faint" style="font-weight:400">${esc(s.date)}</span></div>
+      <div class="dh-id">${teamPill(s.team)}<span class="faint" style="font-weight:400">${fmtDate(s.date)}</span></div>
       <h2 id="sn-title" style="cursor:text">${esc(s.title||"(untitled sync)")}</h2></div>
       <button class="ghost" id="sn-del" title="Delete this sync record">🗑</button></div>
 
@@ -2568,7 +2588,7 @@ function renderSyncPicker(wrap){
     <div class="dash-grid" style="margin-top:20px">
       ${state.settings.teams.map(tm=>{const q=queueFor(tm.id);const nx=nextSyncFor(tm.id);const live=state.syncs.find(s=>!s.closed&&s.team===tm.id);
         return `<div class="dashcard"><h3>${esc(tm.name)}<span class="cnt">${q.length} open</span></h3>
-          <p class="faint" style="font-size:12px;margin:0 0 10px">${esc(tm.note||"")}${nx?" · next "+esc(nx.dow)+" ("+esc(nx.date)+")":""}</p>
+          <p class="faint" style="font-size:12px;margin:0 0 10px">${esc(tm.note||"")}${nx?" · next "+esc(nx.dow)+" ("+fmtDate(nx.date)+")":""}</p>
           ${q.slice(0,4).map(x=>`<div class="dashitem"><span class="di-main">${esc(ticketLabel(x.t))}</span>
             <span class="di-sub">${x.rs.length?esc(x.rs[0].txt):""}</span></div>`).join("")||`<div class="dash-empty">Nothing open.</div>`}
           ${(()=>{const ag=agendaFor(tm.id);return ag.length?`<div style="margin-top:9px">
@@ -2583,7 +2603,7 @@ function renderSyncPicker(wrap){
         <span class="${c.kind==="sync"?"mkind":"mkind"}" style="${c.kind==="sync"?"color:var(--accent);border-color:var(--tint-blue-bd)":""}">${c.kind==="sync"?"🎙 Sync":MEETING_KINDS[c.mkind].icon+" "+MEETING_KINDS[c.mkind].label}</span>
         ${c.team?teamPill(c.team):""}
         <span class="cc-main">${esc(c.title)}</span>
-        <span class="cc-sub">${esc(c.date)} · ${esc(c.sub)}</span></div>`).join("")}`:""}
+        <span class="cc-sub">${fmtDate(c.date)} · ${esc(c.sub)}</span></div>`).join("")}`:""}
   </div>`;
   wrap.querySelectorAll("[data-start]").forEach(b=>b.onclick=()=>startSync(b.dataset.start));
   wrap.querySelectorAll("[data-agadd]").forEach(b=>b.onclick=()=>openAgendaModal(b.dataset.agadd));
@@ -2622,7 +2642,7 @@ function renderMeetingDetail(wrap){
     <div class="capture-head">
       <div style="flex:1;min-width:0">
         <div class="dh-id"><span class="mkind">${MEETING_KINDS[m.kind].icon} ${esc(MEETING_KINDS[m.kind].label)}</span>
-          <span class="faint" style="font-weight:400">${esc(m.date)}</span>
+          <span class="faint" style="font-weight:400">${fmtDate(m.date)}</span>
           ${m.team?teamPill(m.team):""}${ep?`<span class="chip" data-mgoep="1" style="padding:1px 8px;font-size:11px">◆ ${esc(ep.name)}</span>`:""}</div>
         <h2 id="mt-title" style="cursor:text">${esc(m.title||"(untitled meeting)")}</h2></div>
       <button class="sm" id="mt-back">← Calls</button>
@@ -2659,7 +2679,7 @@ function renderMeetingDetail(wrap){
     ${m.actions.length?m.actions.map(a=>actionRow(a,m)).join(""):`<p class="faint" style="font-size:12px">No actions from this meeting yet.</p>`}
 
     ${decs.length?`<div class="sec-title" style="margin-top:22px"><h3>Decisions</h3><div class="ln"></div></div>
-      ${decs.map(x=>`<div class="decrow"><span class="dc-date">${esc(x.date)}</span><div class="dc-t" style="flex:1">${linkify(x.text)}</div><span class="dc-by">${esc(x.by)}</span></div>`).join("")}`:""}
+      ${decs.map(x=>`<div class="decrow"><span class="dc-date">${fmtDate(x.date)}</span><div class="dc-t" style="flex:1">${linkify(x.text)}</div><span class="dc-by">${esc(x.by)}</span></div>`).join("")}`:""}
 
     <div class="field" style="margin-top:22px"><label>General notes</label><textarea id="mt-notes" style="min-height:120px">${esc(m.notes)}</textarea></div>
   </div>`;
@@ -2822,9 +2842,9 @@ function renderPeopleDetail(){
         return `<div class="skillrow" data-skid="${sk.id}">
           <span class="sdot" style="color:${c?ratingColor(c.rating):"var(--faint)"}">${c?c.rating:"·"}</span>
           <span class="sname">${esc(sk.skill)}</span>
-          <span class="strend">${delta>0?`<span style="color:var(--green)">↑ from ${pr.rating}</span> <span class="faint">(${esc(pr.on.slice(0,7))})</span>`
-            :delta<0?`<span style="color:var(--amber)">↓ from ${pr.rating}</span> <span class="faint">(${esc(pr.on.slice(0,7))})</span>`
-            :c?`<span class="faint">rated ${esc(c.on)}</span>`:""}
+          <span class="strend">${delta>0?`<span style="color:var(--green)">↑ from ${pr.rating}</span> <span class="faint">(${fmtMonth(pr.on)})</span>`
+            :delta<0?`<span style="color:var(--amber)">↓ from ${pr.rating}</span> <span class="faint">(${fmtMonth(pr.on)})</span>`
+            :c?`<span class="faint">rated ${fmtDate(c.on)}</span>`:""}
             ${ratingStale(sk)?`<span class="stalechip" title="Older than 6 months">stale</span>`:""}</span>
           <span class="sev">${ev?`${ev} ticket${ev===1?"":"s"} tagged ${esc(sk.skill)}`:`<span class="faint">no ticket evidence</span>`}</span>
           <select class="sconf" data-sconf="${sk.id}">
@@ -2833,7 +2853,7 @@ function renderPeopleDetail(){
           <button class="sm" data-srate="${sk.id}">Re-rate</button>
           <button class="ghost sm nact" data-sdel="${sk.id}">✕</button>
           ${sk.history.length>1?`<div style="flex-basis:100%;font-size:11px;color:var(--faint);font-family:var(--mono);padding-left:44px">
-            ${sk.history.map(h=>`${h.rating}<span style="opacity:.5"> (${h.on.slice(0,7)})</span>`).join(" → ")}</div>`:""}
+            ${sk.history.map(h=>`${h.rating}<span style="opacity:.5"> (${fmtMonth(h.on)})</span>`).join(" → ")}</div>`:""}
         </div>`;}).join("")
         :`<p class="faint" style="font-size:12px">No ratings yet. Rate a skill and it appears in the matrix and the pairing view.</p>`}
 
@@ -2851,7 +2871,7 @@ function renderPeopleDetail(){
         <div class="tprow ${tp.done?"done":""}">
           <span class="chk ${tp.done?"done":""}" data-tpchk="${tp.id}" style="cursor:pointer;width:16px;height:16px;flex:0 0 16px;border:1.5px solid var(--line2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;${tp.done?"background:var(--green);border-color:var(--green);color:var(--on-accent)":""}">${tp.done?"✓":""}</span>
           <span class="tp-t" data-tptx="${tp.id}">${linkify(tp.text)}</span>
-          <span class="faint" style="font-size:10.5px;font-family:var(--mono)">${tp.done?"raised "+esc(tp.doneOn):""}</span>
+          <span class="faint" style="font-size:10.5px;font-family:var(--mono)">${tp.done?"raised "+fmtDate(tp.doneOn):""}</span>
           <button class="ghost sm nact" data-tpdel="${tp.id}">✕</button></div>`).join("")
         :`<p class="faint" style="font-size:12px">Nothing parked. This replaces the mental note that evaporates between Tuesday and Thursday.</p>`}
 
@@ -2866,7 +2886,7 @@ function renderPeopleDetail(){
         return `<div class="obs k-${o.kind}" data-oid="${o.id}">
           <div class="otop">
             <b style="color:${OBS_KINDS[o.kind].color}">${OBS_KINDS[o.kind].icon} ${OBS_KINDS[o.kind].label}</b>
-            <span class="mono">${esc(o.date)}</span>
+            <span class="mono">${fmtDate(o.date)}</span>
             <span class="confchip ${o.confidence}">${o.confidence==="observed"?"I saw this":"reported"}</span>
             ${o.source?`<span>via ${esc(o.source)}</span>`:""}
             ${tk?`<span class="chip" data-obgo="${esc(o.ticketId)}" style="padding:1px 8px;font-size:11px">${esc(tk.ticketId||"ticket")}</span>`:""}
@@ -2891,7 +2911,7 @@ function renderPeopleDetail(){
         return ms.length?ms.map(mm=>`<div class="callcard" data-pnmt="${mm.id}">
           <span class="mkind">${MEETING_KINDS[mm.kind].icon} ${MEETING_KINDS[mm.kind].label}</span>
           <span class="cc-main">${esc(mm.title||MEETING_KINDS[mm.kind].label)}</span>
-          <span class="cc-sub">${esc(mm.date)}</span></div>`).join("")
+          <span class="cc-sub">${fmtDate(mm.date)}</span></div>`).join("")
         :`<p class="faint" style="font-size:12px">No 1:1s logged. Use this for calls about their demands or progress.</p>`;})()}
     </div>`;
   det.querySelector("#pnName").onclick=e=>editInline(e.target,p.name,v=>{if(v.trim())p.name=v.trim();touch(p);renderApp();});
@@ -2961,7 +2981,7 @@ function openRateModal(p,preset){
         <p class="faint" style="font-size:11px;margin:5px 0 0">Shared with the tag vocabulary, so ticket evidence lines up automatically.</p></div>
       <div class="field"><label>Rating — ${picked}/10</label>
         <div class="ratebar" id="rt-bar">${[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<button data-n="${n}" class="${n===picked?"on":""}">${n}</button>`).join("")}</div></div>
-      ${cur?`<p class="faint" style="font-size:11.5px;margin:-6px 0 12px">Currently ${cur.rating}/10, rated ${esc(cur.on)}. The old value is kept as history.</p>`:""}
+      ${cur?`<p class="faint" style="font-size:11.5px;margin:-6px 0 12px">Currently ${cur.rating}/10, rated ${fmtDate(cur.on)}. The old value is kept as history.</p>`:""}
       <div class="row"><div class="field"><label>Rated on</label><input type="date" id="rt-on" value="${todayStr()}"></div>
         <div class="field"><label>Confidence</label><select id="rt-conf">
           <option value="observed" ${(!existing||existing.confidence==="observed")?"selected":""}>I've seen this myself</option>
@@ -3109,7 +3129,7 @@ function renderDecisionLedger(det){
         const ep=x.epicId?epicById(x.epicId):null;
         const sy=x.syncId?state.syncs.find(s2=>s2.id===x.syncId):(x.meetingId?state.meetings.find(m2=>m2.id===x.meetingId):null);
         return `<div class="decrow" id="dec-${x.id}">
-          <span class="dc-date">${esc(x.date)}</span>
+          <span class="dc-date">${fmtDate(x.date)}</span>
           <div style="flex:1;min-width:0">
             <div class="dc-t" data-dct="${x.id}">${linkify(x.text)}</div>
             <div class="chiprow" style="margin-top:5px">
@@ -3177,7 +3197,7 @@ function renderKnowledgeSidebar(){
     <div class="listwrap">
       ${isDec?(decs.length?decs.slice(0,40).map(x=>`<div class="pcard2" style="border-left-color:var(--teal)" data-did2="${x.id}">
           <div class="p2t" style="font-weight:500;font-size:12.5px">${esc(x.text.slice(0,80))}${x.text.length>80?"…":""}</div>
-          <div class="p2m"><span class="mono">${esc(x.date)}</span>${x.by?`<span>by ${esc(x.by)}</span>`:""}</div>
+          <div class="p2m"><span class="mono">${fmtDate(x.date)}</span>${x.by?`<span>by ${esc(x.by)}</span>`:""}</div>
         </div>`).join("")
         :`<div class="empty">${f._q?"No decisions match.":"No decisions logged yet.<br><br>Log them from syncs — the 🧭 button — or from the pane on the right."}</div>`)
       :isPat?(pats.length?pats.map(p=>`<div class="pcard2 ${p.id===activePatternId?"active":""}" data-pid2="${p.id}">
@@ -3277,7 +3297,7 @@ function renderPatternDetail(det){
       ${tks.length?tks.map(t=>`<div class="dashitem" data-ptgo="${t.id}">
         <span class="pill ${MY_STATUS[t.myStatus].cls}">${MY_STATUS[t.myStatus].label}</span>
         <span class="di-main">${esc(ticketLabel(t))}</span>
-        <span class="di-sub">${esc(t.raisedDate||"")}${t.resolution&&t.resolution.timeTaken?" · "+esc(t.resolution.timeTaken):""}</span>
+        <span class="di-sub">${t.raisedDate?fmtDate(t.raisedDate):""}${t.resolution&&t.resolution.timeTaken?" · "+esc(t.resolution.timeTaken):""}</span>
         <button class="ghost sm" data-ptunlink="${t.id}" title="Unlink">✕</button></div>`).join("")
         :`<p class="faint" style="font-size:12px">No tickets linked yet.</p>`}
 
@@ -3464,7 +3484,7 @@ function renderEpicDetail(){
         <button class="ghost" id="epDel" title="Delete epic">🗑</button></div>
       <div class="dh-dates">
         <span>Owner <b>${esc(e.owner||"—")}</b></span>
-        <span>Target <b class="due ${dueClass(e.targetDate,e.closed?"done":"")}">${esc(e.targetDate||"—")}</b></span>
+        <span>Target <b class="due ${dueClass(e.targetDate,e.closed?"done":"")}">${e.targetDate?fmtDate(e.targetDate):"—"}</b></span>
         <span>${s.ts.length} tickets across ${s.teams.length||0} team${s.teams.length===1?"":"s"}</span>
         <span>${s.people.length} people</span>
       </div>
@@ -3475,7 +3495,7 @@ function renderEpicDetail(){
         <div class="hl-h">If your boss asked right now, you'd say
           ${stale?`<span class="warnchip">${e.headline.text?"needs refreshing":"not written yet"}</span>`:""}</div>
         <div class="hl-t" id="ep-headline">${e.headline.text?esc(e.headline.text):`<span class="faint">Write the one sentence you'd actually say out loud. Click to add.</span>`}</div>
-        <div class="hl-m">${e.headline.on?`— you, ${esc(e.headline.on)}${stale?" · over "+HEADLINE_STALE_DAYS+" days old":""}`:""}</div>
+        <div class="hl-m">${e.headline.on?`— you, ${fmtDate(e.headline.on)}${stale?" · over "+HEADLINE_STALE_DAYS+" days old":""}`:""}</div>
       </div>
 
       <div class="row" style="margin-bottom:16px;align-items:flex-end">
@@ -3518,7 +3538,7 @@ function renderEpicDetail(){
         return ms.length?ms.map(mm=>`<div class="callcard" data-epmt="${mm.id}">
           <span class="mkind">${MEETING_KINDS[mm.kind].icon} ${MEETING_KINDS[mm.kind].label}</span>
           <span class="cc-main">${esc(mm.title||MEETING_KINDS[mm.kind].label)}</span>
-          <span class="cc-sub">${esc(mm.date)} · ${mm.actions.filter(a=>!a.done).length} open</span></div>`).join("")
+          <span class="cc-sub">${fmtDate(mm.date)} · ${mm.actions.filter(a=>!a.done).length} open</span></div>`).join("")
         :`<p class="faint" style="font-size:12px">None yet — log an impromptu check-in about this epic.</p>`;})()}
 
       <div class="field" style="margin-top:20px"><label>Description</label><textarea id="ep-desc2" style="min-height:60px">${esc(e.description)}</textarea></div>
@@ -3651,7 +3671,7 @@ function renderEffortCapacity(det,team,q){
           return `<div class="actitem"><span class="chk ${e.approved?"done":""}" data-efappr="${e.id}" style="cursor:pointer;width:16px;height:16px;flex:0 0 16px;border:1.5px solid var(--line2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;${e.approved?"background:var(--green);border-color:var(--green);color:var(--on-accent)":""}">${e.approved?"✓":""}</span>
             <span class="at" style="min-width:120px">${t?`<span class="mono">${esc(t.ticketId||"demand")}</span> ${esc((t.title||"").slice(0,32))}`:esc(e.note||"(non-demand work)")}</span>
             <input class="ow" style="text-align:right;flex:0 0 74px" value="${e.hours}" data-efhrs="${e.id}"><span style="flex:0 0 12px;color:var(--faint);font-size:12px">h</span>
-            ${e.approved?`<span class="appstat approved">✓ ${esc(e.approvedOn)}</span>`:`<span class="appstat pending">pending</span>`}
+            ${e.approved?`<span class="appstat approved">✓ ${fmtDate(e.approvedOn)}</span>`:`<span class="appstat pending">pending</span>`}
             <button class="ghost sm nact" data-efdel="${e.id}">✕</button></div>`;}).join("")}</div>`;}).join("")||`<p class="faint" style="font-size:12px">Nothing logged this quarter.</p>`}
   </div>`;
   det.querySelector("#efc-brief").onclick=openBossBrief;
@@ -3675,8 +3695,8 @@ function renderEffortApprovals(det,team){
       ${list.map(a=>{const t=a.ticketId?ticketByRef(a.ticketId):null;
         return `<tr><td><span class="mono" style="font-size:12px">${APPROVAL_KINDS[a.kind].icon} ${esc(APPROVAL_KINDS[a.kind].label)}</span></td>
           <td>${t?`<span class="mono" style="color:var(--accent);cursor:pointer" data-apgo="${esc(t.id)}">${esc(t.ticketId||"demand")}</span> `:""}${esc(a.title||(t?(t.title||""):"(untitled)"))}${a.note?`<div class="faint" style="font-size:11px">${esc(a.note)}</div>`:""}</td>
-          <td class="mono" style="font-size:12px">${esc(a.requestedOn)}</td>
-          <td><span class="appstat ${a.status}">${a.status==="approved"?"✓ approved "+esc(a.decidedOn):a.status==="rejected"?"✕ rejected":"pending"}</span>${a.status==="approved"?`<div class="faint" style="font-size:10.5px">via ${esc(a.via)}</div>`:""}</td>
+          <td class="mono" style="font-size:12px">${fmtDate(a.requestedOn)}</td>
+          <td><span class="appstat ${a.status}">${a.status==="approved"?"✓ approved "+fmtDate(a.decidedOn):a.status==="rejected"?"✕ rejected":"pending"}</span>${a.status==="approved"?`<div class="faint" style="font-size:10.5px">via ${esc(a.via)}</div>`:""}</td>
           <td>${a.status==="pending"?`<button class="sm go" data-apok="${a.id}">Approve</button>`:`<button class="ghost sm" data-apreopen="${a.id}">↩</button>`}
             <button class="ghost sm nact" data-apdel="${a.id}">✕</button></td></tr>`;}).join("")}
     </tbody></table></div>`:`<p class="faint" style="font-size:12px;margin-top:14px">No approvals logged. Add one when they request a Production move or a weekend patch.</p>`}
@@ -4110,18 +4130,18 @@ function briefData(sinceDate){
 }
 function briefMarkdown(d,opts){
   const L=[];
-  L.push("# Status brief — "+todayStr());
+  L.push("# Status brief — "+fmtDate(todayStr()));
   L.push("");
-  L.push("_Covering "+(d.since==="1970-01-01"?"everything to date":"changes since "+d.since)+"._");
+  L.push("_Covering "+(d.since==="1970-01-01"?"everything to date":"changes since "+fmtDate(d.since))+"._");
   L.push("");
   if(opts.epics&&d.epics.length){
     L.push("## Programmes");L.push("");
     d.epics.forEach(({e,s,hurdles})=>{
       L.push("### "+e.name+(e.code?" ("+e.code+")":"")+" — "+EPIC_HEALTH[e.health].label);
-      if(e.headline.text)L.push("> "+e.headline.text+"  \n> _— as at "+(e.headline.on||"undated")+"_");
+      if(e.headline.text)L.push("> "+e.headline.text+"  \n> _— as at "+(e.headline.on?fmtDate(e.headline.on):"undated")+"_");
       L.push("");
       L.push("- "+s.ts.length+" tickets · "+s.done+" done · "+s.blocked.length+" blocked · "+s.overdue.length+" overdue"+
-        (e.targetDate?" · target "+e.targetDate:""));
+        (e.targetDate?" · target "+fmtDate(e.targetDate):""));
       const dis=healthDisagrees(e);
       if(dis)L.push("- ⚠ Ticket data reads **"+EPIC_HEALTH[dis].label+"**");
       hurdles.forEach(({t,h})=>L.push("- **Blocked:** "+(t.ticketId||"")+" — "+(h.text||HURDLE_KINDS[h.kind].label)+
@@ -4147,12 +4167,12 @@ function briefMarkdown(d,opts){
   if(opts.taken&&d.taken.length){
     L.push("## Decisions taken");L.push("");
     d.taken.forEach(x=>{const tk=x.ticketId?ticketByRef(x.ticketId):null;const ep=x.epicId?epicById(x.epicId):null;
-      L.push("- "+x.date+" — "+x.text+(x.by?" _("+x.by+")_":"")+(tk?" ["+(tk.ticketId||"ticket")+"]":"")+(ep?" ["+ep.name+"]":""));});
+      L.push("- "+fmtDate(x.date)+" — "+x.text+(x.by?" _("+x.by+")_":"")+(tk?" ["+(tk.ticketId||"ticket")+"]":"")+(ep?" ["+ep.name+"]":""));});
     L.push("");
   }
   if(opts.landing&&d.landing.length){
     L.push("## Landing soon (next 14 days)");L.push("");
-    d.landing.forEach(x=>L.push("- "+x.eta+" — "+(x.t.ticketId||"")+" "+x.t.title+
+    d.landing.forEach(x=>L.push("- "+fmtDate(x.eta)+" — "+(x.t.ticketId||"")+" "+x.t.title+
       (x.late?" — **already late**":x.slips>=2?" — has slipped "+x.slips+"×, treat with caution":x.slips===1?" — slipped once":" — held so far")));
     L.push("");
   }
@@ -4172,7 +4192,7 @@ function briefMarkdown(d,opts){
     L.push("## Risks");L.push("");
     d.risks.forEach(t=>{const lp=latestPromise(t);
       L.push("- "+(t.ticketId||"")+" "+t.title+" — "+(slipCount(t)?slipCount(t)+"× slipped":"ETA missed")+
-        (lp&&lp.eta?", now "+lp.eta:""));});
+        (lp&&lp.eta?", now "+fmtDate(lp.eta):""));});
     L.push("");
   }
   if(opts.closed&&d.closedAll.length){
@@ -4183,22 +4203,22 @@ function briefMarkdown(d,opts){
   }
   if(opts.obs&&d.obs.length){
     L.push("## People notes");L.push("");
-    d.obs.forEach(({p,o})=>L.push("- **"+p.name+"** ("+o.date+", "+OBS_KINDS[o.kind].label.toLowerCase()+"): "+o.text));
+    d.obs.forEach(({p,o})=>L.push("- **"+p.name+"** ("+fmtDate(o.date)+", "+OBS_KINDS[o.kind].label.toLowerCase()+"): "+o.text));
     L.push("");
   }
   return L.join("\n");
 }
 function briefHtml(d,opts){
   const H=[];
-  H.push(`<h1>Status brief</h1><div class="meta">${todayStr()} · ${d.since==="1970-01-01"?"everything to date":"changes since "+esc(d.since)}</div>`);
+  H.push(`<h1>Status brief</h1><div class="meta">${fmtDate(todayStr())} · ${d.since==="1970-01-01"?"everything to date":"changes since "+fmtDate(d.since)}</div>`);
   if(opts.epics&&d.epics.length){
     H.push(`<h3>Programmes</h3>`);
     d.epics.forEach(({e,s,hurdles})=>{
       const dis=healthDisagrees(e);
       H.push(`<div class="bblock"><h4>${esc(e.name)}${e.code?` <span class="code">${esc(e.code)}</span>`:""}
         <span class="hpill h-${e.health}">${EPIC_HEALTH[e.health].label}</span></h4>
-        ${e.headline.text?`<blockquote>${esc(e.headline.text)}<div class="asat">— as at ${esc(e.headline.on||"undated")}</div></blockquote>`:""}
-        <p class="nums">${s.ts.length} tickets · ${s.done} done · ${s.blocked.length} blocked · ${s.overdue.length} overdue${e.targetDate?` · target ${esc(e.targetDate)}`:""}</p>
+        ${e.headline.text?`<blockquote>${esc(e.headline.text)}<div class="asat">— as at ${e.headline.on?fmtDate(e.headline.on):"undated"}</div></blockquote>`:""}
+        <p class="nums">${s.ts.length} tickets · ${s.done} done · ${s.blocked.length} blocked · ${s.overdue.length} overdue${e.targetDate?` · target ${fmtDate(e.targetDate)}`:""}</p>
         ${dis?`<p class="warn">⚠ Ticket data reads <b>${EPIC_HEALTH[dis].label}</b></p>`:""}
         ${hurdles.length?`<ul>${hurdles.map(({t,h})=>`<li><b>Blocked:</b> ${esc(t.ticketId||"")} — ${esc(h.text||HURDLE_KINDS[h.kind].label)}
           <i>(${esc(h.owner||"unowned")}, ${Math.max(0,-daysUntil(h.raisedOn))}d)</i></li>`).join("")}</ul>`:""}
@@ -4214,10 +4234,10 @@ function briefHtml(d,opts){
       ${v.pendAppr?`<p class="nums">${v.pendAppr} approval(s) awaiting sign-off</p>`:""}</div>`).join(""));
   if(opts.taken&&d.taken.length)
     H.push(`<h3>Decisions taken</h3><ul>${d.taken.map(x=>{const tk=x.ticketId?ticketByRef(x.ticketId):null;const ep=x.epicId?epicById(x.epicId):null;
-      return `<li><b>${esc(x.date)}</b> — ${esc(x.text)}${x.by?` <i>(${esc(x.by)})</i>`:""}${tk?` <i>[${esc(tk.ticketId||"ticket")}]</i>`:""}${ep?` <i>[${esc(ep.name)}]</i>`:""}</li>`;}).join("")}</ul>`);
+      return `<li><b>${fmtDate(x.date)}</b> — ${esc(x.text)}${x.by?` <i>(${esc(x.by)})</i>`:""}${tk?` <i>[${esc(tk.ticketId||"ticket")}]</i>`:""}${ep?` <i>[${esc(ep.name)}]</i>`:""}</li>`;}).join("")}</ul>`);
   if(opts.landing&&d.landing.length)
     H.push(`<h3>Landing soon (next 14 days)</h3><ul>${d.landing.map(x=>
-      `<li><b>${esc(x.eta)}</b> — ${esc(x.t.ticketId||"")} ${esc(x.t.title)} <i>${x.late?"— already late":x.slips>=2?"— slipped "+x.slips+"×, treat with caution":x.slips===1?"— slipped once":"— held so far"}</i></li>`).join("")}</ul>`);
+      `<li><b>${fmtDate(x.eta)}</b> — ${esc(x.t.ticketId||"")} ${esc(x.t.title)} <i>${x.late?"— already late":x.slips>=2?"— slipped "+x.slips+"×, treat with caution":x.slips===1?"— slipped once":"— held so far"}</i></li>`).join("")}</ul>`);
   if(opts.teams&&d.byTeam.length){
     H.push(`<h3>By team</h3>`);
     d.byTeam.forEach(({tm,open,closed,boss})=>{
@@ -4230,11 +4250,11 @@ function briefHtml(d,opts){
   }
   if(opts.risks&&d.risks.length)
     H.push(`<h3>Risks</h3><ul>${d.risks.map(t=>{const lp=latestPromise(t);
-      return `<li>${esc(t.ticketId||"")} ${esc(t.title)} — ${slipCount(t)?slipCount(t)+"× slipped":"ETA missed"}${lp&&lp.eta?`, now ${esc(lp.eta)}`:""}</li>`;}).join("")}</ul>`);
+      return `<li>${esc(t.ticketId||"")} ${esc(t.title)} — ${slipCount(t)?slipCount(t)+"× slipped":"ETA missed"}${lp&&lp.eta?`, now ${fmtDate(lp.eta)}`:""}</li>`;}).join("")}</ul>`);
   if(opts.closed&&d.closedAll.length)
     H.push(`<h3>Closed this period</h3><ul>${d.closedAll.map(t=>`<li>${esc(t.ticketId||"")} ${esc(t.title)} <i>(${esc(teamOf(t.team).name)}${t.actHours?", "+esc(t.actHours)+"h":""})</i></li>`).join("")}</ul>`);
   if(opts.obs&&d.obs.length)
-    H.push(`<h3>People notes</h3><ul>${d.obs.map(({p,o})=>`<li><b>${esc(p.name)}</b> <i>(${esc(o.date)}, ${OBS_KINDS[o.kind].label.toLowerCase()})</i>: ${esc(o.text)}</li>`).join("")}</ul>`);
+    H.push(`<h3>People notes</h3><ul>${d.obs.map(({p,o})=>`<li><b>${esc(p.name)}</b> <i>(${fmtDate(o.date)}, ${OBS_KINDS[o.kind].label.toLowerCase()})</i>: ${esc(o.text)}</li>`).join("")}</ul>`);
   return H.join("");
 }
 function openBossBrief(){
@@ -4467,7 +4487,7 @@ async function openSnapshots(){
   root.innerHTML=`<div class="modal-bg"><div class="modal"><h2>Daily snapshots</h2>
     <p class="faint" style="font-size:12px;margin-top:-8px">Taken automatically on the first save of each day. Last 14 kept.</p>
     ${arr.length?`<div class="picklist">${arr.map((s,i)=>`<div class="pickrow" data-i="${i}">
-      <span class="tid">${esc(s.date)}</span><span style="flex:1">${s.enc?"🔒 encrypted":"plain"}</span>
+      <span class="tid">${fmtDate(s.date)}</span><span style="flex:1">${s.enc?"🔒 encrypted":"plain"}</span>
       <span class="faint">${(s.data.length/1024).toFixed(1)} KB</span></div>`).join("")}</div>`
       :`<p class="faint">No snapshots yet.</p>`}
     <div class="modal-foot"><button id="sn-x" class="primary">Close</button></div></div></div>`;
@@ -4503,6 +4523,33 @@ document.addEventListener("keydown",e=>{
   if(e.altKey&&!e.ctrlKey&&!e.metaKey&&e.key.toLowerCase()==="n"){e.preventDefault();openQuickAdd();}
 });
 window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+
+/* ---------- day-first date pickers ----------
+   A native <input type="date"> always renders in the BROWSER's locale — mm/dd/yyyy on
+   this en-US machine — and neither the `lang` attribute nor CSS can reorder it (both
+   verified). So mask the native text and paint a dd-mm-yyyy label over it. The input
+   element is never replaced: .value stays ISO, every existing onchange handler keeps
+   working, and the calendar picker is still there. */
+function enhanceDateFields(){
+  document.querySelectorAll('input[type="date"]:not([data-dmy])').forEach(inp=>{
+    inp.setAttribute("data-dmy","1");
+    const w=document.createElement("span");
+    /* carry the input's classes so flex sizing (e.g. .du in action rows) still lands */
+    w.className="dwrap"+(inp.className?" "+inp.className:"");
+    inp.parentNode.insertBefore(w,inp);w.appendChild(inp);
+    const lab=document.createElement("span");lab.className="dlabel";w.appendChild(lab);
+    const sync=()=>{const v=inp.value;lab.textContent=v?fmtDate(v):"dd-mm-yyyy";lab.classList.toggle("ph",!v);};
+    inp.addEventListener("input",sync);inp.addEventListener("change",sync);
+    sync();
+  });
+}
+/* renders happen constantly (and modals live outside renderApp), so watch the DOM
+   rather than trying to call this from every render site */
+let dmyQueued=false;
+new MutationObserver(()=>{if(dmyQueued)return;dmyQueued=true;
+  requestAnimationFrame(()=>{dmyQueued=false;enhanceDateFields();});})
+  .observe(document.body,{childList:true,subtree:true});
+enhanceDateFields();
 
 /* ---------- idle lock (only when encryption is on) ---------- */
 const IDLE_MS=15*60*1000;
