@@ -1,0 +1,21 @@
+# Team Desk data files — these hold real ticket, people and vendor records.
+# The app saves to a .json of your choosing; never commit one.
+*.json
+
+# Local backups / snapshots / exports the app can produce
+*.bak
+*-backup*
+status-brief-*.md
+team-desk-data*
+
+# Screenshots / attachments folder used by the paste-to-attach flow
+images/
+screenshots/
+
+# OS & editor cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+.vscode/
+.idea/
