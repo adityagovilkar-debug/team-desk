@@ -370,6 +370,34 @@ always renders in the **browser's** locale (`mm/dd/yyyy` on an en-US machine), a
 the native text and paints a `dd-mm-yyyy` label over it. The input element itself is untouched,
 so its value stays ISO and the calendar picker still works normally.
 
+## Themes — dark, light, instrument
+
+The ☀/▦/🌙 button cycles three themes. **Instrument** is a scientific-plotter look adapted
+from the `instrument-white/` design system: warm-white paper with an engineering dot-grid,
+hairline rules, registration tics on every panel, silkscreen micro-labels, mono tabular
+figures, and **quantities drawn as discrete dots rather than filled bars**.
+
+In instrument mode the six Insights charts and the vendor capacity meter re-render as dots —
+verified as zero `<rect>` elements. The unlit track is always drawn, because it shows the
+scale: the contract meter reads as *30 of 120 cells*, with approved hours filled and pending
+hours as **rings** (claimed but not yet yours).
+
+Two deliberate deviations from the source system, both forced by the data:
+
+- **Its palette can't serve this app unmodified.** It has six pens, but three double as its
+  state colours, and the warm three are mutually indistinguishable (ochre↔cinnabar measures
+  ΔE 1.7 under deuteranopia). There's no way to get two team colours *and* three state colours
+  all separable by hue. So they're split by **role**: prussian + ochre carry team identity
+  (validated CVD ΔE 27.2, normal-vision 31.9), warm pens are reserved for state, and the team
+  tick also differs in **shape** — Portal a filled dot, P&C a ring — so identity survives
+  without relying on hue at all.
+- **Its dot-column form is built for hundreds of dense samples.** Twelve weekly counts of 0–5
+  rendered that way read as scattered specks, and a count of 1 against a max of 1 drew a *full*
+  run. Small integer counts now get **one dot per unit** against a floor of 4, so "1 of 4" looks
+  like 1 of 4.
+
+Themes are presentational only — the choice lives in `localStorage`, never in your data file.
+
 ## Light / dark theme
 
 A ☀/🌙 toggle in the header. The whole app is driven by CSS variables, so the switch

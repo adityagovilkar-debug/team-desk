@@ -77,6 +77,45 @@
     --ord-1:#6da7ec; --ord-2:#2a78d6; --ord-3:#16457e;
     --grid:#e4e9ef; --axis:#c8d0dc;
   }
+  /* ---- INSTRUMENT WHITE ----
+     A scientific-plotter look: warm-white paper, hairlines, drafting pens, and
+     quantities drawn as discrete dots rather than filled bars. Adapted from the
+     instrument-white/ design system.
+
+     One deliberate deviation. That system has six pens, but three of them double
+     as its state colours, and the warm three are mutually indistinguishable
+     (ochre↔cinnabar measures ΔE 1.7 under deuteranopia). So there is no way to
+     have two team colours AND three state colours all separable by hue. The fix
+     is to split them by ROLE: cool+ochre pens carry team identity, warm pens are
+     reserved for state, and the team tick also differs in SHAPE (Portal a filled
+     dot, P&C a ring) so identity survives without relying on hue at all.
+     Team pair validated on paper: CVD ΔE 27.2 protan, normal-vision 31.9. */
+  :root[data-theme="instrument"]{
+    color-scheme:light;
+    --bg:#FFFFFF; --bg2:#FFFFFF; --panel:#FFFFFF; --panel2:#F7F7F4;
+    --line:#E7E6DF; --line2:#D6D5CC;
+    --txt:#12141A; --muted:#5A5E68; --faint:#9A9EA8;
+    --accent:#1B4FA0; --accent2:#6B3FA0;
+    --green:#0E7C63; --amber:#B07500; --red:#D93A1E; --teal:#0E7C63;
+    --chip:#FFFFFF;
+    --on-accent:#FFFFFF;
+    --err-ink:#D93A1E;
+    --tint-amber-bd:#E4D3A6; --tint-amber-bg:#FDF8EC;
+    --tint-red-bd:#F0C0B6;   --tint-red-bg:#FDF1EE;
+    --tint-green-bd:#B4D8CE; --tint-green-bg:#F0F7F5;
+    --tint-blue-bd:#BFD0E6;  --tint-teal-bd:#B4D8CE;
+    --tint-violet-bd:#D0C4E4; --tint-pnc-bd:#E4D3A6;
+    /* the system forbids surface gradients — flat paper everywhere */
+    --grad-blue:#FBFCFE; --grad-violet:#FCFBFE; --grad-amber:#FDFBF5;
+    --radius:3px;
+    --mono:ui-monospace,"Cascadia Mono","JetBrains Mono","SF Mono",Consolas,monospace;
+    --sans:"Inter","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+    --team-portal:#1B4FA0; --team-pnc:#B07500;
+    --chart-bar:#1B4FA0;
+    --ord-1:#8FB0D6; --ord-2:#1B4FA0; --ord-3:#0C2C5C;
+    --grid:#E7E6DF; --axis:#D6D5CC;
+    --rule-strong:#D6D5CC; --grid-dot:#DEDDD6;
+  }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14px;line-height:1.45;overflow:hidden}
@@ -605,6 +644,191 @@
   .briefdoc .hpill.h-red{color:#991b1b;background:#fef2f2;border-color:#fecaca}
   .briefdoc .hpill.h-unknown{color:#475569;background:#f1f5f9;border-color:#cbd5e1}
 
+  /* ============================================================
+     INSTRUMENT WHITE — structure. The palette above only recolours; this is
+     what makes it read as an instrument: near-square geometry, hairlines,
+     registration tics, silkscreen micro-labels and mono tabular figures.
+     Scoped entirely under the theme attribute, so dark/light are untouched.
+     ============================================================ */
+  :root[data-theme="instrument"] body{font-size:13px;letter-spacing:.005em}
+  /* engineering dot-grid, fading down the page */
+  :root[data-theme="instrument"] #app::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px,var(--grid-dot) 1px,transparent 0);
+    background-size:22px 22px;opacity:.5;
+    mask-image:radial-gradient(ellipse 130% 100% at 50% 0%,#000 30%,transparent 92%)}
+  :root[data-theme="instrument"] header,
+  :root[data-theme="instrument"] main{position:relative;z-index:1}
+
+  /* geometry: nearly square, hairlines, no shadows */
+  :root[data-theme="instrument"] button,
+  :root[data-theme="instrument"] input,
+  :root[data-theme="instrument"] select,
+  :root[data-theme="instrument"] textarea,
+  :root[data-theme="instrument"] .pill,
+  :root[data-theme="instrument"] .chip,
+  :root[data-theme="instrument"] .warnchip,
+  :root[data-theme="instrument"] .teampill{border-radius:2px}
+  :root[data-theme="instrument"] .tcard,
+  :root[data-theme="instrument"] .dashcard,
+  :root[data-theme="instrument"] .chcard,
+  :root[data-theme="instrument"] .kpi,
+  :root[data-theme="instrument"] .modal,
+  :root[data-theme="instrument"] .ledger,
+  :root[data-theme="instrument"] .gatebox,
+  :root[data-theme="instrument"] .ecard,
+  :root[data-theme="instrument"] .rcard,
+  :root[data-theme="instrument"] .pcard,
+  :root[data-theme="instrument"] .pcard2,
+  :root[data-theme="instrument"] .ccard,
+  :root[data-theme="instrument"] .qrow,
+  :root[data-theme="instrument"] .lookwrap,
+  :root[data-theme="instrument"] .depbar,
+  :root[data-theme="instrument"] .sugg,
+  :root[data-theme="instrument"] .headline,
+  :root[data-theme="instrument"] .nextcall{border-radius:3px;box-shadow:none}
+  :root[data-theme="instrument"] .toast,
+  :root[data-theme="instrument"] .gsearch,
+  :root[data-theme="instrument"] .modal{box-shadow:0 2px 10px rgba(18,20,26,.07)}
+
+  /* registration tics — the detail that reads as "instrument", not "web card".
+     Panels only; list rows would be noise at that density. */
+  :root[data-theme="instrument"] .dashcard,
+  :root[data-theme="instrument"] .chcard,
+  :root[data-theme="instrument"] .kpi,
+  :root[data-theme="instrument"] .ledger,
+  :root[data-theme="instrument"] .gatebox,
+  :root[data-theme="instrument"] .pairpanel,
+  :root[data-theme="instrument"] .modal{position:relative}
+  :root[data-theme="instrument"] .dashcard::before,
+  :root[data-theme="instrument"] .dashcard::after,
+  :root[data-theme="instrument"] .chcard::before,
+  :root[data-theme="instrument"] .chcard::after,
+  :root[data-theme="instrument"] .kpi::before,
+  :root[data-theme="instrument"] .kpi::after,
+  :root[data-theme="instrument"] .ledger::before,
+  :root[data-theme="instrument"] .ledger::after,
+  :root[data-theme="instrument"] .gatebox::before,
+  :root[data-theme="instrument"] .gatebox::after,
+  :root[data-theme="instrument"] .modal::before,
+  :root[data-theme="instrument"] .modal::after{
+    content:"";position:absolute;width:7px;height:7px;border:solid var(--rule-strong);pointer-events:none}
+  :root[data-theme="instrument"] .dashcard::before,
+  :root[data-theme="instrument"] .chcard::before,
+  :root[data-theme="instrument"] .kpi::before,
+  :root[data-theme="instrument"] .ledger::before,
+  :root[data-theme="instrument"] .gatebox::before,
+  :root[data-theme="instrument"] .modal::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+  :root[data-theme="instrument"] .dashcard::after,
+  :root[data-theme="instrument"] .chcard::after,
+  :root[data-theme="instrument"] .kpi::after,
+  :root[data-theme="instrument"] .ledger::after,
+  :root[data-theme="instrument"] .gatebox::after,
+  :root[data-theme="instrument"] .modal::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0}
+
+  /* silkscreen micro-labels */
+  :root[data-theme="instrument"] label,
+  :root[data-theme="instrument"] .kpi span,
+  :root[data-theme="instrument"] .stat,
+  :root[data-theme="instrument"] .ebox span,
+  :root[data-theme="instrument"] .qsec{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase}
+  :root[data-theme="instrument"] .dashcard h3,
+  :root[data-theme="instrument"] .sec-title h3,
+  :root[data-theme="instrument"] .chcard h3,
+  :root[data-theme="instrument"] .queue-head h3{font-size:9px;letter-spacing:.22em;font-weight:600;color:var(--ink-2,var(--muted))}
+  :root[data-theme="instrument"] .navbtn{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+    border-radius:2px;border:1px solid transparent;padding:5px 10px}
+  :root[data-theme="instrument"] .nav{background:transparent;border-color:transparent;padding:0;gap:1px}
+  :root[data-theme="instrument"] .navbtn.active{background:transparent;color:var(--txt);border:1px solid var(--rule-strong)}
+  :root[data-theme="instrument"] header .logo{font-family:var(--mono);font-size:11px;letter-spacing:.3em}
+  :root[data-theme="instrument"] header .logo .dot{box-shadow:none;width:7px;height:7px}
+  :root[data-theme="instrument"] header{background:var(--paper,#fff)}
+  :root[data-theme="instrument"] aside{background:transparent;border-right:1px solid var(--line)}
+
+  /* every figure mono + tabular — non-tabular digits make values jitter */
+  :root[data-theme="instrument"] .stat b,
+  :root[data-theme="instrument"] .kpi b,
+  :root[data-theme="instrument"] .ebox b,
+  :root[data-theme="instrument"] .due,
+  :root[data-theme="instrument"] .promise .pe,
+  :root[data-theme="instrument"] .warnchip,
+  :root[data-theme="instrument"] .iw-hero,
+  :root[data-theme="instrument"] .dc-date,
+  :root[data-theme="instrument"] table td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  :root[data-theme="instrument"] .kpi b,
+  :root[data-theme="instrument"] .stat b{letter-spacing:-.01em;font-weight:600}
+
+  /* pills: outlined silkscreen, not filled lozenges */
+  :root[data-theme="instrument"] .pill,
+  :root[data-theme="instrument"] .teampill,
+  :root[data-theme="instrument"] .warnchip,
+  :root[data-theme="instrument"] .appstat,
+  :root[data-theme="instrument"] .mkind,
+  :root[data-theme="instrument"] .agbadge,
+  :root[data-theme="instrument"] .tpbadge,
+  :root[data-theme="instrument"] .stackchip,
+  :root[data-theme="instrument"] .seenbadge{background:transparent;font-size:9px;letter-spacing:.11em;
+    text-transform:uppercase;font-weight:600;padding:1px 6px}
+  :root[data-theme="instrument"] .patbadge,
+  :root[data-theme="instrument"] .bossflag,
+  :root[data-theme="instrument"] .briefchip{font-size:8.5px;letter-spacing:.11em;border-radius:2px}
+  /* team identity carries a SHAPE as well as a hue: Portal a filled tick,
+     P&C a ring — so the two stay apart even for a colourblind reader */
+  :root[data-theme="instrument"] .teampill::before{
+    content:"";width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;flex:0 0 6px}
+  :root[data-theme="instrument"] .teampill.tm-portal::before{background:var(--team-portal)}
+  :root[data-theme="instrument"] .teampill.tm-pnc::before{background:transparent;box-shadow:inset 0 0 0 1.5px var(--team-pnc)}
+
+  /* controls: quiet outlined silkscreen, not filled lozenges. Even the primary
+     action is an outline — in this system a saturated fill means "a value lives
+     here", so spending one on a button would dilute the whole scheme. */
+  :root[data-theme="instrument"] button{
+    font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    background:transparent;border:1px solid var(--rule-strong);color:var(--muted);
+    padding:5px 9px;font-weight:500}
+  :root[data-theme="instrument"] button:hover{background:transparent;color:var(--txt);border-color:var(--faint)}
+  :root[data-theme="instrument"] button.primary{
+    background:color-mix(in srgb,var(--accent) 6%,transparent);border-color:var(--accent);color:var(--accent);font-weight:600}
+  :root[data-theme="instrument"] button.go{
+    background:color-mix(in srgb,var(--green) 7%,transparent);border-color:var(--green);color:var(--green);font-weight:600}
+  :root[data-theme="instrument"] button.primary:hover,
+  :root[data-theme="instrument"] button.go:hover{filter:none;background:color-mix(in srgb,currentColor 10%,transparent)}
+  :root[data-theme="instrument"] button.ghost{border-color:transparent;font-size:11px;letter-spacing:0;text-transform:none}
+  :root[data-theme="instrument"] button.ghost:hover{background:var(--panel2)}
+  :root[data-theme="instrument"] button.sm{font-size:8.5px;padding:3px 7px}
+  :root[data-theme="instrument"] .side-tools button{padding:6px 9px}
+  :root[data-theme="instrument"] .side-tools button .faint{font-size:8.5px}
+  /* inputs sit on hairlines rather than filled wells */
+  :root[data-theme="instrument"] input,
+  :root[data-theme="instrument"] select,
+  :root[data-theme="instrument"] textarea{background:transparent;border-color:var(--line2);font-size:12px}
+  :root[data-theme="instrument"] input:focus,
+  :root[data-theme="instrument"] select:focus,
+  :root[data-theme="instrument"] textarea:focus{border-color:var(--accent)}
+  :root[data-theme="instrument"] .hsearch input{background:transparent}
+
+  /* denser, instrument-panel spacing */
+  :root[data-theme="instrument"] .dashcard{padding:11px 13px 13px}
+  :root[data-theme="instrument"] .dashcard h3{padding-bottom:8px;margin-bottom:9px;border-bottom:1px solid var(--line)}
+  :root[data-theme="instrument"] .dashcard h3 .cnt{background:transparent;color:var(--faint);font-family:var(--mono);padding:0}
+  :root[data-theme="instrument"] .dashitem{font-size:11.5px;padding:6px 2px}
+  :root[data-theme="instrument"] .dashitem .di-sub{font-size:9.5px;letter-spacing:.04em}
+  :root[data-theme="instrument"] .banner,
+  :root[data-theme="instrument"] .nextcall{border-radius:3px}
+  :root[data-theme="instrument"] .nextcall .nc-when{font-family:var(--mono);font-weight:600;letter-spacing:-.01em}
+
+  /* list rows: hairline separation instead of filled cards */
+  :root[data-theme="instrument"] .tcard{border-left-width:2px;background:transparent}
+  :root[data-theme="instrument"] .tcard:hover,
+  :root[data-theme="instrument"] .tcard.active{background:var(--panel2)}
+  :root[data-theme="instrument"] .tcard .tid,
+  :root[data-theme="instrument"] .qrow .qid{font-family:var(--mono);letter-spacing:.02em}
+  :root[data-theme="instrument"] .dashitem{border-bottom:1px dotted var(--rule-strong)}
+  :root[data-theme="instrument"] .stat{background:transparent;border-color:var(--line)}
+
+  /* the capacity bar is the one filled bar left — becomes a dot bank */
+  :root[data-theme="instrument"] .capbar{border:none;background:transparent;height:auto;display:block}
+
   #printArea{display:none}
   @media print{
     #app,#modalRoot,#toast{display:none!important}
@@ -661,7 +885,10 @@
    (NOT the encrypted data file) so it works on the lock screen and never sits
    behind the master password. Purely presentational — no logic reads it. ---- */
 const THEME_KEY="teamdesk.theme";
-function currentTheme(){try{return localStorage.getItem(THEME_KEY)==="light"?"light":"dark";}catch(e){return "dark";}}
+const THEMES=["dark","light","instrument"];
+const THEME_ICON={dark:"☀",light:"▦",instrument:"🌙"};   /* icon shows what you'd switch TO */
+const THEME_NEXT_LABEL={dark:"light",light:"instrument",instrument:"dark"};
+function currentTheme(){try{const t=localStorage.getItem(THEME_KEY);return THEMES.includes(t)?t:"dark";}catch(e){return "dark";}}
 function applyTheme(t){const el=document.documentElement;el.setAttribute("data-theme",t);
   /* Chromium doesn't reliably invalidate the paint of already-rendered persistent
      chrome (the header) when a :root custom property changes. Detaching and
@@ -669,10 +896,13 @@ function applyTheme(t){const el=document.documentElement;el.setAttribute("data-t
      synchronous, so the browser never paints the intermediate state — no flash. */
   el.style.display="none";void el.offsetHeight;el.style.display="";
   const b=document.getElementById("btnTheme");
-  if(b){b.textContent=t==="light"?"🌙":"☀";b.title=t==="light"?"Switch to dark theme":"Switch to light theme";}}
-function toggleTheme(){const nx=currentTheme()==="light"?"dark":"light";
+  if(b){b.textContent=THEME_ICON[t]||"☀";b.title="Switch to "+THEME_NEXT_LABEL[t]+" theme";}}
+function toggleTheme(){
+  const nx=THEMES[(THEMES.indexOf(currentTheme())+1)%THEMES.length];
   try{localStorage.setItem(THEME_KEY,nx);}catch(e){}
   applyTheme(nx);
+  /* charts render differently per theme, so a full re-render is required here —
+     unlike dark↔light, this is not a pure CSS swap */
   if(typeof renderApp==="function")renderApp();}
 applyTheme(currentTheme());
 /* ============================================================
@@ -3983,8 +4213,9 @@ function renderEffortCapacity(det,team,q){
       <div class="kpi ${r.remaining!=null&&r.remaining<0?"bad":""}"><b>${r.remaining!=null?r.remaining+"h":"—"}</b><span>remaining vs contract</span></div>
     </div>
     ${r.contracted!=null&&r.total>0?`<div class="capbar">
-        ${r.approved>0?`<div class="seg appr" style="width:${Math.min(100,r.approved/barMax*100)}%">${r.approved}h</div>`:""}
-        ${r.pending>0?`<div class="seg pend" style="width:${Math.min(100,r.pending/barMax*100)}%">${r.pending}h</div>`:""}
+        ${isInstrument()?capDotBank(r,barMax)
+          :`${r.approved>0?`<div class="seg appr" style="width:${Math.min(100,r.approved/barMax*100)}%">${r.approved}h</div>`:""}
+            ${r.pending>0?`<div class="seg pend" style="width:${Math.min(100,r.pending/barMax*100)}%">${r.pending}h</div>`:""}`}
       </div>
       <div class="caplegend"><span><i style="background:var(--green)"></i>approved</span><span><i style="background:var(--amber)"></i>pending</span>
         <span style="margin-left:auto">${over?`<b style="color:var(--red)">${r.total-r.contracted}h over contract</b>`:`${r.contracted-r.total}h of ${r.contracted}h unused`}</span></div>`
@@ -4332,9 +4563,140 @@ function niceTicks(max,n,intOnly){
 }
 const allInts=a=>a.every(v=>Number.isInteger(v));
 /* horizontal bars; series[] optional for grouped (2 teams), else single hue */
+/* ============================================================
+   INSTRUMENT MODE CHARTS — the same data drawn as discrete dots.
+   The design system's one hard rule is "no filled bars, ever": a quantity is
+   quantised into marks, the unlit track is always drawn (it shows the scale),
+   and both radius AND opacity carry the value — a dot that only changes colour
+   reads as a status light, not a measurement.
+   ============================================================ */
+function isInstrument(){return document.documentElement.getAttribute("data-theme")==="instrument";}
+/* contract capacity as a bank of cells — approved filled, pending drawn as RINGS
+   (claimed but not yet yours), the rest ghosted so the full contract is visible */
+function capDotBank(r,barMax){
+  const COLS=30,ROWS=4,total=COLS*ROWS;
+  const perCell=(r.contracted||barMax)/total;
+  const nAppr=Math.round(r.approved/perCell), nPend=Math.round(r.pending/perCell);
+  const w=COLS*9+8,h=ROWS*9+8;
+  let cells="";
+  for(let i=0;i<total;i++){
+    const cx=5+(i%COLS)*9, cy=5+Math.floor(i/COLS)*9;
+    if(i<nAppr)cells+=`<circle cx="${cx}" cy="${cy}" r="2.1" fill="var(--green)"/>`;
+    else if(i<nAppr+nPend)cells+=`<circle cx="${cx}" cy="${cy}" r="1.9" fill="none" stroke="var(--amber)" stroke-width="1.1"/>`;
+    else cells+=`<circle cx="${cx}" cy="${cy}" r="1.1" fill="${DOT_GHOST}"/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img"
+    data-tip="${esc(r.approved+"h approved · "+r.pending+"h pending · one cell ≈ "+perCell.toFixed(1)+"h")}"
+    class="chbar" tabindex="0">${cells}</svg>`;
+}
+const DOT_GHOST="var(--line2)";
+function dotRun(x0,y,slots,lit,pitch,color,tip){
+  let s=`<g class="chbar" tabindex="0" data-tip="${esc(tip)}">`;
+  for(let i=0;i<slots;i++){
+    const on=i<lit, k=slots>1?i/(slots-1):1;
+    s+=`<circle cx="${(x0+i*pitch).toFixed(1)}" cy="${y}" r="${on?(1.75+k*0.75).toFixed(2):1.1}"`
+      +` fill="${on?color:DOT_GHOST}"${on?` opacity="${(0.6+0.4*k).toFixed(2)}"`:""}/>`;
+  }
+  return s+`</g>`;
+}
+/* horizontal magnitude — one dot run per row */
+function chDotsH(rows,o,series){
+  const CAP=20,PITCH=9;
+  const rowH=series.length>1?(series.length*13+(series.length-1)*3):15;
+  const n=rows.length||1;
+  const h=CH.pad.t+CH.pad.b+n*rowH+(n-1)*CH.gap;
+  const vals=rows.flatMap(r=>series.map(s=>+r[s.key]||0));
+  const rawMax=Math.max(1,...vals);
+  /* Small integer counts get one dot PER UNIT — proportional scaling would draw a
+     count of 1 against a max of 1 as a full run, which reads as "everything is
+     maxed out". The floor of 4 stops a single-item chart filling its track. */
+  const perUnit=allInts(vals)&&rawMax<=CAP;
+  const SLOTS=perUnit?Math.max(4,rawMax):CAP;
+  const max=rawMax;
+  const x0=CH.pad.l, valX=x0+SLOTS*PITCH+14;
+  const body=rows.map((r,i)=>{
+    const y0=CH.pad.t+i*(rowH+CH.gap);
+    const lab=`<text x="${CH.pad.l-11}" y="${y0+rowH/2+4}" fill="var(--muted)" font-size="10.5" text-anchor="end">${esc(String(r.label).slice(0,18))}</text>`;
+    const runs=series.map((s,si)=>{
+      const v=+r[s.key]||0;
+      const y=series.length>1?y0+6+si*16:y0+rowH/2;
+      const lit=perUnit?v:Math.round((v/max)*SLOTS);
+      return dotRun(x0,y,SLOTS,lit,PITCH,s.color,(s.label?s.label+" · ":"")+r.label+": "+o.fmt(v)+o.unit)
+        +`<text x="${valX}" y="${y+3.5}" fill="var(--muted)" font-size="10" style="font-variant-numeric:tabular-nums">${esc(o.fmt(v))}${esc(o.unit)}</text>`;
+    }).join("");
+    return lab+runs;
+  }).join("");
+  return `<svg viewBox="0 0 ${o.w} ${h}" width="100%" height="${h}" role="img">${body}</svg>`;
+}
+/* time series — one dot per unit, unlit track above showing the scale */
+function chDotCols(cats,series,o){
+  const pl=30,pr=10,pt=10,pb=30;
+  const cvals=cats.flatMap(c=>series.map(s=>+c[s.key]||0));
+  const rawMax=Math.max(1,...cvals);
+  /* one dot per ticket while the counts are small; quantise once they aren't */
+  const perUnit=rawMax<=8, slots=perUnit?Math.max(rawMax,4):12;
+  /* size the panel to the data rather than stretching a 4-dot column over 150px,
+     which left the marks squashed into the bottom of an empty frame */
+  const pitch=13;
+  const plotH=slots*pitch;
+  const H=pt+plotH+pb;
+  const plotW=o.w-pl-pr;
+  const bandW=plotW/(cats.length||1);
+  const body=cats.map((c,i)=>{
+    const cx=pl+i*bandW+bandW/2;
+    const cols=series.map((s,si)=>{
+      const v=+c[s.key]||0;
+      const lit=perUnit?v:Math.round((v/rawMax)*slots);
+      const ox=cx+(si-(series.length-1)/2)*9;
+      let out=`<g class="chbar" tabindex="0" data-tip="${esc(s.label+" · "+c.label+": "+o.fmt(v)+o.unit)}">`;
+      for(let k=0;k<slots;k++){
+        const cy=pt+plotH-k*pitch, on=k<lit, top=on&&k===lit-1;
+        out+=`<circle cx="${ox.toFixed(1)}" cy="${cy.toFixed(1)}" r="${on?(top?2.4:1.9):1.1}"`
+          +` fill="${on?s.color:DOT_GHOST}"${on?` opacity="${top?0.95:(0.45+0.25*(k/slots)).toFixed(2)}"`:""}/>`;
+      }
+      /* zero is a measurement — give it a baseline tick so it differs from "no data" */
+      if(v===0)out+=`<line x1="${(ox-3).toFixed(1)}" y1="${pt+plotH+3}" x2="${(ox+3).toFixed(1)}" y2="${pt+plotH+3}" stroke="${DOT_GHOST}" stroke-width="1"/>`;
+      return out+`</g>`;
+    }).join("");
+    const showLab=i%Math.ceil(cats.length/6||1)===0;
+    return cols+(showLab?`<text x="${cx}" y="${H-9}" fill="var(--faint)" font-size="9.5" text-anchor="middle">${esc(c.label)}</text>`:"");
+  }).join("");
+  return `<svg viewBox="0 0 ${o.w} ${H}" width="100%" height="${H}" role="img">
+    <text x="${pl-6}" y="${pt+8}" fill="var(--faint)" font-size="9.5" text-anchor="end" style="font-variant-numeric:tabular-nums">${perUnit?slots:rawMax}</text>
+    <text x="${pl-6}" y="${pt+plotH+3}" fill="var(--faint)" font-size="9.5" text-anchor="end">0</text>
+    ${body}
+    <line x1="${pl}" y1="${pt+plotH+5}" x2="${o.w-pr}" y2="${pt+plotH+5}" stroke="var(--axis)" stroke-width="1"/></svg>`;
+}
+/* proportion — one dot run split between the ordered bands */
+function chDotStack(rows,bands,o){
+  const SLOTS=24,PITCH=9;
+  const rowH=17,h=CH.pad.t+CH.pad.b+rows.length*(rowH+CH.gap);
+  const x0=CH.pad.l;
+  const body=rows.map((r,i)=>{
+    const y=CH.pad.t+i*(rowH+CH.gap)+rowH/2;
+    const total=bands.reduce((a,b)=>a+(+r[b.key]||0),0)||1;
+    /* largest-remainder, so the run always totals exactly SLOTS */
+    const raw=bands.map(b=>({b,exact:(+r[b.key]||0)/total*SLOTS}));
+    const alloc=raw.map(x=>({...x,n:Math.floor(x.exact)}));
+    let left=SLOTS-alloc.reduce((a,x)=>a+x.n,0);
+    alloc.slice().sort((a,b)=>(b.exact-b.n)-(a.exact-a.n)).forEach(x=>{if(left-- >0)x.n++;});
+    let idx=0,out="";
+    alloc.forEach(({b,n})=>{
+      const v=+r[b.key]||0;
+      if(n>0)out+=`<g class="chbar" tabindex="0" data-tip="${esc(r.label+" · "+b.label+": "+v+" ("+Math.round(v/total*100)+"%)")}">`
+        +Array.from({length:n},(_,j)=>`<circle cx="${(x0+(idx+j)*PITCH).toFixed(1)}" cy="${y}" r="2.1" fill="${b.color}"/>`).join("")
+        +`</g>`;
+      idx+=n;
+    });
+    return `<text x="${x0-11}" y="${y+4}" fill="var(--muted)" font-size="10.5" text-anchor="end">${esc(String(r.label).slice(0,18))}</text>`
+      +out+`<text x="${x0+SLOTS*PITCH+10}" y="${y+4}" fill="var(--faint)" font-size="9.5" style="font-variant-numeric:tabular-nums">n=${total}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${o.w} ${h}" width="100%" height="${h}" role="img">${body}</svg>`;
+}
 function chBarsH(rows,opts){
   const o=Object.assign({w:520,series:null,fmt:v=>v,unit:""},opts||{});
   const series=o.series||[{key:"v",label:"",color:"var(--chart-bar)"}];
+  if(isInstrument())return chDotsH(rows,o,series);
   const n=rows.length||1;
   const rowH=series.length>1?(series.length*CH.barH+(series.length-1)*CH.grpGap):CH.barH;
   const h=CH.pad.t+CH.pad.b+n*rowH+(n-1)*CH.gap;
@@ -4367,6 +4729,7 @@ function chBarsH(rows,opts){
 /* vertical grouped columns over time */
 function chCols(cats,series,opts){
   const o=Object.assign({w:560,h:190,fmt:v=>v,unit:""},opts||{});
+  if(isInstrument())return chDotCols(cats,series,o);
   const pl=34,pr=10,pt=10,pb=30;
   const plotW=o.w-pl-pr,plotH=o.h-pt-pb;
   const cvals=cats.flatMap(c=>series.map(s=>+c[s.key]||0));
@@ -4393,6 +4756,7 @@ function chCols(cats,series,opts){
 /* 100% stacked bar, one row per category — ordered bands (ordinal ramp) */
 function chStacked(rows,bands,opts){
   const o=Object.assign({w:520},opts||{});
+  if(isInstrument())return chDotStack(rows,bands,o);
   const rowH=20,h=CH.pad.t+CH.pad.b+rows.length*(rowH+CH.gap);
   /* the trailing "n=" count is right-anchored at the frame edge, so the bar track has
      to stop short of it — otherwise the label sits on top of the last segment */
