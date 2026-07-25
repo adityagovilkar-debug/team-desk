@@ -162,6 +162,7 @@
   .warnchip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;border-radius:5px;padding:1px 7px;border:1px solid var(--tint-amber-bd);background:var(--tint-amber-bg);color:var(--amber)}
   .warnchip.bad{border-color:var(--tint-red-bd);background:var(--tint-red-bg);color:var(--red)}
   .warnchip.info{border-color:var(--line2);background:var(--chip);color:var(--muted)}
+  .warnchip.good{border-color:var(--tint-green-bd);background:var(--tint-green-bg);color:var(--green)}
 
   section.detail{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
   .detail-head{padding:16px 22px 0;border-bottom:1px solid var(--line)}
@@ -251,6 +252,23 @@
   .ares{flex-basis:100%;font-size:11.5px;color:var(--teal);white-space:pre-wrap;padding:1px 0 0 25px;cursor:text;line-height:1.4}
   .ares:hover{color:var(--txt)}
   .carried{border-left:3px solid var(--amber)}
+
+  /* dependencies */
+  .depbar{display:flex;align-items:flex-start;gap:10px;border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:13px;border:1px solid;line-height:1.5}
+  .depbar.blocked{border-color:var(--tint-amber-bd);background:var(--tint-amber-bg)}
+  .depbar.cross{border-color:var(--tint-red-bd);background:var(--tint-red-bg)}
+  .depbar.clear{border-color:var(--tint-green-bd);background:var(--tint-green-bg)}
+  .depbar .db-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .deprow{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:7px;padding:7px 11px;margin-bottom:6px;cursor:pointer}
+  .deprow:hover{background:var(--panel2)}
+  .deprow.open{border-left-color:var(--amber)} .deprow.closed{border-left-color:var(--green)}
+  .deprow .dp-id{font-family:var(--mono);font-size:11.5px;font-weight:600;flex:0 0 auto}
+  .deprow .dp-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .deprow .nact{opacity:0}.deprow:hover .nact{opacity:1}
+  .depchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border-radius:5px;padding:1px 7px;
+    border:1px solid var(--tint-blue-bd);background:var(--chip);color:var(--accent);cursor:pointer}
+  .depchip.done{color:var(--green);border-color:var(--tint-green-bd)}
+  .depchip.cross{color:var(--red);border-color:var(--tint-red-bd)}
 
   /* subtasks (flat checklist inside a ticket) */
   .subrow{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:7px 11px;margin-bottom:6px;flex-wrap:wrap}
@@ -964,6 +982,9 @@ function normTicket(t){
     myStatus:st,theirStatus:t.theirStatus||"",
     assignees:[...new Set(t.assignees||[])],
     epicId:t.epicId||"",
+    /* Dependencies are stored ONE way only — "what am I waiting on". The inverse
+       ("what am I holding up") is derived, so the two can never drift apart. */
+    blockedBy:[...new Set(t.blockedBy||[])],
     subtasks:(t.subtasks||[]).map(normSubtask),
     gates:normGates(t.gates),evidence:t.evidence||"",statusChangedOn:t.statusChangedOn||"",
     raisedDate:t.raisedDate||"",startedDate:t.startedDate||"",dueDate:t.dueDate||"",closedDate:t.closedDate||"",
@@ -1036,7 +1057,9 @@ function migrate(d){
   d.tickets.forEach(t=>{if(t.epicId&&!eids.has(t.epicId))t.epicId="";});
   const tids=new Set(d.tickets.map(t=>t.id)),cids=new Set(d.contacts.map(c=>c.id));
   d.patterns.forEach(p=>{p.ticketIds=p.ticketIds.filter(x=>tids.has(x));p.contactIds=p.contactIds.filter(x=>cids.has(x));});
-  d.tickets.forEach(t=>{t.contactIds=t.contactIds.filter(x=>cids.has(x));});
+  d.tickets.forEach(t=>{t.contactIds=t.contactIds.filter(x=>cids.has(x));
+    /* drop dead blockers and any self-reference a hand-edit could introduce */
+    t.blockedBy=t.blockedBy.filter(x=>tids.has(x)&&x!==t.id);});
   /* a decision outlives what it pointed at — keep the record, clear the dead link */
   d.decisions.forEach(x=>{if(x.ticketId&&!tids.has(x.ticketId))x.ticketId="";
     if(x.epicId&&!eids.has(x.epicId))x.epicId="";});
@@ -1180,6 +1203,26 @@ function tpsForTeam(team){return state.people.filter(p=>p.team===team)
 function subProg(t){if(!t.subtasks.length)return null;
   return {done:t.subtasks.filter(x=>x.done).length,total:t.subtasks.length};}
 function subNext(t){return t.subtasks.find(x=>!x.done)||null;}
+/* ---------- cross-ticket dependencies ----------
+   The seam between his two teams is where work actually stalls: a Portal ticket
+   waiting on a P&C deliverable used to live only as free text in an update. */
+function blockersOf(t){return (t.blockedBy||[]).map(ticketByRef).filter(Boolean);}
+function openBlockersOf(t){return blockersOf(t).filter(isOpen);}
+function blockingList(id){return state.tickets.filter(t=>(t.blockedBy||[]).includes(id));}
+function openBlockingList(id){return blockingList(id).filter(isOpen);}
+/* every blocker finished but this is still open — the moment to say "you can start now" */
+function nowUnblocked(t){return isOpen(t)&&(t.blockedBy||[]).length>0&&openBlockersOf(t).length===0;}
+function crossTeamBlockers(t){return openBlockersOf(t).filter(b=>b.team!==t.team);}
+/* walking the chain stops A→B→A ever being created; also caps runaway depth */
+function wouldCycle(ticketId,candidateBlockerId){
+  if(ticketId===candidateBlockerId)return true;
+  const seen=new Set();const walk=id=>{
+    if(id===ticketId)return true;
+    if(seen.has(id))return false;seen.add(id);
+    const t=ticketByRef(id);if(!t)return false;
+    return (t.blockedBy||[]).some(walk);};
+  return walk(candidateBlockerId);
+}
 /* ---------- agenda (points to raise in an upcoming sync) ---------- */
 function agendaFor(team){return state.agenda.filter(a=>a.team===team&&!a.done);}
 /* ---------- meetings (non-sync calls) ---------- */
@@ -1544,6 +1587,16 @@ function renderToday(){
   cards.push(dashCard("📈 Forecast vs contract",fcCards.map(x=>({
     main:x.tm.name+" — "+quarterLabel(x.sig.nq),sub:(x.sig.dir==="up"?"negotiate ~"+Math.abs(x.sig.pct)+"% more":"could reduce ~"+Math.abs(x.sig.pct)+"%"),
     go:()=>{effortTeam=x.tm.id;effortTab="capacity";view="effort";renderApp();}})),""));
+  /* a blocker finished — the dependent can move, and nobody else will notice */
+  const unblocked=state.tickets.filter(nowUnblocked);
+  cards.push(dashCard("✅ Unblocked — blocker is done",unblocked.map(t=>({
+    main:ticketLabel(t),sub:teamOf(t.team).name+" · was waiting on "+blockersOf(t).map(b=>b.ticketId||"?").join(", "),
+    go:()=>gotoTicket(t.id,"work")})),"good"));
+  /* handoffs stuck across the seam between his two teams */
+  const crossBlocked=state.tickets.filter(t=>isOpen(t)&&crossTeamBlockers(t).length);
+  cards.push(dashCard("⛓ Waiting on the other team",crossBlocked.map(t=>({
+    main:ticketLabel(t),sub:"needs "+crossTeamBlockers(t).map(b=>b.ticketId||"?").join(", "),
+    go:()=>gotoTicket(t.id,"work")})),"alert"));
   /* slipped commitments */
   cards.push(dashCard("⚠ Slipped commitments",missed.map(t=>({
     main:ticketLabel(t),sub:`ETA ${fmtDate(latestPromise(t).eta)} · ${slipCount(t)?slipCount(t)+"× slipped":"missed"}`,go:()=>gotoTicket(t.id)
@@ -1732,6 +1785,8 @@ function renderTicketSidebar(){
         ${miss?`<span class="warnchip bad">ETA missed</span>`:sl?`<span class="warnchip">${sl}× slipped</span>`:""}
         ${gateProg(t)?`<span class="warnchip info">🚥 ${gateProg(t).done}/${gateProg(t).total}</span>`:""}
         ${subProg(t)?`<span class="warnchip info">☑ ${subProg(t).done}/${subProg(t).total}</span>`:""}
+        ${nowUnblocked(t)?`<span class="warnchip good">✅ unblocked</span>`
+          :openBlockersOf(t).length?`<span class="warnchip ${crossTeamBlockers(t).length?"bad":""}">⛓ ${openBlockersOf(t).length}</span>`:""}
         ${isStalled(t)?`<span class="warnchip bad">🧊 ${daysSince(lastMovementTs(t))}d</span>`
           :isOpen(t)&&stale>=state.settings.staleDays?`<span class="warnchip info">🕰 ${stale}d</span>`:""}
         ${t.bossRelevant?`<span class="bossflag">BOSS</span>`:""}
@@ -1797,6 +1852,37 @@ function duplicateTicket(t){
   activeId=c.id;activeTab="work";renderApp();
   toast("Duplicated — set the new ID and title");
 }
+function openDependencyModal(t){
+  const root=document.getElementById("modalRoot");
+  let q="";
+  const draw=()=>{
+    /* anything that would create a loop is shown but disabled, with the reason —
+       silently hiding it would look like the ticket had gone missing */
+    const list=state.tickets.filter(x=>x.id!==t.id&&!t.blockedBy.includes(x.id))
+      .filter(x=>!q||(x.ticketId+" "+x.title).toLowerCase().includes(q.toLowerCase()))
+      .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,60);
+    root.innerHTML=`<div class="modal-bg"><div class="modal" style="width:560px"><h2>What is ${esc(t.ticketId||"this ticket")} waiting on?</h2>
+      <p class="faint" style="font-size:12px;margin-top:-8px">Pick the ticket that has to finish first. Cross-team picks are the useful ones — that's the handoff you'd otherwise only spot in a call.</p>
+      <div class="field"><input id="dp-q" value="${esc(q)}" placeholder="Filter by ID or title…" autocomplete="off"></div>
+      <div class="picklist">${list.length?list.map(x=>{const bad=wouldCycle(t.id,x.id);
+        return `<div class="pickrow" ${bad?"":`data-dppick="${esc(x.id)}"`} style="${bad?"opacity:.45;cursor:not-allowed":""}">
+          <span class="tid" style="color:${teamColor(x.team)}">${esc(x.ticketId||"—")}</span>
+          ${teamPill(x.team)}
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</span>
+          ${bad?`<span class="faint" style="font-size:11px">would loop</span>`:`<span class="pill ${MY_STATUS[x.myStatus].cls}">${MY_STATUS[x.myStatus].label}</span>`}</div>`;}).join("")
+        :`<div class="pickrow faint">No tickets match.</div>`}</div>
+      <div class="modal-foot"><button id="dp-x" class="primary">Done</button></div></div></div>`;
+    const qi=root.querySelector("#dp-q");
+    qi.oninput=e=>{q=e.target.value;draw();
+      const n=document.getElementById("dp-q");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}};
+    root.querySelector("#dp-x").onclick=()=>{root.innerHTML="";renderApp();};
+    root.querySelectorAll("[data-dppick]").forEach(r=>r.onclick=()=>{
+      t.blockedBy.push(r.dataset.dppick);touch(t);draw();
+      toast("Now waiting on "+(ticketByRef(r.dataset.dppick).ticketId||"that ticket"));});
+    qi.focus();
+  };
+  draw();
+}
 function renderTicketDetail(){
   const det=document.getElementById("detail");
   const t=activeTicket();
@@ -1828,6 +1914,7 @@ function renderTicketDetail(){
   det.querySelector("#tkDel").onclick=()=>{
     if(!confirm("Delete "+(t.ticketId||"this ticket")+" and everything on it?"))return;
     state.tickets=state.tickets.filter(x=>x.id!==t.id);
+    state.tickets.forEach(x=>{x.blockedBy=x.blockedBy.filter(b=>b!==t.id);});
     state.syncs.forEach(s=>{s.covered=s.covered.filter(c=>c.ticketId!==t.id);});
     state.agenda.forEach(a=>{if(a.ticketId===t.id)a.ticketId="";});
     activeId=null;markDirty();renderApp();toast("Deleted");};
@@ -1885,6 +1972,13 @@ function tabWork(body,t){
   const disagree=t.theirStatus&&statusDisagrees(t);
   body.innerHTML=`
     ${disagree?`<div class="disagree">⚠ <b>Status mismatch.</b> They say “${esc(t.theirStatus)}”, you have it as <b>${MY_STATUS[t.myStatus].label}</b>. Worth asking about.</div>`:""}
+    ${(()=>{const ob=openBlockersOf(t),xt=crossTeamBlockers(t);
+      if(nowUnblocked(t))return `<div class="depbar clear">✅ <div><b>Every blocker is done.</b> This can move — worth confirming they've picked it back up.
+        <div class="db-links">${blockersOf(t).map(b=>`<span class="depchip done" data-depgo="${esc(b.id)}">✓ ${esc(b.ticketId||"ticket")}</span>`).join("")}</div></div></div>`;
+      if(!ob.length)return "";
+      return `<div class="depbar ${xt.length?"cross":"blocked"}">⛓ <div><b>Waiting on ${ob.length} ticket${ob.length===1?"":"s"}.</b>
+        ${xt.length?`${xt.length} of them sit${xt.length===1?"s":""} with <b>another team</b> — that's a handoff worth chasing directly.`:""}
+        <div class="db-links">${ob.map(b=>`<span class="depchip ${b.team!==t.team?"cross":""}" data-depgo="${esc(b.id)}">${esc(b.ticketId||"ticket")} · ${esc(teamOf(b.team).name)}${slipCount(b)?" · "+slipCount(b)+"× slipped":""}</span>`).join("")}</div></div></div>`;})()}
     <div id="w-look"></div>
     ${patternForTicket(t.id)?`<div class="lookwrap">
       <div class="lk-h">⟲ Part of a known pattern</div>
@@ -1956,6 +2050,22 @@ function tabWork(body,t){
       ${x.note?`<div class="sub-note" data-subnx="${x.id}">↳ ${esc(x.note)}</div>`:""}
     </div>`).join(""):`<p class="faint" style="font-size:12px">No subtasks — this ticket is a single unit of work.</p>`}
 
+    <div class="sec-title"><h3>Dependencies</h3><div class="ln"></div>
+      <button class="sm" id="w-adddep">＋ Waiting on…</button></div>
+    <p class="faint" style="font-size:11.5px;margin:-6px 0 8px">What this ticket is waiting on. The reverse — what it holds up — is worked out automatically, so the two can't disagree.</p>
+    ${blockersOf(t).length?blockersOf(t).map(b=>`<div class="deprow ${isOpen(b)?"open":"closed"}" data-depopen="${esc(b.id)}">
+      <span class="dp-id" style="color:${teamColor(b.team)}">${esc(b.ticketId||"—")}</span>
+      ${teamPill(b.team)}
+      <span class="dp-t">${esc(b.title||"(untitled)")}</span>
+      <span class="pill ${MY_STATUS[b.myStatus].cls}">${MY_STATUS[b.myStatus].label}</span>
+      <button class="ghost sm nact" data-depdel="${esc(b.id)}" title="Remove this dependency">✕</button></div>`).join("")
+      :`<p class="faint" style="font-size:12px">Not waiting on anything.</p>`}
+    ${blockingList(t.id).length?`<div style="margin-top:12px"><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700">This is holding up ${blockingList(t.id).length} ticket${blockingList(t.id).length===1?"":"s"}</div>
+      ${blockingList(t.id).map(b=>`<div class="deprow ${isOpen(b)?"open":"closed"}" data-depopen="${esc(b.id)}" style="margin-top:6px">
+        <span class="dp-id" style="color:${teamColor(b.team)}">${esc(b.ticketId||"—")}</span>
+        ${teamPill(b.team)}<span class="dp-t">${esc(b.title||"(untitled)")}</span>
+        <span class="pill ${MY_STATUS[b.myStatus].cls}">${MY_STATUS[b.myStatus].label}</span></div>`).join("")}</div>`:""}
+
     <div class="sec-title"><h3>For my boss</h3><div class="ln"></div></div>
     <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;letter-spacing:0;color:var(--txt)">
       <input type="checkbox" id="w-boss" style="width:auto" ${t.bossRelevant?"checked":""}> Flag this for my boss discussions</label>
@@ -2021,6 +2131,12 @@ function tabWork(body,t){
   body.querySelectorAll("[data-subdel]").forEach(b=>b.onclick=()=>{
     t.subtasks=t.subtasks.filter(y=>y.id!==b.dataset.subdel);touch(t);renderApp();});
   on("#w-boss","onchange",e=>{t.bossRelevant=e.target.checked;touch(t);renderApp();});
+  /* dependencies */
+  body.querySelectorAll("[data-depgo]").forEach(c=>c.onclick=()=>gotoTicket(c.dataset.depgo,"work"));
+  body.querySelectorAll("[data-depopen]").forEach(r=>r.onclick=()=>gotoTicket(r.dataset.depopen,"work"));
+  body.querySelectorAll("[data-depdel]").forEach(b=>b.onclick=e=>{e.stopPropagation();
+    t.blockedBy=t.blockedBy.filter(x=>x!==b.dataset.depdel);touch(t);renderApp();});
+  const adep=body.querySelector("#w-adddep");if(adep)adep.onclick=()=>openDependencyModal(t);
   const wla=body.querySelector("#w-logappr");if(wla)wla.onclick=()=>openApprovalModal(t.team,t.id);
   body.querySelectorAll("[data-wapok]").forEach(b=>b.onclick=()=>{const a=state.approvals.find(x=>x.id===b.dataset.wapok);
     a.status="approved";a.decidedOn=todayStr();markDirty();renderTicketDetail();toast("Approved — recorded");});
@@ -2244,6 +2360,11 @@ function queueReasons(t,team){
   if(oh.length)out.push({w:50,cls:"",txt:"🚧 "+HURDLE_KINDS[oh[0].kind].label});
   if(!t.updates.length)out.push({w:40,cls:"",txt:"never updated"});
   else if(lastTs&&lastUpdateTs(t)<lastTs)out.push({w:30,cls:"",txt:"nothing since last sync"});
+  if(nowUnblocked(t))out.push({w:58,cls:"",txt:"✅ unblocked — can start"});
+  const obq=openBlockersOf(t);
+  if(obq.length){const xt=crossTeamBlockers(t);
+    out.push({w:xt.length?46:34,cls:xt.length?"bad":"",
+      txt:"⛓ waiting on "+(obq[0].ticketId||"a ticket")+(xt.length?" ("+teamOf(xt[0].team).name+")":"")});}
   const ds=daysSince(lastUpdateTs(t));
   if(isStalled(t))out.push({w:38,cls:"bad",txt:"🧊 no movement "+daysSince(lastMovementTs(t))+"d"});
   else if(ds>=state.settings.staleDays&&t.updates.length)out.push({w:28,cls:"info",txt:"🕰 "+ds+"d quiet"});
@@ -3532,6 +3653,19 @@ function renderEpicDetail(){
           <span class="di-sub">${t.assignees.length?esc(t.assignees.map(personName).join(", ")):"unassigned"}${subProg(t)?" · ☑ "+subProg(t).done+"/"+subProg(t).total+(subNext(t)?" — next: "+esc(subNext(t).title||""):""):""}${slipCount(t)?" · "+slipCount(t)+"× slipped":""}</span></div>`).join("")}</div>`).join("")
         :`<p class="faint" style="font-size:12px">No tickets linked yet. Use 🔗 Link tickets, or set the epic on a ticket's Work tab.</p>`}
 
+      ${(()=>{const edges=s.ts.filter(t=>(t.blockedBy||[]).length).flatMap(t=>blockersOf(t).map(b=>({t,b})));
+        if(!edges.length)return "";
+        const stuck=edges.filter(e=>isOpen(e.b)).length;
+        return `<div class="sec-title" style="margin-top:22px"><h3>Dependency chain</h3><div class="ln"></div>
+          ${stuck?`<span class="warnchip">${stuck} still waiting</span>`:`<span class="warnchip good">all cleared</span>`}</div>
+        ${edges.map(({t,b})=>`<div class="deprow ${isOpen(b)?"open":"closed"}" data-epdep="${esc(t.id)}">
+          <span class="dp-id" style="color:${teamColor(t.team)}">${esc(t.ticketId||"—")}</span>
+          <span class="faint" style="font-size:11.5px">waits on</span>
+          <span class="dp-id" style="color:${teamColor(b.team)}">${esc(b.ticketId||"—")}</span>
+          ${b.team!==t.team?`<span class="warnchip bad">cross-team</span>`:""}
+          <span class="dp-t">${esc(b.title||"")}</span>
+          <span class="pill ${MY_STATUS[b.myStatus].cls}">${MY_STATUS[b.myStatus].label}</span></div>`).join("")}`;})()}
+
       <div class="sec-title" style="margin-top:22px"><h3>Meetings about this epic</h3><div class="ln"></div>
         <button class="sm" id="ep-meet">＋ Log a meeting</button></div>
       ${(()=>{const ms=meetingsForEpic(e.id).sort((a,b)=>a.date<b.date?1:-1);
@@ -3568,6 +3702,7 @@ function renderEpicDetail(){
   det.querySelectorAll("[data-goh]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.goh,"hurdles"));
   q("#ep-meet").onclick=()=>openMeetingModal({kind:"epic",epicId:e.id,title:e.name+" — check-in"});
   det.querySelectorAll("[data-epmt]").forEach(d=>d.onclick=()=>{activeMeetingId=d.dataset.epmt;activeSyncId=null;view="sync";renderApp();});
+  det.querySelectorAll("[data-epdep]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.epdep,"work"));
 }
 function openEpicLinkModal(e){
   const root=document.getElementById("modalRoot");
@@ -4720,6 +4855,8 @@ function seedDemo(){
   const sysD=normTicket({ticketId:"DECOM-DELTA",source:"ServiceNow",team:"pnc",title:"Decommission system DELTA",
     tags:["Data fix"],priority:"P4",myStatus:"new",theirStatus:"New",epicId:decom.id,
     raisedDate:addDays(-3),subtasks:decomSteps()});
+  /* the cross-team handoff: the Portal dashboard can't finish until P&C deliver the extract */
+  t6.blockedBy=[t5.id];
   [sysB,sysC,sysD].forEach(t=>{if(t.raisedDate)t.createdAt=new Date(t.raisedDate+"T09:00:00").getTime();});
   state=emptyState();
   state.people=[john,meera,deepa];

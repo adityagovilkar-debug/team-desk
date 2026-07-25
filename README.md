@@ -302,6 +302,21 @@ Built for cases like: a governance call with the (outsourced) Portal lead about 
 next quarter's hours; an impromptu check-in on the DECOM epic; a 1:1 with a P&C person about
 their demands.
 
+## Dependencies between tickets
+
+You oversee two teams that hand work to each other, and that seam is where things stall. A
+ticket can record **what it's waiting on**; the inverse ("what this holds up") is *derived*, so
+the two halves can never drift apart.
+
+- A banner on the Work tab names the blockers, and turns **red when the blocker belongs to the
+  other team** — with the blocker's own slippage shown, so *"waiting on PC-8903 · P&C IT · 2×
+  slipped"* tells you the whole story at a glance.
+- When every blocker closes, the ticket flips to **"✅ unblocked — can start"**: a Today card and
+  the top of the sync queue. That moment otherwise passes unnoticed.
+- The **epic** page draws the dependency chain, flagging cross-team edges.
+- Loops are impossible — the picker walks the chain and disables any choice that would create
+  one, showing *"would loop"* rather than silently hiding it.
+
 ## Subtasks
 
 A flat checklist inside one ticket — title, done, optional owner and note per step. Built for
