@@ -253,6 +253,17 @@
   .ares:hover{color:var(--txt)}
   .carried{border-left:3px solid var(--amber)}
 
+  /* risk register */
+  .rcard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer}
+  .rcard:hover{background:var(--panel2)}
+  .rcard.active{border-color:var(--accent);background:var(--panel2)}
+  .rcard.sev-high{border-left-color:var(--red)} .rcard.sev-medium{border-left-color:var(--amber)}
+  .rcard.sev-low{border-left-color:var(--teal)}
+  .rcard.st-closed{opacity:.6}
+  .rcard .rt{font-weight:650;font-size:13.5px}
+  .rcard .rm{font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .revchip{font-size:10px;font-weight:700;color:var(--amber);border:1px solid var(--tint-amber-bd);background:var(--tint-amber-bg);border-radius:4px;padding:1px 6px}
+
   /* dependencies */
   .depbar{display:flex;align-items:flex-start;gap:10px;border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:13px;border:1px solid;line-height:1.5}
   .depbar.blocked{border-color:var(--tint-amber-bd);background:var(--tint-amber-bg)}
@@ -749,6 +760,12 @@ const APPROVAL_KINDS={
   other:{label:"Other",icon:"•"}
 };
 const MONTH_ABBR=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+/* Risks are the things that outlive any one ticket — "the AD team always takes a
+   week", "cutting Q4 hours before LUCA lands". Hurdles belong to a ticket; these
+   don't, and without a home they die in a meeting note. */
+const RISK_SEV={high:{label:"High",cls:"blocked"},medium:{label:"Medium",cls:"review"},low:{label:"Low",cls:"progress"}};
+const RISK_STATUS={open:{label:"Open"},mitigating:{label:"Mitigating"},accepted:{label:"Accepted"},closed:{label:"Closed"}};
+const RISK_REVIEW_DAYS=30;   /* default gap before a risk asks to be looked at again */
 /* Words that carry no signal in a ticket corpus. "error", "issue", "user" and friends
    are in here because they appear in half the tickets and would match everything. */
 const STOPWORDS=new Set(("the a an and or but if then for to of in on at by with from is are was were be been being "+
@@ -777,14 +794,14 @@ const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let state={version:1,settings:{teams:JSON.parse(JSON.stringify(DEF_TEAMS)),tags:[...DEF_TAGS],sources:[...DEF_SOURCES],
   encryption:false,autosave:true,staleDays:7,syncDays:{portal:[2,4],pnc:[]}},
   tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],
-  capacity:[],efforts:[],forecasts:[],approvals:[]};
+  capacity:[],efforts:[],forecasts:[],approvals:[],risks:[]};
 
 let fileHandle=null, dirty=false, autoSaveTimer=null, lastSaveAuto=false;
 let view="today";
 let activeId=null, activeTab="work";
 let activeSyncId=null, syncFocusId=null, activeMeetingId=null;
 let activePersonId=null, activeEpicId=null, peopleMatrix=false, matrixSkill="";
-let activePatternId=null, activeContactId=null, knowledgeTab="patterns";
+let activePatternId=null, activeContactId=null, activeRiskId=null, knowledgeTab="patterns";
 let effortTab="capacity", effortTeam="", effortQuarter="";
 let masterPassword=null, pendingEncrypted=null;
 
@@ -818,8 +835,8 @@ async function recryptSnapshots(oldPw,newPw){try{
 
 /* ---------- persistence ---------- */
 let hadContent=false;
-function contentCount(){return state.tickets.length+state.people.length+state.syncs.length+state.contacts.length+state.epics.length+state.patterns.length+state.decisions.length+state.agenda.length+state.meetings.length+state.efforts.length+state.approvals.length;}
-function isValidState(s){return s&&typeof s==="object"&&Array.isArray(s.tickets)&&Array.isArray(s.people)&&Array.isArray(s.contacts)&&Array.isArray(s.syncs)&&Array.isArray(s.epics)&&Array.isArray(s.patterns)&&Array.isArray(s.decisions)&&Array.isArray(s.agenda)&&Array.isArray(s.meetings)&&Array.isArray(s.capacity)&&Array.isArray(s.efforts)&&Array.isArray(s.forecasts)&&Array.isArray(s.approvals);}
+function contentCount(){return state.tickets.length+state.people.length+state.syncs.length+state.contacts.length+state.epics.length+state.patterns.length+state.decisions.length+state.agenda.length+state.meetings.length+state.efforts.length+state.approvals.length+state.risks.length;}
+function isValidState(s){return s&&typeof s==="object"&&Array.isArray(s.tickets)&&Array.isArray(s.people)&&Array.isArray(s.contacts)&&Array.isArray(s.syncs)&&Array.isArray(s.epics)&&Array.isArray(s.patterns)&&Array.isArray(s.decisions)&&Array.isArray(s.agenda)&&Array.isArray(s.meetings)&&Array.isArray(s.capacity)&&Array.isArray(s.efforts)&&Array.isArray(s.forecasts)&&Array.isArray(s.approvals)&&Array.isArray(s.risks);}
 function noteContent(){if(isValidState(state)&&contentCount()>0)hadContent=true;}
 function safeToPersist(){return isValidState(state)&&!(hadContent&&contentCount()===0);}
 function markDirty(){noteContent();dirty=true;renderSaveState();backupLocal();scheduleAutoSave();}
@@ -1010,6 +1027,14 @@ function normApproval(a){return {id:a.id||uid(),team:a.team||"",kind:APPROVAL_KI
   ticketId:a.ticketId||"",title:a.title||"",requestedOn:a.requestedOn||todayStr(),
   status:["pending","approved","rejected"].includes(a.status)?a.status:"pending",decidedOn:a.decidedOn||"",
   via:a.via||"email",note:a.note||"",createdAt:a.createdAt||Date.now()};}
+function normRisk(r){return {id:r.id||uid(),title:r.title||"",detail:r.detail||"",
+  severity:RISK_SEV[r.severity]?r.severity:"medium",
+  status:RISK_STATUS[r.status]?r.status:"open",
+  owner:r.owner||"",team:r.team||"",
+  raisedOn:r.raisedOn||todayStr(),reviewOn:r.reviewOn||"",closedOn:r.closedOn||"",
+  mitigation:r.mitigation||"",
+  ticketIds:[...new Set(r.ticketIds||[])],epicIds:[...new Set(r.epicIds||[])],
+  createdAt:r.createdAt||Date.now(),updatedAt:r.updatedAt||Date.now()};}
 function normMeeting(m){return {id:m.id||uid(),date:m.date||todayStr(),
   kind:MEETING_KINDS[m.kind]?m.kind:"general",title:m.title||"",attendees:m.attendees||"",
   team:m.team||"",epicId:m.epicId||"",personIds:[...new Set(m.personIds||[])],ticketIds:[...new Set(m.ticketIds||[])],
@@ -1052,6 +1077,7 @@ function migrate(d){
   d.efforts=(d.efforts||[]).map(normEffort);
   d.forecasts=(d.forecasts||[]).map(normForecast);
   d.approvals=(d.approvals||[]).map(normApproval);
+  d.risks=(d.risks||[]).map(normRisk);
   /* drop links that point at something deleted, in both directions */
   const eids=new Set(d.epics.map(e=>e.id));
   d.tickets.forEach(t=>{if(t.epicId&&!eids.has(t.epicId))t.epicId="";});
@@ -1069,6 +1095,7 @@ function migrate(d){
     m.personIds=m.personIds.filter(x=>pids.has(x));m.ticketIds=m.ticketIds.filter(x=>tids.has(x));});
   d.decisions.forEach(x=>{if(x.meetingId&&!mids.has(x.meetingId))x.meetingId="";});
   d.efforts.forEach(e=>{if(e.ticketId&&!tids.has(e.ticketId))e.ticketId="";});
+  d.risks.forEach(r=>{r.ticketIds=r.ticketIds.filter(x=>tids.has(x));r.epicIds=r.epicIds.filter(x=>eids.has(x));});
   d.approvals.forEach(a=>{if(a.ticketId&&!tids.has(a.ticketId))a.ticketId="";});
   return d;
 }
@@ -1090,7 +1117,7 @@ async function loadFromText(txt,name){
 async function openFile(){if(!supportsFS)return importViaInput();
   try{const[h]=await window.showOpenFilePicker({types:[{description:"Team Desk data",accept:{"application/json":[".json"]}}]});
     const f=await h.getFile();if(!await loadFromText(await f.text(),h.name))return;
-    fileHandle=h;dirty=false;setFileLabel(h.name);rememberHandle();activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=null;backupLocal();renderApp();toast("Opened "+h.name);
+    fileHandle=h;dirty=false;setFileLabel(h.name);rememberHandle();activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=null;backupLocal();renderApp();toast("Opened "+h.name);
   }catch(e){if(e.name!=="AbortError")toast("Couldn't open: "+e.message,true);}}
 function saveGuardOk(action){
   if(!isValidState(state)){toast("Save blocked — data looks corrupted; your file was NOT overwritten.",true);return false;}
@@ -1110,7 +1137,7 @@ async function exportDownload(){if(!saveGuardOk("download"))return;
   dirty=false;renderSaveState();maybeSnapshot();toast("Downloaded data file"+(isEncrypted()?" 🔒":""));}
 function importViaInput(){const i=document.createElement("input");i.type="file";i.accept=".json,application/json";
   i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();
-    r.onload=async()=>{try{if(!await loadFromText(r.result,f.name))return;dirty=false;activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=null;backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
+    r.onload=async()=>{try{if(!await loadFromText(r.result,f.name))return;dirty=false;activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=null;backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
     r.readAsText(f);};i.click();}
 
 function promptPassword(title,confirmIt){
@@ -1222,6 +1249,45 @@ function wouldCycle(ticketId,candidateBlockerId){
     const t=ticketByRef(id);if(!t)return false;
     return (t.blockedBy||[]).some(walk);};
   return walk(candidateBlockerId);
+}
+/* ---------- risk register ---------- */
+function openRisks(){return state.risks.filter(r=>r.status!=="closed");}
+function liveRisks(){return state.risks.filter(r=>r.status==="open"||r.status==="mitigating");}
+function riskNeedsReview(r){return r.status!=="closed"&&r.reviewOn&&daysUntil(r.reviewOn)<=0;}
+function risksForEpic(id){return state.risks.filter(r=>r.epicIds.includes(id));}
+function risksForTicket(id){return state.risks.filter(r=>r.ticketIds.includes(id));}
+function sevRank(r){return r.severity==="high"?0:r.severity==="medium"?1:2;}
+/* Derived risk candidates: a hurdle KIND that keeps recurring across tickets isn't a
+   ticket problem any more, it's a systemic one. Same accept/dismiss contract as the
+   observation suggestions, so a waved-away nudge stays away. */
+function suggestRisks(){
+  const dis=new Set(state.settings.dismissedSuggestions||[]);
+  const byKind={};
+  state.tickets.forEach(t=>t.hurdles.forEach(h=>{
+    const end=h.resolvedOn||todayStr();
+    const days=Math.max(0,Math.round((new Date(end+"T00:00:00")-new Date(h.raisedOn+"T00:00:00"))/86400000));
+    const k=h.kind;(byKind[k]=byKind[k]||{n:0,days:0,tickets:new Set()});
+    byKind[k].n++;byKind[k].days+=days;byKind[k].tickets.add(t.id);}));
+  const out=[];
+  Object.entries(byKind).forEach(([k,v])=>{
+    /* What makes it systemic is the same KIND of blocker hitting SEVERAL tickets for
+       real time — not how many times it was logged. An early version gated on
+       occurrence count and stayed silent on 46 days lost across two tickets. */
+    if(v.tickets.size<2||v.days<25)return;
+    const key="risk:"+k+":"+v.tickets.size;if(dis.has(key))return;
+    const label=HURDLE_KINDS[k].label;
+    /* already covered? either the wording names this kind, or a live risk is already
+       attached to most of the same tickets */
+    if(liveRisks().some(r=>(r.title+" "+r.detail).toLowerCase().includes(label.toLowerCase())))return;
+    if(liveRisks().some(r=>{const ov=[...v.tickets].filter(id=>r.ticketIds.includes(id)).length;
+      return ov>=Math.ceil(v.tickets.size/2);}))return;
+    out.push({key,kind:k,
+      title:label+" delays are a recurring pattern",
+      detail:label+" hurdles have cost roughly "+v.days+" days across "+v.tickets.size+" tickets ("+v.n+" occurrences). This is no longer a one-off.",
+      ticketIds:[...v.tickets],
+      why:v.days+" days lost across "+v.tickets.size+" tickets"});
+  });
+  return out.sort((a,b)=>b.ticketIds.length-a.ticketIds.length);
 }
 /* ---------- agenda (points to raise in an upcoming sync) ---------- */
 function agendaFor(team){return state.agenda.filter(a=>a.team===team&&!a.done);}
@@ -1587,6 +1653,19 @@ function renderToday(){
   cards.push(dashCard("📈 Forecast vs contract",fcCards.map(x=>({
     main:x.tm.name+" — "+quarterLabel(x.sig.nq),sub:(x.sig.dir==="up"?"negotiate ~"+Math.abs(x.sig.pct)+"% more":"could reduce ~"+Math.abs(x.sig.pct)+"%"),
     go:()=>{effortTeam=x.tm.id;effortTab="capacity";view="effort";renderApp();}})),""));
+  /* live high-severity risks, and any risk whose review date has come round */
+  const hiRisks=liveRisks().filter(r=>r.severity==="high");
+  cards.push(dashCard("⚠ High risks",hiRisks.map(r=>({
+    main:r.title||"(untitled)",sub:RISK_STATUS[r.status].label+(r.owner?" · "+r.owner:""),
+    go:()=>{activeRiskId=r.id;knowledgeTab="risks";view="knowledge";renderApp();}})),"alert"));
+  const dueRisks=state.risks.filter(riskNeedsReview);
+  cards.push(dashCard("🔁 Risks due for review",dueRisks.map(r=>({
+    main:r.title||"(untitled)",sub:"review was "+fmtDate(r.reviewOn),
+    go:()=>{activeRiskId=r.id;knowledgeTab="risks";view="knowledge";renderApp();}})),"warn"));
+  const rsug=suggestRisks();
+  cards.push(dashCard("⚠ Possible systemic risk",rsug.map(x=>({
+    main:x.title,sub:x.why,
+    go:()=>{activeRiskId=null;knowledgeTab="risks";view="knowledge";renderApp();}})),""));
   /* a blocker finished — the dependent can move, and nobody else will notice */
   const unblocked=state.tickets.filter(nowUnblocked);
   cards.push(dashCard("✅ Unblocked — blocker is done",unblocked.map(t=>({
@@ -3281,30 +3360,137 @@ function renderDecisionLedger(det){
     activeEpicId=c.dataset.dcep;view="epics";renderApp();});
 }
 
+/* ===================== RISK REGISTER ===================== */
+function activeRisk(){return state.risks.find(r=>r.id===activeRiskId);}
+function newRisk(pre){
+  const r=normRisk(Object.assign({title:"",reviewOn:addDays(RISK_REVIEW_DAYS)},pre||{}));
+  state.risks.unshift(r);activeRiskId=r.id;knowledgeTab="risks";view="knowledge";markDirty();renderApp();
+  toast("Risk added — give it a title");
+}
+function renderRiskDetail(det){
+  const r=activeRisk();
+  if(!r){
+    const sg=suggestRisks();
+    det.innerHTML=`<div class="dash">
+      <div class="dash-head"><h1>Risk register</h1><span class="faint">what threatens delivery, beyond any one ticket</span>
+        <span style="flex:1"></span><button class="primary sm" id="rk-new">＋ New risk</button></div>
+      <p class="muted" style="font-size:12.5px;max-width:640px">Hurdles belong to a ticket. These don't — a team that is reliably slow, an exposure you're carrying into next quarter, a dependency you can't control. They feed Today and the Boss Brief.</p>
+      ${sg.length?`<div class="sec-title" style="margin-top:20px"><h3>Suggested from your data</h3><div class="ln"></div></div>
+        ${sg.map(x=>`<div class="sugg" data-rsk="${esc(x.key)}">
+          <div class="sg-why">Suggested — ${esc(x.why)}</div>
+          <div class="sg-txt"><b>${esc(x.title)}</b><br>${esc(x.detail)}</div>
+          <div class="sg-act"><button class="sm primary" data-rsacc="${esc(x.key)}">Add as a risk</button>
+            <button class="sm ghost" data-rsdis="${esc(x.key)}">Not a risk</button></div></div>`).join("")}`:""}
+      ${state.risks.length?`<div class="sec-title" style="margin-top:20px"><h3>All risks</h3><div class="ln"></div></div>
+        ${state.risks.slice().sort((a,b)=>(a.status==="closed"?1:0)-(b.status==="closed"?1:0)||sevRank(a)-sevRank(b)).map(x=>`<div class="dashitem" data-rgo="${x.id}">
+          <span class="pill ${RISK_SEV[x.severity].cls}">${RISK_SEV[x.severity].label}</span>
+          <span class="di-main">${esc(x.title||"(untitled)")}</span>
+          <span class="di-sub">${esc(RISK_STATUS[x.status].label)}${x.owner?" · "+esc(x.owner):""}</span></div>`).join("")}`
+        :`<p class="faint" style="font-size:12px;margin-top:16px">Nothing logged yet.</p>`}
+    </div>`;
+    det.querySelector("#rk-new").onclick=()=>newRisk();
+    det.querySelectorAll("[data-rgo]").forEach(d=>d.onclick=()=>{activeRiskId=d.dataset.rgo;renderApp();});
+    det.querySelectorAll("[data-rsacc]").forEach(b=>b.onclick=()=>{
+      const x=sg.find(y=>y.key===b.dataset.rsacc);
+      dismissSuggestion(x.key);
+      newRisk({title:x.title,detail:x.detail,severity:"medium",ticketIds:x.ticketIds});});
+    det.querySelectorAll("[data-rsdis]").forEach(b=>b.onclick=()=>{dismissSuggestion(b.dataset.rsdis);renderApp();});
+    return;
+  }
+  const tks=r.ticketIds.map(ticketByRef).filter(Boolean);
+  const eps=r.epicIds.map(epicById).filter(Boolean);
+  det.innerHTML=`
+    <div class="detail-head">
+      <div class="dh-top"><div style="flex:1;min-width:0">
+        <div class="dh-id"><span class="pill ${RISK_SEV[r.severity].cls}">${RISK_SEV[r.severity].label} risk</span>
+          <span class="faint" style="font-weight:400">${esc(RISK_STATUS[r.status].label)}</span>
+          ${riskNeedsReview(r)?`<span class="revchip">review due</span>`:""}
+          ${r.team?teamPill(r.team):""}</div>
+        <h1 id="rk-title" style="cursor:text">${esc(r.title||"(untitled risk)")}</h1></div>
+        <button class="sm" id="rk-back">← All risks</button>
+        <button class="ghost" id="rk-del" title="Delete risk">🗑</button></div>
+      <div class="dh-dates"><span>Raised <b>${fmtDate(r.raisedOn)}</b></span>
+        <span>Review <b class="due ${r.reviewOn&&daysUntil(r.reviewOn)<=0?"over":""}">${r.reviewOn?fmtDate(r.reviewOn):"—"}</b></span>
+        ${r.closedOn?`<span>Closed <b>${fmtDate(r.closedOn)}</b></span>`:""}</div>
+      <div class="tabs"></div>
+    </div>
+    <div class="detail-body">
+      <div class="grid3">
+        <div class="field"><label>Severity</label><select id="rk-sev">${Object.entries(RISK_SEV).map(([k,v])=>`<option value="${k}" ${r.severity===k?"selected":""}>${v.label}</option>`).join("")}</select></div>
+        <div class="field"><label>Status</label><select id="rk-status">${Object.entries(RISK_STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?"selected":""}>${v.label}</option>`).join("")}</select></div>
+        <div class="field"><label>Owner</label><input id="rk-owner" value="${esc(r.owner)}" placeholder="who's carrying it"></div>
+      </div>
+      <div class="grid3">
+        <div class="field"><label>Team (optional)</label><select id="rk-team"><option value="">— none —</option>${state.settings.teams.map(t=>`<option value="${esc(t.id)}" ${r.team===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Raised on</label><input type="date" id="rk-raised" value="${esc(r.raisedOn)}"></div>
+        <div class="field"><label>Review on</label><input type="date" id="rk-review" value="${esc(r.reviewOn)}"></div>
+      </div>
+      <div class="field"><label>What's the risk?</label><textarea id="rk-detail" style="min-height:80px">${esc(r.detail)}</textarea></div>
+      <div class="field"><label>What are we doing about it?</label><textarea id="rk-mit" style="min-height:80px">${esc(r.mitigation)}</textarea></div>
+      <div class="row" style="margin-bottom:16px">
+        <button id="rk-reviewed" style="flex:0 0 auto">✓ Reviewed today — remind me in ${RISK_REVIEW_DAYS} days</button>
+        <span style="flex:1"></span></div>
+
+      <div class="sec-title"><h3>Linked demands</h3><div class="ln"></div></div>
+      <div class="chiprow">
+        ${tks.map(t=>`<span class="chip" data-rtdel="${esc(t.id)}">${esc(t.ticketId||"ticket")} <span class="x">✕</span></span>`).join("")}
+        <select id="rk-taddsel" style="width:auto;padding:3px 9px"><option value="">+ link a demand</option>
+          ${state.tickets.filter(t=>!r.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${esc(ticketLabel(t)).slice(0,50)}</option>`).join("")}</select></div>
+
+      <div class="sec-title" style="margin-top:20px"><h3>Linked epics</h3><div class="ln"></div></div>
+      <div class="chiprow">
+        ${eps.map(e=>`<span class="chip" data-redel="${esc(e.id)}">◆ ${esc(e.name)} <span class="x">✕</span></span>`).join("")}
+        ${state.epics.filter(e=>!r.epicIds.includes(e.id)).length?`<select id="rk-eaddsel" style="width:auto;padding:3px 9px"><option value="">+ link an epic</option>
+          ${state.epics.filter(e=>!r.epicIds.includes(e.id)).map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("")}</select>`:""}</div>
+    </div>`;
+  const q=x=>det.querySelector(x);
+  q("#rk-back").onclick=()=>{activeRiskId=null;renderApp();};
+  q("#rk-title").onclick=e=>editInline(e.target,r.title,v=>{r.title=v;touch(r);renderApp();});
+  q("#rk-sev").onchange=e=>{r.severity=e.target.value;touch(r);renderApp();};
+  q("#rk-status").onchange=e=>{r.status=e.target.value;
+    r.closedOn=r.status==="closed"?todayStr():"";touch(r);renderApp();};
+  q("#rk-owner").onchange=e=>{r.owner=e.target.value.trim();touch(r);};
+  q("#rk-team").onchange=e=>{r.team=e.target.value;touch(r);renderApp();};
+  q("#rk-raised").onchange=e=>{r.raisedOn=e.target.value;touch(r);renderApp();};
+  q("#rk-review").onchange=e=>{r.reviewOn=e.target.value;touch(r);renderApp();};
+  q("#rk-detail").onchange=e=>{r.detail=e.target.value;touch(r);};
+  q("#rk-mit").onchange=e=>{r.mitigation=e.target.value;touch(r);};
+  q("#rk-reviewed").onclick=()=>{r.reviewOn=addDays(RISK_REVIEW_DAYS);touch(r);renderApp();toast("Review date pushed out");};
+  q("#rk-del").onclick=()=>{if(!confirm("Delete this risk?"))return;
+    state.risks=state.risks.filter(x=>x.id!==r.id);activeRiskId=null;markDirty();renderApp();};
+  det.querySelectorAll("[data-rtdel]").forEach(c=>c.onclick=()=>{r.ticketIds=r.ticketIds.filter(x=>x!==c.dataset.rtdel);touch(r);renderApp();});
+  det.querySelectorAll("[data-redel]").forEach(c=>c.onclick=()=>{r.epicIds=r.epicIds.filter(x=>x!==c.dataset.redel);touch(r);renderApp();});
+  const ta=q("#rk-taddsel");if(ta)ta.onchange=e=>{if(e.target.value){r.ticketIds.push(e.target.value);touch(r);renderApp();}};
+  const ea=q("#rk-eaddsel");if(ea)ea.onchange=e=>{if(e.target.value){r.epicIds.push(e.target.value);touch(r);renderApp();}};
+}
+
 /* ===================== KNOWLEDGE (patterns + contacts) ===================== */
 function activePattern(){return state.patterns.find(p=>p.id===activePatternId);}
 function activeContact(){return state.contacts.find(c=>c.id===activeContactId);}
 function renderKnowledgeSidebar(){
   const side=document.getElementById("side");
   const f=renderKnowledgeSidebar;
-  const isPat=knowledgeTab==="patterns",isDec=knowledgeTab==="decisions";
+  const isPat=knowledgeTab==="patterns",isDec=knowledgeTab==="decisions",isRisk=knowledgeTab==="risks";
+  let rks=state.risks.slice().sort((a,b)=>(a.status==="closed"?1:0)-(b.status==="closed"?1:0)||sevRank(a)-sevRank(b)||(a.reviewOn||"9999")<(b.reviewOn||"9999")?-1:1);
   let decs=state.decisions.slice().sort((a,b)=>a.date<b.date?1:-1);
   let pats=state.patterns.slice().sort((a,b)=>b.ticketIds.length-a.ticketIds.length||a.title.localeCompare(b.title));
   let cons=state.contacts.slice().sort((a,b)=>(a.stack||"").localeCompare(b.stack||"")||a.name.localeCompare(b.name));
   if(f._q){const q=f._q.toLowerCase();
     pats=pats.filter(p=>(p.title+" "+p.symptom+" "+p.cause+" "+p.steps+" "+p.tags.join(" ")).toLowerCase().includes(q));
     cons=cons.filter(c=>(c.name+" "+c.stack+" "+c.org+" "+c.note).toLowerCase().includes(q));
-    decs=decs.filter(x=>(x.text+" "+x.by).toLowerCase().includes(q));}
+    decs=decs.filter(x=>(x.text+" "+x.by).toLowerCase().includes(q));
+    rks=rks.filter(x=>(x.title+" "+x.detail+" "+x.owner+" "+x.mitigation).toLowerCase().includes(q));}
   renderDecisionLedger._q=f._q||"";
   if(f._stack)cons=cons.filter(c=>c.stack===f._stack);
   const stacks=distinct(state.contacts.map(c=>c.stack));
   side.innerHTML=`
     <div class="side-tools">
       <div class="segmented">
-        <button class="${knowledgeTab==="patterns"?"on":""}" data-kt="patterns">⟲ Patterns</button>
-        <button class="${knowledgeTab==="contacts"?"on":""}" data-kt="contacts">👤 Contacts</button>
-        <button class="${knowledgeTab==="decisions"?"on":""}" data-kt="decisions">🧭 Decisions</button></div>
-      <button class="primary" id="kNew" style="width:100%">＋ ${knowledgeTab==="patterns"?"New pattern":knowledgeTab==="contacts"?"New contact":"Log a decision"}</button>
+        <button class="${knowledgeTab==="patterns"?"on":""}" data-kt="patterns">Patterns</button>
+        <button class="${knowledgeTab==="contacts"?"on":""}" data-kt="contacts">Contacts</button>
+        <button class="${knowledgeTab==="decisions"?"on":""}" data-kt="decisions">Decisions</button>
+        <button class="${knowledgeTab==="risks"?"on":""}" data-kt="risks">Risks</button></div>
+      <button class="primary" id="kNew" style="width:100%">＋ ${knowledgeTab==="patterns"?"New pattern":knowledgeTab==="contacts"?"New contact":knowledgeTab==="risks"?"New risk":"Log a decision"}</button>
       <input id="kSearch" placeholder="Filter…" value="${esc(f._q||"")}" autocomplete="off">
       ${knowledgeTab==="contacts"&&stacks.length?`<div class="filters"><select id="kStack"><option value="">Any stack</option>
         ${stacks.map(s=>`<option value="${esc(s)}" ${f._stack===s?"selected":""}>${esc(s)}</option>`).join("")}</select></div>`:""}
@@ -3314,9 +3500,18 @@ function renderKnowledgeSidebar(){
       <div class="stat dl"><b>${state.tickets.filter(t=>t.resolution).length}</b>resolutions</div>
       <div class="stat"><b>${state.contacts.length}</b>contacts</div>
       <div class="stat"><b>${state.decisions.length}</b>decisions</div>
+      <div class="stat ov"><b>${liveRisks().length}</b>live risks</div>
     </div>
     <div class="listwrap">
-      ${isDec?(decs.length?decs.slice(0,40).map(x=>`<div class="pcard2" style="border-left-color:var(--teal)" data-did2="${x.id}">
+      ${isRisk?(rks.length?rks.map(r=>`<div class="rcard sev-${r.severity} st-${r.status} ${r.id===activeRiskId?"active":""}" data-rid="${r.id}">
+          <div class="rt">${esc(r.title||"(untitled risk)")}</div>
+          <div class="rm"><span class="pill ${RISK_SEV[r.severity].cls}">${RISK_SEV[r.severity].label}</span>
+            <span>${esc(RISK_STATUS[r.status].label)}</span>
+            ${riskNeedsReview(r)?`<span class="revchip">review due</span>`:""}
+            ${r.owner?`<span class="faint">${esc(r.owner)}</span>`:""}</div>
+        </div>`).join("")
+        :`<div class="empty">${f._q?"No risks match.":"No risks logged.<br><br>The things that outlive one ticket — a team that's always slow, an exposure you're carrying. They'd otherwise stay in a meeting note."}</div>`)
+      :isDec?(decs.length?decs.slice(0,40).map(x=>`<div class="pcard2" style="border-left-color:var(--teal)" data-did2="${x.id}">
           <div class="p2t" style="font-weight:500;font-size:12.5px">${esc(x.text.slice(0,80))}${x.text.length>80?"…":""}</div>
           <div class="p2m"><span class="mono">${fmtDate(x.date)}</span>${x.by?`<span>by ${esc(x.by)}</span>`:""}</div>
         </div>`).join("")
@@ -3337,12 +3532,13 @@ function renderKnowledgeSidebar(){
     </div>`;
   side.querySelectorAll("[data-kt]").forEach(b=>b.onclick=()=>{
     knowledgeTab=b.dataset.kt;f._q="";f._stack="";renderApp();});
-  side.querySelector("#kNew").onclick=()=>isPat?openPatternModal():isDec?openDecisionModal({}):openContactModal(null);
+  side.querySelector("#kNew").onclick=()=>isPat?openPatternModal():isDec?openDecisionModal({}):isRisk?newRisk():openContactModal(null);
   const si=side.querySelector("#kSearch");
   si.oninput=e=>{clearTimeout(si._t);si._t=setTimeout(()=>{f._q=e.target.value;renderKnowledgeSidebar();
     const el=document.getElementById("kSearch");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}},200);};
   const ks=side.querySelector("#kStack");if(ks)ks.onchange=e=>{f._stack=e.target.value;renderKnowledgeSidebar();};
   side.querySelectorAll("[data-pid2]").forEach(c=>c.onclick=()=>{activePatternId=c.dataset.pid2;renderApp();});
+  side.querySelectorAll("[data-rid]").forEach(c=>c.onclick=()=>{activeRiskId=c.dataset.rid;renderApp();});
   side.querySelectorAll("[data-did2]").forEach(c=>c.onclick=()=>{
     const el=document.getElementById("dec-"+c.dataset.did2);
     if(el){el.scrollIntoView({block:"center",behavior:"smooth"});
@@ -3380,6 +3576,7 @@ function renderKnowledgeDetail(){
   const det=document.getElementById("detail");
   if(knowledgeTab==="patterns")renderPatternDetail(det);
   else if(knowledgeTab==="decisions")renderDecisionLedger(det);
+  else if(knowledgeTab==="risks")renderRiskDetail(det);
   else renderContactDetail(det);
 }
 function renderPatternDetail(det){
@@ -3653,6 +3850,13 @@ function renderEpicDetail(){
           <span class="di-sub">${t.assignees.length?esc(t.assignees.map(personName).join(", ")):"unassigned"}${subProg(t)?" · ☑ "+subProg(t).done+"/"+subProg(t).total+(subNext(t)?" — next: "+esc(subNext(t).title||""):""):""}${slipCount(t)?" · "+slipCount(t)+"× slipped":""}</span></div>`).join("")}</div>`).join("")
         :`<p class="faint" style="font-size:12px">No tickets linked yet. Use 🔗 Link tickets, or set the epic on a ticket's Work tab.</p>`}
 
+      ${(()=>{const rs=risksForEpic(e.id).filter(r=>r.status!=="closed");
+        if(!rs.length)return "";
+        return `<div class="sec-title" style="margin-top:22px"><h3>Risks on this epic</h3><div class="ln"></div></div>
+        ${rs.sort((a,b)=>sevRank(a)-sevRank(b)).map(r=>`<div class="dashitem" data-eprisk="${r.id}">
+          <span class="pill ${RISK_SEV[r.severity].cls}">${RISK_SEV[r.severity].label}</span>
+          <span class="di-main">${esc(r.title)}</span>
+          <span class="di-sub">${esc(RISK_STATUS[r.status].label)}${r.owner?" · "+esc(r.owner):""}</span></div>`).join("")}`;})()}
       ${(()=>{const edges=s.ts.filter(t=>(t.blockedBy||[]).length).flatMap(t=>blockersOf(t).map(b=>({t,b})));
         if(!edges.length)return "";
         const stuck=edges.filter(e=>isOpen(e.b)).length;
@@ -3703,6 +3907,7 @@ function renderEpicDetail(){
   q("#ep-meet").onclick=()=>openMeetingModal({kind:"epic",epicId:e.id,title:e.name+" — check-in"});
   det.querySelectorAll("[data-epmt]").forEach(d=>d.onclick=()=>{activeMeetingId=d.dataset.epmt;activeSyncId=null;view="sync";renderApp();});
   det.querySelectorAll("[data-epdep]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.epdep,"work"));
+  det.querySelectorAll("[data-eprisk]").forEach(d=>d.onclick=()=>{activeRiskId=d.dataset.eprisk;knowledgeTab="risks";view="knowledge";renderApp();});
 }
 function openEpicLinkModal(e){
   const root=document.getElementById("modalRoot");
@@ -4259,7 +4464,8 @@ function briefData(sinceDate){
   const vendorEffort=vendorTeams().map(tm=>{const q=curQuarter();
     return {team:tm,q,r:quarterRollup(tm.id,q),sig:forecastSignal(tm.id),
       pendAppr:state.approvals.filter(a=>a.team===tm.id&&a.status==="pending").length};});
-  return {since,epics,byTeam,decisions,taken,landing,risks,obs,vendorEffort,
+  const register=liveRisks().sort((a,b)=>sevRank(a)-sevRank(b));
+  return {since,epics,byTeam,decisions,taken,landing,risks,register,obs,vendorEffort,
     changed:state.tickets.filter(changedSince),
     closedAll:state.tickets.filter(t=>t.closedDate&&t.closedDate>=since)};
 }
@@ -4323,8 +4529,12 @@ function briefMarkdown(d,opts){
       L.push("");
     });
   }
-  if(opts.risks&&d.risks.length){
+  if(opts.risks&&(d.register.length||d.risks.length)){
     L.push("## Risks");L.push("");
+    d.register.forEach(r=>{
+      L.push("- **"+RISK_SEV[r.severity].label+"** — "+r.title+(r.owner?" _("+r.owner+")_":""));
+      if(r.mitigation)L.push("  - Mitigation: "+r.mitigation);});
+    if(d.register.length&&d.risks.length)L.push("");
     d.risks.forEach(t=>{const lp=latestPromise(t);
       L.push("- "+(t.ticketId||"")+" "+t.title+" — "+(slipCount(t)?slipCount(t)+"× slipped":"ETA missed")+
         (lp&&lp.eta?", now "+fmtDate(lp.eta):""));});
@@ -4383,8 +4593,10 @@ function briefHtml(d,opts){
           ${open.filter(t=>!t.bossRelevant&&openHurdles(t).length).map(t=>`<li>${esc(t.ticketId||"")} ${esc(t.title)} — blocked <i>(${esc(openHurdles(t)[0].owner||"unowned")})</i></li>`).join("")}
         </ul>`:""}</div>`);});
   }
-  if(opts.risks&&d.risks.length)
-    H.push(`<h3>Risks</h3><ul>${d.risks.map(t=>{const lp=latestPromise(t);
+  if(opts.risks&&(d.register.length||d.risks.length))
+    H.push(`<h3>Risks</h3>`+(d.register.length?`<ul>${d.register.map(r=>
+      `<li><b>${RISK_SEV[r.severity].label}</b> — ${esc(r.title)}${r.owner?` <i>(${esc(r.owner)})</i>`:""}${r.mitigation?`<br><i>Mitigation: ${esc(r.mitigation)}</i>`:""}</li>`).join("")}</ul>`:"")
+      +`<ul>${d.risks.map(t=>{const lp=latestPromise(t);
       return `<li>${esc(t.ticketId||"")} ${esc(t.title)} — ${slipCount(t)?slipCount(t)+"× slipped":"ETA missed"}${lp&&lp.eta?`, now ${fmtDate(lp.eta)}`:""}</li>`;}).join("")}</ul>`);
   if(opts.closed&&d.closedAll.length)
     H.push(`<h3>Closed this period</h3><ul>${d.closedAll.map(t=>`<li>${esc(t.ticketId||"")} ${esc(t.title)} <i>(${esc(teamOf(t.team).name)}${t.actHours?", "+esc(t.actHours)+"h":""})</i></li>`).join("")}</ul>`);
@@ -4502,6 +4714,10 @@ function runGlobalSearch(qraw){
       m.actions.map(a=>a.text+" "+a.owner+" "+a.resolution).join(" ")].join(" ").toLowerCase();
     if(hay.includes(q))push("Meeting",m.title||MEETING_KINDS[m.kind].label,MEETING_KINDS[m.kind].label+" · "+m.date,
       ()=>{activeMeetingId=m.id;activeSyncId=null;syncFocusId=null;view="sync";renderApp();});});
+  state.risks.forEach(r=>{
+    if((r.title+" "+r.detail+" "+r.owner+" "+r.mitigation).toLowerCase().includes(q))
+      push("Risk",r.title||"(untitled)",RISK_SEV[r.severity].label+" · "+RISK_STATUS[r.status].label,
+        ()=>{activeRiskId=r.id;knowledgeTab="risks";view="knowledge";renderApp();});});
   state.approvals.forEach(a=>{const t=a.ticketId?ticketByRef(a.ticketId):null;
     if((a.title+" "+a.note+" "+(t?t.ticketId:"")).toLowerCase().includes(q))
       push("Approval",a.title||APPROVAL_KINDS[a.kind].label,APPROVAL_KINDS[a.kind].label+" · "+a.status,
@@ -4634,7 +4850,7 @@ async function openSnapshots(){
       if(s.enc){const pw=await promptPassword("Snapshot is encrypted — password");if(pw===null)return;
         state=migrate(await decryptEnvelope(JSON.parse(s.data),pw));masterPassword=pw;}
       else state=migrate(JSON.parse(s.data));
-      activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=null;
+      activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=null;
       dirty=true;markDirty();root.innerHTML="";renderApp();toast("Restored snapshot "+s.date);
     }catch(e){toast("Couldn't restore: "+e.message,true);}
   });
@@ -4718,7 +4934,7 @@ async function unlockStartup(){
 function emptyState(){
   return migrate({version:1,settings:{teams:JSON.parse(JSON.stringify(DEF_TEAMS)),tags:[...DEF_TAGS],sources:[...DEF_SOURCES],
     encryption:false,autosave:true,staleDays:7,syncDays:{portal:[2,4],pnc:[]}},
-    tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],capacity:[],efforts:[],forecasts:[],approvals:[]});
+    tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],capacity:[],efforts:[],forecasts:[],approvals:[],risks:[]});
 }
 /* Example data mirrors the workflow this app was built around, so the moving
    parts (queue reasons, slippage, hurdles, resolution) are visible on day one. */
@@ -4895,6 +5111,21 @@ function seedDemo(){
     normEffort({team:"portal",ticketId:t3.id,month:cm,hours:35,approved:false}),
     normEffort({team:"portal",ticketId:t2.id,month:cm,hours:20,approved:false}),
     normEffort({team:"portal",ticketId:"",month:cm,hours:10,approved:false,note:"General support & standups"})];
+  /* both of these are literally points raised in the seeded meetings — exactly the
+     kind of thing that used to die in a meeting note */
+  state.risks=[
+    normRisk({title:"AD team turnaround is consistently 5+ days",
+      detail:"Second SSO ticket stuck the same way. Any demand needing an AD change should assume a week of dead time, and we have no escalation path that actually moves them.",
+      severity:"high",status:"mitigating",owner:"Me",team:"portal",
+      raisedOn:"2026-07-16",reviewOn:addDays(-2),
+      mitigation:"Priya agreed to be the escalation contact. Chase after 3 days rather than waiting.",
+      ticketIds:[t3.id]}),
+    normRisk({title:"Cutting Q4 vendor hours before LUCA and DECOM are sized",
+      detail:"The vendor forecast is 560h against a 480h contract. Reducing hours now would leave no capacity if the LUCA extract slips into Q4, which it is currently on track to do.",
+      severity:"medium",status:"open",owner:"Me",team:"portal",
+      raisedOn:todayStr(),reviewOn:addDays(21),
+      mitigation:"Hold the decision until the vendor's Q4 forecast lands and PC-8903 has a firm date.",
+      epicIds:[luca.id]})];
   state.approvals=[
     normApproval({team:"portal",kind:"prod",ticketId:t1.id,title:"Move the launchpad tile fix to Production",requestedOn:addDays(-3),status:"approved",decidedOn:addDays(-2),note:"CAB approved"}),
     normApproval({team:"portal",kind:"prod",ticketId:t2.id,title:"Move the payroll launchpad fix to Production",requestedOn:addDays(-1),status:"pending"}),

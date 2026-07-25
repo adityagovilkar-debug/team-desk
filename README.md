@@ -302,6 +302,24 @@ Built for cases like: a governance call with the (outsourced) Portal lead about 
 next quarter's hours; an impromptu check-in on the DECOM epic; a 1:1 with a P&C person about
 their demands.
 
+## Risk register
+
+Hurdles belong to a ticket. Risks don't — *"the AD team is reliably slow"*, *"cutting Q4 hours
+before LUCA is sized"*. Without a home those stay in a meeting note and resurface as a surprise.
+
+Lives as a fourth tab in **Knowledge**: severity, status (open / mitigating / accepted / closed),
+owner, what it is, what you're doing about it, and links to demands and epics.
+
+- A **review date** — the register's whole value is that risks resurface. Overdue reviews land
+  on Today, and one click pushes the date out 30 days.
+- **High risks** and **review-due** risks appear on Today; live risks head the Boss Brief's Risks
+  section, above the slipped-ticket list, each with its mitigation.
+- Risks linked to an epic show on that epic's page.
+- **Suggested from your data** — when the same *kind* of hurdle costs real time across several
+  tickets, it stops being a ticket problem. The seeded data trips this: *"Access / auth delays
+  are a recurring pattern — 46 days lost across 2 tickets."* Accept it and you get a risk with
+  those demands already linked; dismiss it and it stays gone.
+
 ## Dependencies between tickets
 
 You oversee two teams that hand work to each other, and that seam is where things stall. A
