@@ -390,6 +390,11 @@
   .dashitem .di-sub{font-size:11px;color:var(--faint);white-space:nowrap;flex:0 0 auto}
   .dash-empty{color:var(--faint);font-size:12px;padding:4px}
   .getting-started{background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:24px 28px;max-width:680px;margin:14px auto}
+  .getting-started h2{margin:0 0 10px}
+  .gs-lede{color:var(--muted)}
+  .gs-list{line-height:1.9;color:var(--muted)}
+  .gs-actions{margin-top:18px}
+  .gs-foot{color:var(--faint);font-size:11.5px;margin-top:16px}
   .banner{display:flex;align-items:center;gap:12px;border:1px solid var(--tint-amber-bd);background:var(--tint-amber-bg);border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:13px}
   .banner.blue{border-color:var(--tint-blue-bd);background:var(--grad-blue)}
   .banner.good{border-color:var(--tint-green-bd);background:var(--tint-green-bg)}
@@ -651,14 +656,25 @@
      Scoped entirely under the theme attribute, so dark/light are untouched.
      ============================================================ */
   :root[data-theme="instrument"] body{font-size:13px;letter-spacing:.005em}
-  /* engineering dot-grid, fading down the page */
+  /* Engineering dot-grid — a blueprint plane the whole app sits on. Uniform and
+     nearly imperceptible rather than masked to a corner; it should read as paper
+     stock, not as a decorative flourish in one region. */
   :root[data-theme="instrument"] #app::before{
     content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
     background-image:radial-gradient(circle at 1px 1px,var(--grid-dot) 1px,transparent 0);
-    background-size:22px 22px;opacity:.5;
-    mask-image:radial-gradient(ellipse 130% 100% at 50% 0%,#000 30%,transparent 92%)}
+    background-size:22px 22px;opacity:.45}
   :root[data-theme="instrument"] header,
   :root[data-theme="instrument"] main{position:relative;z-index:1}
+  /* The grid only shows if the big surfaces stop painting opaque white over it.
+     Cards keep their solid --panel fill, so they read as sheets laid on the grid. */
+  :root[data-theme="instrument"] header,
+  :root[data-theme="instrument"] aside,
+  :root[data-theme="instrument"] section.detail,
+  :root[data-theme="instrument"] .capture,
+  :root[data-theme="instrument"] .queue,
+  :root[data-theme="instrument"] .detail-body,
+  :root[data-theme="instrument"] .listwrap,
+  :root[data-theme="instrument"] .dash{background:transparent}
 
   /* geometry: nearly square, hairlines, no shadows */
   :root[data-theme="instrument"] button,
@@ -742,8 +758,7 @@
   :root[data-theme="instrument"] .navbtn.active{background:transparent;color:var(--txt);border:1px solid var(--rule-strong)}
   :root[data-theme="instrument"] header .logo{font-family:var(--mono);font-size:11px;letter-spacing:.3em}
   :root[data-theme="instrument"] header .logo .dot{box-shadow:none;width:7px;height:7px}
-  :root[data-theme="instrument"] header{background:var(--paper,#fff)}
-  :root[data-theme="instrument"] aside{background:transparent;border-right:1px solid var(--line)}
+  :root[data-theme="instrument"] aside{border-right:1px solid var(--line)}
 
   /* every figure mono + tabular — non-tabular digits make values jitter */
   :root[data-theme="instrument"] .stat b,
@@ -778,6 +793,70 @@
     content:"";width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;flex:0 0 6px}
   :root[data-theme="instrument"] .teampill.tm-portal::before{background:var(--team-portal)}
   :root[data-theme="instrument"] .teampill.tm-pnc::before{background:transparent;box-shadow:inset 0 0 0 1.5px var(--team-pnc)}
+
+  /* ---- type roles ----
+     The system has three: silkscreen micro-labels (uppercase, tracked), mono
+     tabular values, and quiet sans prose. Anything that is STRUCTURE — a
+     workspace name, a tab, a dialog title — becomes a micro-label; anything the
+     user WROTE stays sans so it reads as content, not chrome. */
+  :root[data-theme="instrument"] .dash-head h1{
+    font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+  :root[data-theme="instrument"] .dash-head span.faint{font-family:var(--mono);font-size:10px;letter-spacing:.08em}
+  :root[data-theme="instrument"] .detail-head h1{font-size:16.5px;font-weight:600;letter-spacing:-.005em}
+  :root[data-theme="instrument"] .capture-head h2,
+  :root[data-theme="instrument"] .modal h2{font-size:11px;font-family:var(--mono);font-weight:600;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  :root[data-theme="instrument"] .capture-head h2{font-family:var(--sans);font-size:16px;letter-spacing:-.005em;
+    text-transform:none;color:var(--txt)}
+  :root[data-theme="instrument"] .tab{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+  :root[data-theme="instrument"] .tab .count{font-family:var(--mono);background:transparent;color:var(--faint)}
+  :root[data-theme="instrument"] .dh-id,
+  :root[data-theme="instrument"] .dh-dates{font-size:10.5px;letter-spacing:.03em}
+  :root[data-theme="instrument"] .dh-dates b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* prose: quieter and smaller, but not so small it fights a working day */
+  :root[data-theme="instrument"] .muted,
+  :root[data-theme="instrument"] .faint,
+  :root[data-theme="instrument"] .note,
+  :root[data-theme="instrument"] .chcard .chq,
+  :root[data-theme="instrument"] .dash-empty{font-size:10.5px;line-height:1.55;letter-spacing:.01em}
+  :root[data-theme="instrument"] .tcard .ttitle,
+  :root[data-theme="instrument"] .qrow .qtitle{font-size:12.5px;font-weight:600;letter-spacing:-.002em}
+  :root[data-theme="instrument"] .tcard .meta,
+  :root[data-theme="instrument"] .qrow .qwhy{font-size:10px}
+  :root[data-theme="instrument"] .upd .utxt,
+  :root[data-theme="instrument"] .point .ptx,
+  :root[data-theme="instrument"] .obs .otxt,
+  :root[data-theme="instrument"] .lastsaid{font-size:12.5px;line-height:1.6}
+  :root[data-theme="instrument"] .headline .hl-t{font-size:14.5px;line-height:1.55}
+
+  /* the welcome card was the loudest survivor of the old scale */
+  :root[data-theme="instrument"] .getting-started{
+    border-radius:3px;border-color:var(--line);padding:20px 22px;position:relative}
+  :root[data-theme="instrument"] .getting-started::before,
+  :root[data-theme="instrument"] .getting-started::after{
+    content:"";position:absolute;width:7px;height:7px;border:solid var(--rule-strong);pointer-events:none}
+  :root[data-theme="instrument"] .getting-started::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+  :root[data-theme="instrument"] .getting-started::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0}
+  :root[data-theme="instrument"] .getting-started h2{
+    font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--muted);padding-bottom:9px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+  :root[data-theme="instrument"] .gs-lede{font-size:12px;line-height:1.6;color:var(--txt)}
+  :root[data-theme="instrument"] .gs-list{font-size:11px;line-height:1.7;padding-left:0;list-style:none}
+  :root[data-theme="instrument"] .gs-list li{
+    padding:7px 0;border-top:1px dotted var(--rule-strong)}
+  :root[data-theme="instrument"] .gs-list li b{color:var(--txt);font-weight:600;
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+    display:block;margin-bottom:2px}
+  :root[data-theme="instrument"] .gs-foot{font-size:9.5px;letter-spacing:.06em}
+  /* tracked uppercase is wider than the sans it replaced — let these size to their
+     text and wrap the row instead of squeezing each label onto three lines */
+  :root[data-theme="instrument"] .gs-actions{flex-wrap:wrap;gap:7px}
+  :root[data-theme="instrument"] .gs-actions>button{flex:0 0 auto;white-space:nowrap}
+
+  /* empty / nothing-picked states read as instrument copy too */
+  :root[data-theme="instrument"] .nopick{font-size:11px;line-height:1.6}
+  :root[data-theme="instrument"] .empty{font-size:10.5px;line-height:1.6}
 
   /* controls: quiet outlined silkscreen, not filled lozenges. Even the primary
      action is an outline — in this system a saturated fill means "a value lives
@@ -2008,21 +2087,23 @@ function dashCard(title,items,cls){
 }
 function gotoTicket(id,tab){activeId=id;activeTab=tab||"work";view="tickets";renderApp();}
 function gettingStarted(){
+  /* no inline type styles here — the themes set the type scale, and an inline
+     line-height would win over the instrument theme's own rhythm */
   return `<div class="dash"><div class="getting-started">
-    <h2 style="margin-top:0">Welcome to Team Desk</h2>
-    <p class="muted">A tracker for the two teams you oversee — the tickets they work, the people who work them, and the knowledge you'd otherwise lose.</p>
-    <ul style="line-height:1.9;color:var(--muted)">
+    <h2>Welcome to Team Desk</h2>
+    <p class="gs-lede">A tracker for the two teams you oversee — the tickets they work, the people who work them, and the knowledge you'd otherwise lose.</p>
+    <ul class="gs-list">
       <li><b>Tickets</b> — one record per JIRA/ServiceNow ticket, tagged to a team. Quick-add takes 5 seconds; fill in the rest during your calls.</li>
       <li><b>Sync</b> — your twice-weekly Portal call. Team Desk builds the ask-about list for you and writes the meeting record as you go.</li>
       <li><b>People</b> — the roster builds itself from whoever you name on a ticket.</li>
       <li><b>Commitment ledger</b> — every ETA you're given is logged, so slippage is visible instead of remembered.</li>
     </ul>
-    <div class="row" style="margin-top:18px">
+    <div class="row gs-actions">
       <button class="primary" id="gsNew">＋ Add your first ticket</button>
       <button id="gsSeed">Load example data</button>
       <button id="gsOpen">📂 Open existing file</button>
     </div>
-    <p class="faint" style="font-size:11.5px;margin-top:16px">Your data stays in one .json file on your machine. Nothing leaves this page.</p>
+    <p class="gs-foot">Your data stays in one .json file on your machine. Nothing leaves this page.</p>
   </div></div>`;
 }
 function wireGettingStarted(){
