@@ -302,6 +302,42 @@ Built for cases like: a governance call with the (outsourced) Portal lead about 
 next quarter's hours; an impromptu check-in on the DECOM epic; a 1:1 with a P&C person about
 their demands.
 
+## Performance log
+
+Everything else in the app records *state*. This records **conduct** — how a team actually
+fails, over months, with evidence.
+
+The unit is an **incident**, and one real episode usually carries several distinct failures.
+A single late delivery might be `late-response` → `missed-eta` → `false-done` → `untested` →
+`misdiagnosis` → `deflection` → `escalation-only` → `customer-visible`. Tagging all of them is
+what makes the pattern emerge: after ten incidents you can say *"seven involved a 'done' that
+wasn't"* — with the incidents behind it.
+
+Failure modes are grouped into **Communication · Commitment · Quality · Analysis · Effort ·
+Process · Impact**, so the rollup answers *which kind* of failure this team has.
+
+**Evidence assembles itself.** Link a demand and the incident automatically cites that demand's
+ETA history, the hours logged against it, its hurdles and its dates — always current, straight
+from your own records. You add only what the app can't know: the quote, the third party's
+finding, what you saw.
+
+**Facts and inference are kept apart.** *"Delivered 27-06, the tile did not render"* is
+evidence. *"They never tested it"* is your reading. Both are recorded, in separate fields, and
+the evidence pack labels the second as an inference — because the first is what survives being
+challenged.
+
+**Three detections** surface candidates from data you already have: an effort claim far above
+comparable work, a demand with repeated broken ETAs, and work that sat for weeks then closed
+within a day or two of the final commitment.
+
+**Evidence pack** — a dated document (Markdown or print/PDF): totals, recurring modes, then
+each incident with its sequence, evidence and cost. Deliberately separate from the Boss Brief,
+so conduct never rides along in a routine status update.
+
+One care taken throughout: an incident usually carries several modes, so per-mode day counts
+**overlap and must not be summed**. Both the UI and the pack say so, and the headline totals are
+the non-overlapping figures.
+
 ## Risk register
 
 Hurdles belong to a ticket. Risks don't — *"the AD team is reliably slow"*, *"cutting Q4 hours

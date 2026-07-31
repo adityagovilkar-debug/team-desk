@@ -207,7 +207,9 @@
   .detail-head{padding:16px 22px 0;border-bottom:1px solid var(--line)}
   .detail-head .dh-top{display:flex;align-items:flex-start;gap:14px}
   .detail-head h1{font-size:19px;margin:0;flex:1;font-weight:650}
-  .dh-id{font-family:var(--mono);font-size:13px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:9px}
+  /* wraps because an incident can carry several status chips at once, and without
+     it they overflow the title block and collide with the header buttons */
+  .dh-id{font-family:var(--mono);font-size:13px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;row-gap:5px}
   .dh-dates{display:flex;gap:18px;margin:10px 0 0;font-size:12px;color:var(--muted);flex-wrap:wrap}
   .tabs{display:flex;gap:2px;margin-top:14px;flex-wrap:wrap}
   .tab{padding:8px 15px;border:none;background:transparent;border-bottom:2px solid transparent;border-radius:0;color:var(--muted);font-weight:600;font-size:13px}
@@ -291,6 +293,44 @@
   .ares{flex-basis:100%;font-size:11.5px;color:var(--teal);white-space:pre-wrap;padding:1px 0 0 25px;cursor:text;line-height:1.4}
   .ares:hover{color:var(--txt)}
   .carried{border-left:3px solid var(--amber)}
+
+  /* performance log */
+  .icard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer}
+  .icard:hover{background:var(--panel2)}
+  .icard.active{border-color:var(--accent);background:var(--panel2)}
+  .icard.sev-high{border-left-color:var(--red)} .icard.sev-medium{border-left-color:var(--amber)}
+  .icard.sev-low{border-left-color:var(--teal)}
+  .icard .it{font-weight:650;font-size:13px;line-height:1.35}
+  .icard .im{font-size:10.5px;color:var(--muted);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .kchip{display:inline-flex;align-items:center;font-size:9.5px;font-weight:700;border-radius:3px;padding:1px 6px;
+    border:1px solid var(--tint-red-bd);background:var(--tint-red-bg);color:var(--red);white-space:nowrap}
+  .kchip.g-Communication,.kchip.g-Commitment{border-color:var(--tint-amber-bd);background:var(--tint-amber-bg);color:var(--amber)}
+  .kchip.g-Analysis,.kchip.g-Process{border-color:var(--tint-violet-bd);background:var(--chip);color:var(--accent2)}
+  .kchip.g-Effort{border-color:var(--tint-blue-bd);background:var(--chip);color:var(--accent)}
+  .evrow{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--line2);border-radius:7px;padding:8px 11px;margin-bottom:6px}
+  .evrow.k-derived{border-left-color:var(--accent);background:var(--grad-blue)}
+  .evrow.k-thirdparty{border-left-color:var(--green)}
+  .evrow .ev-k{flex:0 0 96px;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding-top:2px}
+  .evrow .ev-t{flex:1;min-width:0;font-size:12.5px;line-height:1.5;white-space:pre-wrap;cursor:text}
+  .evrow .ev-s{font-size:10px;color:var(--faint);margin-top:3px}
+  .evrow .nact{opacity:0}.evrow:hover .nact{opacity:1}
+  .tlrow{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px dotted var(--line2);font-size:12px}
+  .tlrow:first-of-type{border-top:none}
+  .tlrow .tl-d{flex:0 0 92px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .tlrow .tl-w{flex:0 0 96px;font-size:11px;color:var(--faint)}
+  .tlrow .tl-t{flex:1;min-width:0;line-height:1.5;cursor:text}
+  .tlrow .nact{opacity:0}.tlrow:hover .nact{opacity:1}
+  .inferbox{border:1px dashed var(--line2);border-radius:7px;padding:9px 12px;margin-bottom:14px;background:transparent}
+  .inferbox .ib-h{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:5px}
+  .patrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px dotted var(--line2)}
+  .patrow:first-of-type{border-top:none}
+  .patrow .pr-k{flex:1;min-width:0;font-size:12.5px}
+  .patrow .pr-n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;flex:0 0 34px;text-align:right}
+  .patrow .pr-d{font-family:var(--mono);font-size:11px;color:var(--muted);flex:0 0 62px;text-align:right}
+  .patbar{flex:0 0 120px;height:8px;display:flex;gap:2px}
+  .patbar i{flex:1;background:var(--line2);border-radius:1px}
+  .patbar i.on{background:var(--red)}
 
   /* risk register */
   .rcard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer}
@@ -928,6 +968,7 @@
       <button class="navbtn" data-view="tickets">Tickets</button>
       <button class="navbtn" data-view="people">People</button>
       <button class="navbtn hide" data-view="effort" id="navEffort">Effort</button>
+      <button class="navbtn hide" data-view="perf" id="navPerf">Performance</button>
       <button class="navbtn" data-view="insights">Insights</button>
       <button class="navbtn" data-view="knowledge">Knowledge</button>
     </div>
@@ -1072,6 +1113,39 @@ const MONTH_ABBR=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","N
 /* Risks are the things that outlive any one ticket — "the AD team always takes a
    week", "cutting Q4 hours before LUCA lands". Hurdles belong to a ticket; these
    don't, and without a home they die in a meeting note. */
+/* ---- performance log ----
+   Conduct, not state. One real episode usually contains SEVERAL distinct failures
+   — a late ETA, then a false "done", then a wrong root cause — and it's the mix
+   that reveals how a team actually fails. So an incident carries many kinds. */
+const FAIL_KINDS={
+  "late-response":{label:"Slow to respond",group:"Communication"},
+  "no-eta":{label:"No ETA when asked",group:"Communication"},
+  "missed-eta":{label:"Missed a committed ETA",group:"Commitment"},
+  "escalation-only":{label:"Moved only after escalation",group:"Commitment"},
+  "false-done":{label:"Declared done, wasn't",group:"Quality"},
+  "untested":{label:"Delivered untested",group:"Quality"},
+  "regression":{label:"Broke working functionality",group:"Quality"},
+  "weak-analysis":{label:"Failed basic analysis",group:"Analysis"},
+  "misdiagnosis":{label:"Wrong root cause",group:"Analysis"},
+  "deflection":{label:"Blamed another team wrongly",group:"Analysis"},
+  "no-reuse":{label:"Didn't reuse earlier work",group:"Analysis"},
+  "effort-inflation":{label:"Implausible effort claim",group:"Effort"},
+  "process-breach":{label:"Bypassed an agreed process",group:"Process"},
+  "customer-visible":{label:"Reached the end user",group:"Impact"}
+};
+const INC_SEV={high:{label:"High",cls:"blocked"},medium:{label:"Medium",cls:"review"},low:{label:"Low",cls:"progress"}};
+const INC_STATUS={open:{label:"Logged"},raised:{label:"Raised with vendor"},
+  acknowledged:{label:"Acknowledged"},disputed:{label:"Disputed"},closed:{label:"Closed"}};
+/* Evidence kinds. "derived" is auto-cited from the app's own records; everything
+   else is something only he can supply. */
+const EV_KINDS={
+  derived:{label:"From the record",icon:"◆"},
+  quote:{label:"What they said",icon:"❝"},
+  email:{label:"Email / message",icon:"✉"},
+  thirdparty:{label:"Third-party finding",icon:"⚖"},
+  observed:{label:"What I saw",icon:"👁"},
+  file:{label:"File / screenshot",icon:"🖼"}
+};
 const RISK_SEV={high:{label:"High",cls:"blocked"},medium:{label:"Medium",cls:"review"},low:{label:"Low",cls:"progress"}};
 const RISK_STATUS={open:{label:"Open"},mitigating:{label:"Mitigating"},accepted:{label:"Accepted"},closed:{label:"Closed"}};
 const RISK_REVIEW_DAYS=30;   /* default gap before a risk asks to be looked at again */
@@ -1103,7 +1177,7 @@ const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let state={version:1,settings:{teams:JSON.parse(JSON.stringify(DEF_TEAMS)),tags:[...DEF_TAGS],sources:[...DEF_SOURCES],
   encryption:false,autosave:true,staleDays:7,syncDays:{portal:[2,4],pnc:[]}},
   tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],
-  capacity:[],efforts:[],forecasts:[],approvals:[],risks:[]};
+  capacity:[],efforts:[],forecasts:[],approvals:[],risks:[],incidents:[]};
 
 let fileHandle=null, dirty=false, autoSaveTimer=null, lastSaveAuto=false;
 let view="today";
@@ -1111,6 +1185,7 @@ let activeId=null, activeTab="work";
 let activeSyncId=null, syncFocusId=null, activeMeetingId=null;
 let activePersonId=null, activeEpicId=null, peopleMatrix=false, matrixSkill="";
 let activePatternId=null, activeContactId=null, activeRiskId=null, knowledgeTab="patterns";
+let activeIncidentId=null, perfView="log", perfTeam="", perfKind="", perfSince="";
 let effortTab="capacity", effortTeam="", effortQuarter="";
 let masterPassword=null, pendingEncrypted=null;
 
@@ -1144,8 +1219,8 @@ async function recryptSnapshots(oldPw,newPw){try{
 
 /* ---------- persistence ---------- */
 let hadContent=false;
-function contentCount(){return state.tickets.length+state.people.length+state.syncs.length+state.contacts.length+state.epics.length+state.patterns.length+state.decisions.length+state.agenda.length+state.meetings.length+state.efforts.length+state.approvals.length+state.risks.length;}
-function isValidState(s){return s&&typeof s==="object"&&Array.isArray(s.tickets)&&Array.isArray(s.people)&&Array.isArray(s.contacts)&&Array.isArray(s.syncs)&&Array.isArray(s.epics)&&Array.isArray(s.patterns)&&Array.isArray(s.decisions)&&Array.isArray(s.agenda)&&Array.isArray(s.meetings)&&Array.isArray(s.capacity)&&Array.isArray(s.efforts)&&Array.isArray(s.forecasts)&&Array.isArray(s.approvals)&&Array.isArray(s.risks);}
+function contentCount(){return state.tickets.length+state.people.length+state.syncs.length+state.contacts.length+state.epics.length+state.patterns.length+state.decisions.length+state.agenda.length+state.meetings.length+state.efforts.length+state.approvals.length+state.risks.length+state.incidents.length;}
+function isValidState(s){return s&&typeof s==="object"&&Array.isArray(s.tickets)&&Array.isArray(s.people)&&Array.isArray(s.contacts)&&Array.isArray(s.syncs)&&Array.isArray(s.epics)&&Array.isArray(s.patterns)&&Array.isArray(s.decisions)&&Array.isArray(s.agenda)&&Array.isArray(s.meetings)&&Array.isArray(s.capacity)&&Array.isArray(s.efforts)&&Array.isArray(s.forecasts)&&Array.isArray(s.approvals)&&Array.isArray(s.risks)&&Array.isArray(s.incidents);}
 function noteContent(){if(isValidState(state)&&contentCount()>0)hadContent=true;}
 function safeToPersist(){return isValidState(state)&&!(hadContent&&contentCount()===0);}
 function markDirty(){noteContent();dirty=true;renderSaveState();backupLocal();scheduleAutoSave();}
@@ -1336,6 +1411,24 @@ function normApproval(a){return {id:a.id||uid(),team:a.team||"",kind:APPROVAL_KI
   ticketId:a.ticketId||"",title:a.title||"",requestedOn:a.requestedOn||todayStr(),
   status:["pending","approved","rejected"].includes(a.status)?a.status:"pending",decidedOn:a.decidedOn||"",
   via:a.via||"email",note:a.note||"",createdAt:a.createdAt||Date.now()};}
+function normEvidence(e){return {id:e.id||uid(),kind:EV_KINDS[e.kind]?e.kind:"observed",
+  text:e.text||"",on:e.on||"",source:e.source||""};}
+function normIncStep(s){return {id:s.id||uid(),date:s.date||"",who:s.who||"",what:s.what||""};}
+function normIncident(x){return {id:x.id||uid(),date:x.date||todayStr(),title:x.title||"",
+  team:x.team||"",ticketIds:[...new Set(x.ticketIds||[])],
+  kinds:[...new Set((x.kinds||[]).filter(k=>FAIL_KINDS[k]))],
+  severity:INC_SEV[x.severity]?x.severity:"medium",
+  status:INC_STATUS[x.status]?x.status:"open",
+  /* what happened vs what I take from it — kept apart on purpose. The first is
+     evidence; the second is a conclusion, and mixing them hands the vendor
+     something to argue with instead of a dated fact. */
+  narrative:x.narrative||"",inference:x.inference||"",
+  costDays:num(x.costDays),etasBurned:num(x.etasBurned),
+  escalated:!!x.escalated,customerVisible:!!x.customerVisible,
+  evidence:(x.evidence||[]).map(normEvidence),
+  timeline:(x.timeline||[]).map(normIncStep),
+  raisedOn:x.raisedOn||"",vendorResponse:x.vendorResponse||"",
+  createdAt:x.createdAt||Date.now(),updatedAt:x.updatedAt||Date.now()};}
 function normRisk(r){return {id:r.id||uid(),title:r.title||"",detail:r.detail||"",
   severity:RISK_SEV[r.severity]?r.severity:"medium",
   status:RISK_STATUS[r.status]?r.status:"open",
@@ -1387,6 +1480,7 @@ function migrate(d){
   d.forecasts=(d.forecasts||[]).map(normForecast);
   d.approvals=(d.approvals||[]).map(normApproval);
   d.risks=(d.risks||[]).map(normRisk);
+  d.incidents=(d.incidents||[]).map(normIncident);
   /* drop links that point at something deleted, in both directions */
   const eids=new Set(d.epics.map(e=>e.id));
   d.tickets.forEach(t=>{if(t.epicId&&!eids.has(t.epicId))t.epicId="";});
@@ -1405,6 +1499,8 @@ function migrate(d){
   d.decisions.forEach(x=>{if(x.meetingId&&!mids.has(x.meetingId))x.meetingId="";});
   d.efforts.forEach(e=>{if(e.ticketId&&!tids.has(e.ticketId))e.ticketId="";});
   d.risks.forEach(r=>{r.ticketIds=r.ticketIds.filter(x=>tids.has(x));r.epicIds=r.epicIds.filter(x=>eids.has(x));});
+  /* an incident is a historical record — it outlives the demand it happened on */
+  d.incidents.forEach(x=>{x.ticketIds=x.ticketIds.filter(t=>tids.has(t));});
   d.approvals.forEach(a=>{if(a.ticketId&&!tids.has(a.ticketId))a.ticketId="";});
   return d;
 }
@@ -1426,7 +1522,7 @@ async function loadFromText(txt,name){
 async function openFile(){if(!supportsFS)return importViaInput();
   try{const[h]=await window.showOpenFilePicker({types:[{description:"Team Desk data",accept:{"application/json":[".json"]}}]});
     const f=await h.getFile();if(!await loadFromText(await f.text(),h.name))return;
-    fileHandle=h;dirty=false;setFileLabel(h.name);rememberHandle();activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=null;backupLocal();renderApp();toast("Opened "+h.name);
+    fileHandle=h;dirty=false;setFileLabel(h.name);rememberHandle();activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;backupLocal();renderApp();toast("Opened "+h.name);
   }catch(e){if(e.name!=="AbortError")toast("Couldn't open: "+e.message,true);}}
 function saveGuardOk(action){
   if(!isValidState(state)){toast("Save blocked — data looks corrupted; your file was NOT overwritten.",true);return false;}
@@ -1446,7 +1542,7 @@ async function exportDownload(){if(!saveGuardOk("download"))return;
   dirty=false;renderSaveState();maybeSnapshot();toast("Downloaded data file"+(isEncrypted()?" 🔒":""));}
 function importViaInput(){const i=document.createElement("input");i.type="file";i.accept=".json,application/json";
   i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();
-    r.onload=async()=>{try{if(!await loadFromText(r.result,f.name))return;dirty=false;activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=null;backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
+    r.onload=async()=>{try{if(!await loadFromText(r.result,f.name))return;dirty=false;activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
     r.readAsText(f);};i.click();}
 
 function promptPassword(title,confirmIt){
@@ -1597,6 +1693,113 @@ function suggestRisks(){
       why:v.days+" days lost across "+v.tickets.size+" tickets"});
   });
   return out.sort((a,b)=>b.ticketIds.length-a.ticketIds.length);
+}
+/* ---------- performance log ---------- */
+function activeIncident(){return state.incidents.find(x=>x.id===activeIncidentId);}
+function incidentsFor(team){return state.incidents.filter(x=>!team||x.team===team);}
+function incSevRank(x){return x.severity==="high"?0:x.severity==="medium"?1:2;}
+/* Evidence the app can cite for itself. He shouldn't retype "they logged effort on
+   the 20th and 22nd" — the effort log already knows, and a quoted record is harder
+   to dispute than a recollection. */
+function derivedEvidence(inc){
+  const out=[];
+  inc.ticketIds.map(ticketByRef).filter(Boolean).forEach(t=>{
+    const id=t.ticketId||"demand";
+    if(t.promises.length)out.push({kind:"derived",on:t.promises[t.promises.length-1].givenOn,
+      source:id+" · commitment ledger",
+      text:t.promises.length+" ETA"+(t.promises.length===1?"":"s")+" given — "+
+        t.promises.map(p=>fmtDate(p.eta)+" (told "+fmtDate(p.givenOn)+")").join(" → ")+
+        (slipCount(t)?"; "+slipCount(t)+" missed":"")});
+    const es=state.efforts.filter(e=>e.ticketId===t.id);
+    if(es.length)out.push({kind:"derived",on:"",source:id+" · effort log",
+      text:sumHours(es)+"h logged across "+[...new Set(es.map(e=>monthLabel(e.month)))].join(", ")+
+        (t.estHours?", against a "+t.estHours+"h estimate":"")});
+    t.hurdles.forEach(h=>{
+      const end=h.resolvedOn||todayStr();
+      const days=Math.max(0,Math.round((new Date(end+"T00:00:00")-new Date(h.raisedOn+"T00:00:00"))/86400000));
+      out.push({kind:"derived",on:h.raisedOn,source:id+" · hurdle",
+        text:HURDLE_KINDS[h.kind].label+" hurdle open "+days+" days"+(h.owner?", owned by "+h.owner:"")+(h.text?" — "+h.text:"")});});
+    if(t.raisedDate)out.push({kind:"derived",on:t.closedDate||t.raisedDate,source:id+" · dates",
+      text:"Raised "+fmtDate(t.raisedDate)+(t.closedDate?", closed "+fmtDate(t.closedDate)+
+        (cycleDays(t)!=null?" — "+cycleDays(t)+" days end to end":""):", still open")});
+  });
+  return out;
+}
+/* hours actually recorded against a demand, from the vendor effort log */
+function hoursOn(t){const es=state.efforts.filter(e=>e.ticketId===t.id);
+  return es.length?sumHours(es):num(t.actHours);}
+/* ---- derived detections: candidate incidents, surfaced not remembered ---- */
+function detectPerf(){
+  const dis=new Set(state.settings.dismissedSuggestions||[]);
+  const out=[];
+  const vend=new Set(vendorTeams().map(t=>t.id));
+  state.tickets.forEach(t=>{
+    if(vend.size&&!vend.has(t.team))return;
+    /* 1 — effort plausibility, judged against comparable work rather than a hunch */
+    const h=hoursOn(t);
+    if(h>0){
+      const peers=state.tickets.filter(o=>o.id!==t.id&&o.team===t.team&&hoursOn(o)>0
+        &&o.tags.some(g=>t.tags.includes(g)));
+      if(peers.length>=2){
+        const med=medianOf(peers.map(hoursOn));
+        if(med>0&&h>=med*2.5&&h-med>=8){
+          const key="perf:effort:"+t.id+":"+h;
+          if(!dis.has(key))out.push({key,kind:"effort-inflation",ticketId:t.id,
+            title:"Implausible effort on "+(t.ticketId||"a demand"),
+            detail:h+"h claimed. "+peers.length+" comparable "+t.team+" demands sharing its tags averaged "+med+"h.",
+            why:h+"h vs a peer median of "+med+"h"});
+        }
+      }
+    }
+    /* 2 — repeated broken commitments on one demand */
+    if(slipCount(t)>=2){
+      const key="perf:eta:"+t.id+":"+t.promises.length;
+      if(!dis.has(key))out.push({key,kind:"missed-eta",ticketId:t.id,
+        title:"Repeated missed ETAs on "+(t.ticketId||"a demand"),
+        detail:t.promises.length+" ETAs given: "+t.promises.map(p=>fmtDate(p.eta)).join(" → ")+". "+slipCount(t)+" were missed.",
+        why:slipCount(t)+" broken commitments"});
+    }
+    /* 3 — sat for weeks, then closed within days of the final commitment: the
+       capacity was there all along, it just needed escalating */
+    if(t.closedDate&&t.raisedDate&&slipCount(t)>=1){
+      const age=cycleDays(t);
+      const lp=latestPromise(t);
+      if(age!=null&&age>=21&&lp&&lp.givenOn){
+        const gap=Math.round((new Date(t.closedDate+"T00:00:00")-new Date(lp.givenOn+"T00:00:00"))/86400000);
+        if(gap>=0&&gap<=2){
+          const key="perf:fast:"+t.id;
+          if(!dis.has(key))out.push({key,kind:"escalation-only",ticketId:t.id,
+            title:"Closed in "+gap+" day"+(gap===1?"":"s")+" after "+age+" days open — "+(t.ticketId||"a demand"),
+            detail:"Open "+age+" days with "+slipCount(t)+" missed ETA"+(slipCount(t)===1?"":"s")+", then closed "+gap+" day"+(gap===1?"":"s")+" after the final commitment on "+fmtDate(lp.givenOn)+".",
+            why:age+" days open, then "+gap+" to close"});
+        }
+      }
+    }
+  });
+  return out;
+}
+/* ---- the pattern rollup: the answer to "how does this team fail?" ---- */
+function perfRollup(team,since){
+  const list=state.incidents.filter(x=>(!team||x.team===team)&&(!since||x.date>=since));
+  const byKind={};
+  list.forEach(x=>x.kinds.forEach(k=>{
+    (byKind[k]=byKind[k]||{n:0,days:0,ids:[]});
+    byKind[k].n++;byKind[k].days+=num(x.costDays);byKind[k].ids.push(x.id);}));
+  const kinds=Object.entries(byKind).map(([k,v])=>({kind:k,...v})).sort((a,b)=>b.n-a.n||b.days-a.days);
+  const byGroup={};
+  kinds.forEach(k=>{const g=FAIL_KINDS[k.kind].group;(byGroup[g]=byGroup[g]||{n:0,days:0});
+    byGroup[g].n+=k.n;byGroup[g].days+=k.days;});
+  /* month buckets, so "is this getting better or worse" is answerable */
+  const months={};
+  list.forEach(x=>{const m=x.date.slice(0,7);months[m]=(months[m]||0)+1;});
+  return {list,kinds,
+    groups:Object.entries(byGroup).map(([g,v])=>({group:g,...v})).sort((a,b)=>b.n-a.n),
+    months:Object.entries(months).sort().map(([m,n])=>({label:monthLabel(m).slice(0,3),m,n})),
+    totals:{n:list.length,days:list.reduce((a,x)=>a+num(x.costDays),0),
+      etas:list.reduce((a,x)=>a+num(x.etasBurned),0),
+      escalated:list.filter(x=>x.escalated).length,
+      customer:list.filter(x=>x.customerVisible).length,
+      raised:list.filter(x=>x.status!=="open").length}};
 }
 /* ---------- agenda (points to raise in an upcoming sync) ---------- */
 function agendaFor(team){return state.agenda.filter(a=>a.team===team&&!a.done);}
@@ -1871,6 +2074,11 @@ function renderApp(){
   const navEff=document.getElementById("navEffort");
   if(navEff)navEff.classList.toggle("hide",!vendorTeams().length);
   if(view==="effort"&&!vendorTeams().length)view="today";
+  /* the performance log earns its tab once there's a vendor team or anything logged */
+  const showPerf=vendorTeams().length>0||state.incidents.length>0;
+  const navPf=document.getElementById("navPerf");
+  if(navPf)navPf.classList.toggle("hide",!showPerf);
+  if(view==="perf"&&!showPerf)view="today";
   document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
   const main=document.getElementById("main");
   if(view==="sync"){main.innerHTML=`<div class="syncwrap" id="syncwrap"></div>`;renderSync();}
@@ -1882,6 +2090,7 @@ function renderApp(){
     else if(view==="knowledge"){renderKnowledgeSidebar();renderKnowledgeDetail();}
     else if(view==="insights"){renderInsights();}
     else if(view==="effort"){renderEffort();}
+    else if(view==="perf"){renderPerf();}
     else{renderPeopleSidebar();peopleMatrix?renderMatrix():renderPeopleDetail();}
   }
   renderSaveState();
@@ -1962,6 +2171,11 @@ function renderToday(){
   cards.push(dashCard("📈 Forecast vs contract",fcCards.map(x=>({
     main:x.tm.name+" — "+quarterLabel(x.sig.nq),sub:(x.sig.dir==="up"?"negotiate ~"+Math.abs(x.sig.pct)+"% more":"could reduce ~"+Math.abs(x.sig.pct)+"%"),
     go:()=>{effortTeam=x.tm.id;effortTab="capacity";view="effort";renderApp();}})),""));
+  /* performance failures the data can spot — log them while the detail is fresh */
+  const pfc=detectPerf();
+  cards.push(dashCard("⚑ Worth logging against the team",pfc.map(c=>({
+    main:c.title,sub:esc(FAIL_KINDS[c.kind].label)+" · "+c.why,
+    go:()=>{perfView="log";activeIncidentId=null;view="perf";renderApp();}})),"warn"));
   /* live high-severity risks, and any risk whose review date has come round */
   const hiRisks=liveRisks().filter(r=>r.severity==="high");
   cards.push(dashCard("⚠ High risks",hiRisks.map(r=>({
@@ -3671,6 +3885,385 @@ function renderDecisionLedger(det){
     activeEpicId=c.dataset.dcep;view="epics";renderApp();});
 }
 
+/* ===================== PERFORMANCE LOG ===================== */
+function renderPerf(){
+  const side=document.getElementById("side"),det=document.getElementById("detail");
+  const teams=state.settings.teams;
+  const list=state.incidents
+    .filter(x=>(!perfTeam||x.team===perfTeam)&&(!perfKind||x.kinds.includes(perfKind))&&(!perfSince||x.date>=perfSince))
+    .sort((a,b)=>a.date<b.date?1:-1);
+  const det0=detectPerf();
+  side.innerHTML=`
+    <div class="side-tools">
+      <div class="segmented">
+        <button class="${perfView==="log"?"on":""}" data-pv="log">Log</button>
+        <button class="${perfView==="patterns"?"on":""}" data-pv="patterns">Patterns</button></div>
+      <button class="primary" id="pf-new" style="width:100%">＋ Log an incident</button>
+      <div class="filters">
+        <select id="pf-team"><option value="">All teams</option>${teams.map(t=>`<option value="${esc(t.id)}" ${perfTeam===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select>
+        <select id="pf-since"><option value="">All time</option>
+          ${[["3 months",addDays(-90)],["6 months",addDays(-182)],["12 months",addDays(-365)]].map(([l,d])=>`<option value="${d}" ${perfSince===d?"selected":""}>Last ${l}</option>`).join("")}</select>
+      </div>
+      <select id="pf-kind"><option value="">Any failure kind</option>
+        ${Object.entries(FAIL_KINDS).map(([k,v])=>`<option value="${k}" ${perfKind===k?"selected":""}>${esc(v.label)}</option>`).join("")}</select>
+    </div>
+    <div class="stats">
+      <div class="stat ov"><b>${list.length}</b>logged</div>
+      <div class="stat bl"><b>${list.reduce((a,x)=>a+num(x.costDays),0)}</b>days lost</div>
+      <div class="stat op"><b>${det0.length}</b>detected</div>
+    </div>
+    <div class="listwrap">
+      ${list.length?list.map(x=>`<div class="icard sev-${x.severity} ${x.id===activeIncidentId?"active":""}" data-iid="${x.id}">
+        <div class="it">${esc(x.title||"(untitled)")}</div>
+        <div class="im"><span class="mono">${fmtDate(x.date)}</span>${x.team?teamPill(x.team):""}
+          ${x.costDays?`<span class="warnchip">${x.costDays}d lost</span>`:""}</div>
+        <div class="im">${x.kinds.slice(0,3).map(k=>`<span class="kchip g-${FAIL_KINDS[k].group}">${esc(FAIL_KINDS[k].label)}</span>`).join("")}
+          ${x.kinds.length>3?`<span class="faint">+${x.kinds.length-3}</span>`:""}</div>
+      </div>`).join("")
+      :`<div class="empty">Nothing logged.<br><br>Record what actually went wrong — the missed commitment, the "done" that wasn't, the wrong root cause — and the pattern builds itself.</div>`}
+    </div>`;
+  side.querySelectorAll("[data-pv]").forEach(b=>b.onclick=()=>{perfView=b.dataset.pv;activeIncidentId=null;renderApp();});
+  side.querySelector("#pf-new").onclick=()=>newIncident();
+  side.querySelector("#pf-team").onchange=e=>{perfTeam=e.target.value;renderApp();};
+  side.querySelector("#pf-since").onchange=e=>{perfSince=e.target.value;renderApp();};
+  side.querySelector("#pf-kind").onchange=e=>{perfKind=e.target.value;renderApp();};
+  side.querySelectorAll("[data-iid]").forEach(c=>c.onclick=()=>{activeIncidentId=c.dataset.iid;perfView="log";renderApp();});
+  if(perfView==="patterns")renderPerfPatterns(det);
+  else if(activeIncidentId)renderIncidentDetail(det);
+  else renderPerfOverview(det,det0);
+}
+function newIncident(pre){
+  const x=normIncident(Object.assign({team:(vendorTeams()[0]||{}).id||"",date:todayStr()},pre||{}));
+  state.incidents.unshift(x);activeIncidentId=x.id;perfView="log";view="perf";markDirty();renderApp();
+  toast("Incident logged — give it a title");
+}
+function renderPerfOverview(det,cands){
+  det.innerHTML=`<div class="dash">
+    <div class="dash-head"><h1>Performance log</h1><span class="faint">how this team actually fails, with evidence</span>
+      <span style="flex:1"></span><button class="primary sm" id="pf-new2">＋ Log an incident</button></div>
+    <p class="muted" style="font-size:12.5px;max-width:660px">One episode usually contains several distinct failures — a late ETA, then a "done" that wasn't, then a wrong root cause. Tag them all and the pattern emerges over months. Evidence from your own records is attached automatically.</p>
+    ${cands.length?`<div class="sec-title" style="margin-top:20px"><h3>Detected from your data</h3><div class="ln"></div></div>
+      ${cands.map(c=>`<div class="sugg">
+        <div class="sg-why">${esc(FAIL_KINDS[c.kind].label)} — ${esc(c.why)}</div>
+        <div class="sg-txt"><b>${esc(c.title)}</b><br>${esc(c.detail)}</div>
+        <div class="sg-act"><button class="sm primary" data-pfacc="${esc(c.key)}">Log as an incident</button>
+          <button class="sm ghost" data-pfdis="${esc(c.key)}">Not an issue</button></div></div>`).join("")}`:""}
+    ${state.incidents.length?`<div class="sec-title" style="margin-top:20px"><h3>Recent</h3><div class="ln"></div>
+        <button class="sm" id="pf-pat">▦ See patterns</button></div>
+      ${state.incidents.slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,12).map(x=>`<div class="dashitem" data-igo="${x.id}">
+        <span class="pill ${INC_SEV[x.severity].cls}">${INC_SEV[x.severity].label}</span>
+        <span class="di-main">${esc(x.title||"(untitled)")}</span>
+        <span class="di-sub">${fmtDate(x.date)}${x.costDays?" · "+x.costDays+"d":""}</span></div>`).join("")}`
+      :`<p class="faint" style="font-size:12px;margin-top:16px">Nothing logged yet.</p>`}
+  </div>`;
+  det.querySelector("#pf-new2").onclick=()=>newIncident();
+  const pb=det.querySelector("#pf-pat");if(pb)pb.onclick=()=>{perfView="patterns";renderApp();};
+  det.querySelectorAll("[data-igo]").forEach(d=>d.onclick=()=>{activeIncidentId=d.dataset.igo;renderApp();});
+  det.querySelectorAll("[data-pfacc]").forEach(b=>b.onclick=()=>{
+    const c=cands.find(y=>y.key===b.dataset.pfacc);
+    dismissSuggestion(c.key);
+    const t=ticketByRef(c.ticketId);
+    newIncident({title:c.title,kinds:[c.kind],ticketIds:c.ticketId?[c.ticketId]:[],
+      team:t?t.team:"",narrative:c.detail,date:todayStr()});});
+  det.querySelectorAll("[data-pfdis]").forEach(b=>b.onclick=()=>{dismissSuggestion(b.dataset.pfdis);renderApp();});
+}
+function renderIncidentDetail(det){
+  const x=activeIncident();
+  if(!x){activeIncidentId=null;renderPerf();return;}
+  const derived=derivedEvidence(x);
+  const tks=x.ticketIds.map(ticketByRef).filter(Boolean);
+  const groups={};Object.entries(FAIL_KINDS).forEach(([k,v])=>{(groups[v.group]=groups[v.group]||[]).push(k);});
+  det.innerHTML=`
+    <div class="detail-head">
+      <div class="dh-top"><div style="flex:1;min-width:0">
+        <div class="dh-id"><span class="pill ${INC_SEV[x.severity].cls}">${INC_SEV[x.severity].label}</span>
+          <span class="faint" style="font-weight:400">${esc(INC_STATUS[x.status].label)}</span>
+          ${x.team?teamPill(x.team):""}
+          ${x.customerVisible?`<span class="warnchip bad">reached the end user</span>`:""}
+          ${x.escalated?`<span class="warnchip">escalated</span>`:""}</div>
+        <h1 id="in-title" style="cursor:text">${esc(x.title||"(untitled incident)")}</h1></div>
+        <button class="sm" id="in-back">← All incidents</button>
+        <button class="ghost" id="in-del" title="Delete">🗑</button></div>
+      <div class="dh-dates"><span>Occurred <b>${fmtDate(x.date)}</b></span>
+        ${x.costDays?`<span>Cost <b>${x.costDays} days</b></span>`:""}
+        ${x.etasBurned?`<span>ETAs burned <b>${x.etasBurned}</b></span>`:""}
+        ${x.raisedOn?`<span>Raised <b>${fmtDate(x.raisedOn)}</b></span>`:""}</div>
+      <div class="tabs"></div>
+    </div>
+    <div class="detail-body">
+      <div class="grid3">
+        <div class="field"><label>Date it happened</label><input type="date" id="in-date" value="${esc(x.date)}"></div>
+        <div class="field"><label>Team</label><select id="in-team"><option value="">— none —</option>${state.settings.teams.map(t=>`<option value="${esc(t.id)}" ${x.team===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Severity</label><select id="in-sev">${Object.entries(INC_SEV).map(([k,v])=>`<option value="${k}" ${x.severity===k?"selected":""}>${v.label}</option>`).join("")}</select></div>
+      </div>
+
+      <div class="sec-title"><h3>How it failed</h3><div class="ln"></div>
+        <span class="faint" style="font-size:11px">tag every mode that applies</span></div>
+      ${Object.entries(groups).map(([g,ks])=>`<div style="margin-bottom:7px">
+        <div class="faint" style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">${esc(g)}</div>
+        <div class="chiprow">${ks.map(k=>`<span class="chip ${x.kinds.includes(k)?"":""}" data-kind="${k}"
+          style="${x.kinds.includes(k)?"border-color:var(--red);color:var(--red);font-weight:600":"opacity:.6"}">${x.kinds.includes(k)?"✓ ":""}${esc(FAIL_KINDS[k].label)}</span>`).join("")}</div></div>`).join("")}
+
+      <div class="field" style="margin-top:16px"><label>What happened — dated facts only</label>
+        <textarea id="in-narr" style="min-height:96px" placeholder="Delivered 27 Jun and declared complete; the tile did not render. Root cause was in their own code, per the BTP team's analysis on 29 Jun.">${esc(x.narrative)}</textarea></div>
+
+      <div class="inferbox">
+        <div class="ib-h">What I take from it — my reading, not a fact</div>
+        <textarea id="in-infer" style="min-height:56px;border:none;padding:0;background:transparent"
+          placeholder="They almost certainly never tested it before declaring done.">${esc(x.inference)}</textarea>
+        <p class="faint" style="font-size:10.5px;margin:6px 0 0">Kept separate on purpose. The facts above are what survive being challenged; this is the conclusion you draw from them.</p>
+      </div>
+
+      <div class="grid3">
+        <div class="field"><label>Days lost</label><input id="in-cost" value="${esc(x.costDays||"")}" placeholder="0"></div>
+        <div class="field"><label>ETAs burned</label><input id="in-etas" value="${esc(x.etasBurned||"")}" placeholder="0"></div>
+        <div class="field"><label>Status</label><select id="in-status">${Object.entries(INC_STATUS).map(([k,v])=>`<option value="${k}" ${x.status===k?"selected":""}>${v.label}</option>`).join("")}</select></div>
+      </div>
+      <div class="row" style="margin-bottom:16px;gap:18px">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12.5px;letter-spacing:0;color:var(--txt);margin:0">
+          <input type="checkbox" id="in-esc" style="width:auto" ${x.escalated?"checked":""}> Needed escalation to move</label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12.5px;letter-spacing:0;color:var(--txt);margin:0">
+          <input type="checkbox" id="in-cust" style="width:auto" ${x.customerVisible?"checked":""}> Reached the end user</label>
+      </div>
+
+      <div class="sec-title"><h3>Demands involved</h3><div class="ln"></div></div>
+      <div class="chiprow" style="margin-bottom:6px">
+        ${tks.map(t=>`<span class="chip" data-itdel="${esc(t.id)}">${esc(t.ticketId||"demand")} <span class="x">✕</span></span>`).join("")}
+        <select id="in-tadd" style="width:auto;padding:3px 9px"><option value="">+ link a demand</option>
+          ${state.tickets.filter(t=>!x.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${esc(ticketLabel(t)).slice(0,52)}</option>`).join("")}</select></div>
+      <p class="faint" style="font-size:11px">Linking a demand cites its ETA history, logged hours and hurdles automatically, below.</p>
+
+      <div class="sec-title" style="margin-top:20px"><h3>Sequence of events</h3><div class="ln"></div>
+        <button class="sm" id="in-addstep">＋ Step</button></div>
+      ${x.timeline.length?x.timeline.slice().sort((a,b)=>(a.date||"")<(b.date||"")?-1:1).map(s=>`<div class="tlrow">
+        <input class="tl-d" type="date" value="${esc(s.date)}" data-tld="${s.id}">
+        <input class="tl-w" value="${esc(s.who)}" placeholder="who" data-tlw="${s.id}">
+        <div class="tl-t" data-tlt="${s.id}">${linkify(s.what||"(what happened)")}</div>
+        <button class="ghost sm nact" data-tldel="${s.id}">✕</button></div>`).join("")
+        :`<p class="faint" style="font-size:12px">No steps yet. The back-and-forth is usually the story — who said what, and when.</p>`}
+
+      <div class="sec-title" style="margin-top:22px"><h3>Evidence</h3><div class="ln"></div>
+        <button class="sm" id="in-addev">＋ Add evidence</button></div>
+      ${derived.length?`<div class="faint" style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Cited from your records — always current</div>
+        ${derived.map(e=>`<div class="evrow k-derived">
+          <span class="ev-k">${EV_KINDS.derived.icon} ${esc(EV_KINDS.derived.label)}</span>
+          <div style="flex:1;min-width:0"><div class="ev-t">${esc(e.text)}</div>
+            <div class="ev-s">${esc(e.source)}${e.on?" · "+fmtDate(e.on):""}</div></div></div>`).join("")}`
+        :`<p class="faint" style="font-size:11.5px">Link a demand above and its ETA history, hours and hurdles appear here automatically.</p>`}
+      ${x.evidence.length?`<div class="faint" style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;margin:12px 0 6px">Added by you</div>
+        ${x.evidence.map(e=>`<div class="evrow k-${e.kind}">
+          <select class="ev-k" data-evk="${e.id}" style="font-size:10px;padding:2px 4px">${Object.entries(EV_KINDS).filter(([k])=>k!=="derived").map(([k,v])=>`<option value="${k}" ${e.kind===k?"selected":""}>${v.label}</option>`).join("")}</select>
+          <div style="flex:1;min-width:0"><div class="ev-t" data-evt="${e.id}">${linkify(e.text||"(the evidence)")}</div>
+            <div class="ev-s"><input value="${esc(e.source)}" placeholder="source (who / where)" data-evs="${e.id}" style="font-size:10px;padding:1px 4px;width:60%">
+              <input type="date" value="${esc(e.on)}" data-evo="${e.id}" style="font-size:10px;padding:1px 4px;width:auto"></div></div>
+          <button class="ghost sm nact" data-evdel="${e.id}">✕</button></div>`).join("")}`:""}
+
+      <div class="sec-title" style="margin-top:22px"><h3>Raised with them</h3><div class="ln"></div></div>
+      <div class="grid2">
+        <div class="field"><label>Raised on</label><input type="date" id="in-raised" value="${esc(x.raisedOn)}"></div>
+        <div class="field"><label>Their response</label><input id="in-resp" value="${esc(x.vendorResponse)}" placeholder="what they said"></div>
+      </div>
+    </div>`;
+  const q=s=>det.querySelector(s);
+  q("#in-back").onclick=()=>{activeIncidentId=null;renderApp();};
+  q("#in-title").onclick=e=>editInline(e.target,x.title,v=>{x.title=v;touch(x);renderApp();});
+  q("#in-del").onclick=()=>{if(!confirm("Delete this incident and its evidence?"))return;
+    state.incidents=state.incidents.filter(y=>y.id!==x.id);activeIncidentId=null;markDirty();renderApp();};
+  q("#in-date").onchange=e=>{x.date=e.target.value;touch(x);renderApp();};
+  q("#in-team").onchange=e=>{x.team=e.target.value;touch(x);renderApp();};
+  q("#in-sev").onchange=e=>{x.severity=e.target.value;touch(x);renderApp();};
+  q("#in-status").onchange=e=>{x.status=e.target.value;touch(x);renderApp();};
+  q("#in-narr").onchange=e=>{x.narrative=e.target.value;touch(x);};
+  q("#in-infer").onchange=e=>{x.inference=e.target.value;touch(x);};
+  q("#in-cost").onchange=e=>{x.costDays=num(e.target.value);touch(x);renderApp();};
+  q("#in-etas").onchange=e=>{x.etasBurned=num(e.target.value);touch(x);renderApp();};
+  q("#in-esc").onchange=e=>{x.escalated=e.target.checked;touch(x);renderApp();};
+  q("#in-cust").onchange=e=>{x.customerVisible=e.target.checked;touch(x);renderApp();};
+  q("#in-raised").onchange=e=>{x.raisedOn=e.target.value;touch(x);renderApp();};
+  q("#in-resp").onchange=e=>{x.vendorResponse=e.target.value;touch(x);};
+  det.querySelectorAll("[data-kind]").forEach(c=>c.onclick=()=>{
+    const k=c.dataset.kind;
+    x.kinds=x.kinds.includes(k)?x.kinds.filter(y=>y!==k):x.kinds.concat(k);
+    touch(x);renderApp();});
+  det.querySelectorAll("[data-itdel]").forEach(c=>c.onclick=()=>{
+    x.ticketIds=x.ticketIds.filter(y=>y!==c.dataset.itdel);touch(x);renderApp();});
+  q("#in-tadd").onchange=e=>{if(e.target.value){x.ticketIds.push(e.target.value);touch(x);renderApp();}};
+  q("#in-addstep").onclick=()=>{x.timeline.push(normIncStep({date:x.date}));touch(x);renderApp();};
+  det.querySelectorAll("[data-tld]").forEach(i=>i.onchange=e=>{x.timeline.find(s=>s.id===i.dataset.tld).date=e.target.value;touch(x);renderApp();});
+  det.querySelectorAll("[data-tlw]").forEach(i=>i.onchange=e=>{x.timeline.find(s=>s.id===i.dataset.tlw).who=e.target.value;touch(x);});
+  det.querySelectorAll("[data-tlt]").forEach(el=>el.onclick=()=>{const s=x.timeline.find(y=>y.id===el.dataset.tlt);
+    editInline(el,s.what,v=>{s.what=v;touch(x);renderApp();},true);});
+  det.querySelectorAll("[data-tldel]").forEach(b=>b.onclick=()=>{x.timeline=x.timeline.filter(s=>s.id!==b.dataset.tldel);touch(x);renderApp();});
+  q("#in-addev").onclick=()=>{x.evidence.push(normEvidence({kind:"quote",on:x.date}));touch(x);renderApp();};
+  det.querySelectorAll("[data-evk]").forEach(s=>s.onchange=e=>{x.evidence.find(y=>y.id===s.dataset.evk).kind=e.target.value;touch(x);renderApp();});
+  det.querySelectorAll("[data-evt]").forEach(el=>el.onclick=()=>{const e2=x.evidence.find(y=>y.id===el.dataset.evt);
+    editInline(el,e2.text,v=>{e2.text=v;touch(x);renderApp();},true);});
+  det.querySelectorAll("[data-evs]").forEach(i=>i.onchange=e=>{x.evidence.find(y=>y.id===i.dataset.evs).source=e.target.value;touch(x);});
+  det.querySelectorAll("[data-evo]").forEach(i=>i.onchange=e=>{x.evidence.find(y=>y.id===i.dataset.evo).on=e.target.value;touch(x);});
+  det.querySelectorAll("[data-evdel]").forEach(b=>b.onclick=()=>{x.evidence=x.evidence.filter(y=>y.id!==b.dataset.evdel);touch(x);renderApp();});
+}
+function renderPerfPatterns(det){
+  const r=perfRollup(perfTeam,perfSince);
+  /* floor of 3, or one incident tagged once would draw a full-width bar and every
+     mode would look equally dominant */
+  const maxN=Math.max(3,...r.kinds.map(k=>k.n));
+  det.innerHTML=`<div class="dash">
+    <div class="dash-head"><h1>Patterns</h1>
+      <span class="faint">${perfTeam?esc(teamOf(perfTeam).name):"all teams"}${perfSince?" · since "+fmtDate(perfSince):" · all time"}</span>
+      <span style="flex:1"></span><button class="primary sm" id="pp-pack">📄 Evidence pack</button></div>
+    ${r.totals.n?`
+      <div class="kpirow">
+        <div class="kpi"><b>${r.totals.n}</b><span>incidents</span></div>
+        <div class="kpi bad"><b>${r.totals.days}</b><span>days lost</span></div>
+        <div class="kpi warn"><b>${r.totals.etas}</b><span>ETAs burned</span></div>
+        <div class="kpi ${r.totals.customer?"bad":""}"><b>${r.totals.customer}</b><span>reached the end user</span></div>
+      </div>
+      <div class="dashcard" style="margin-bottom:14px"><h3>Recurring failure modes<span class="cnt">${r.kinds.length}</span></h3>
+        <div class="patrow" style="border:none;padding-bottom:2px">
+          <span class="pr-k faint" style="font-size:9px;letter-spacing:.12em;text-transform:uppercase">Mode</span>
+          <span class="patbar"></span>
+          <span class="pr-n faint" style="font-size:9px;letter-spacing:.1em;font-weight:600">N</span>
+          <span class="pr-d faint" style="font-size:9px;letter-spacing:.06em;text-transform:uppercase">In those</span></div>
+        ${r.kinds.map(k=>`<div class="patrow" data-pk="${esc(k.kind)}" style="cursor:pointer">
+          <span class="pr-k">${esc(FAIL_KINDS[k.kind].label)} <span class="faint" style="font-size:10px">${esc(FAIL_KINDS[k.kind].group)}</span></span>
+          <span class="patbar">${Array.from({length:10},(_,i)=>`<i class="${i<Math.round(k.n/maxN*10)?"on":""}"></i>`).join("")}</span>
+          <span class="pr-n">${k.n}</span><span class="pr-d">${k.days?k.days+"d":"—"}</span></div>`).join("")}
+        <p class="faint" style="font-size:11px;margin-top:9px">Click a mode to filter the log to it.
+          <b>“In those”</b> is the days lost by the incidents carrying that mode — one incident usually carries several, so these overlap and must not be added up. The headline figure is ${r.totals.days} days across ${r.totals.n} incidents.</p></div>
+      <div class="chgrid">
+        <div class="dashcard"><h3>By area</h3>
+          ${r.groups.map(g=>`<div class="patrow"><span class="pr-k">${esc(g.group)}</span>
+            <span class="pr-n">${g.n}</span><span class="pr-d">${g.days?g.days+"d":"—"}</span></div>`).join("")}</div>
+        <div class="dashcard chcard"><h3>When they happened</h3><p class="chq">Is it getting better or worse?</p>
+          ${r.months.length>1?chCols(r.months.map(m=>({label:m.label,n:m.n})),[{key:"n",label:"Incidents",color:"var(--red)"}],{w:520,h:170,unit:""}):`<div class="dash-empty">Needs a couple of months of data.</div>`}</div>
+      </div>
+      <div class="sec-title" style="margin-top:20px"><h3>Incidents behind these numbers</h3><div class="ln"></div></div>
+      ${r.list.sort((a,b)=>a.date<b.date?1:-1).map(x=>`<div class="dashitem" data-igo2="${x.id}">
+        <span class="pill ${INC_SEV[x.severity].cls}">${INC_SEV[x.severity].label}</span>
+        <span class="di-main">${esc(x.title||"(untitled)")}</span>
+        <span class="di-sub">${fmtDate(x.date)}${x.costDays?" · "+x.costDays+"d":""}${x.kinds.length?" · "+x.kinds.length+" modes":""}</span></div>`).join("")}
+      `:`<div class="nopick" style="height:auto;padding:50px 20px"><div>
+        <p style="color:var(--muted);max-width:440px;line-height:1.7">No incidents in this window.<br><br>
+        Log them as they happen and this becomes the answer to "how does this team keep failing?" — with the dated evidence behind every number.</p></div></div>`}
+  </div>`;
+  det.querySelector("#pp-pack").onclick=()=>openEvidencePack(perfTeam,perfSince);
+  det.querySelectorAll("[data-pk]").forEach(d=>d.onclick=()=>{perfKind=d.dataset.pk;perfView="log";renderApp();});
+  det.querySelectorAll("[data-igo2]").forEach(d=>d.onclick=()=>{activeIncidentId=d.dataset.igo2;perfView="log";renderApp();});
+}
+/* ---- evidence pack: the document he takes into the conversation ---- */
+function packMarkdown(team,since){
+  const r=perfRollup(team,since);
+  const L=[];
+  L.push("# Performance evidence pack — "+(team?teamOf(team).name:"all teams"));
+  L.push("");
+  L.push("_Compiled "+fmtDate(todayStr())+". Covering "+(since?"since "+fmtDate(since):"all recorded incidents")+"._");
+  L.push("");
+  L.push("## Summary");L.push("");
+  L.push("- **"+r.totals.n+" incidents** logged");
+  L.push("- **"+r.totals.days+" days** lost");
+  L.push("- **"+r.totals.etas+" committed ETAs** missed");
+  L.push("- **"+r.totals.customer+"** reached the end user");
+  L.push("- **"+r.totals.escalated+"** required escalation to move");
+  L.push("");
+  L.push("## Recurring failure modes");L.push("");
+  r.kinds.forEach(k=>L.push("- **"+FAIL_KINDS[k.kind].label+"** ("+FAIL_KINDS[k.kind].group+") — "+
+    k.n+" incident"+(k.n===1?"":"s")));
+  L.push("");
+  /* one incident usually carries several modes, so per-mode day counts overlap and
+     must never be presented as if they add up */
+  L.push("_A single incident usually involves several of these, so the counts overlap. The totals above are the non-overlapping figures._");
+  L.push("");
+  L.push("## Incidents");L.push("");
+  r.list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(x=>{
+    L.push("### "+fmtDate(x.date)+" — "+(x.title||"(untitled)"));
+    L.push("");
+    L.push("_"+INC_SEV[x.severity].label+" severity"+(x.costDays?" · "+x.costDays+" days lost":"")+
+      (x.etasBurned?" · "+x.etasBurned+" ETAs burned":"")+(x.customerVisible?" · reached the end user":"")+
+      (x.escalated?" · needed escalation":"")+"_");
+    L.push("");
+    if(x.kinds.length){L.push("**Failure modes:** "+x.kinds.map(k=>FAIL_KINDS[k].label).join(" · "));L.push("");}
+    if(x.narrative){L.push(x.narrative);L.push("");}
+    if(x.timeline.length){
+      L.push("**Sequence**");L.push("");
+      x.timeline.slice().sort((a,b)=>(a.date||"")<(b.date||"")?-1:1)
+        .forEach(s=>L.push("- "+(s.date?fmtDate(s.date):"—")+(s.who?" · "+s.who:"")+" — "+s.what));
+      L.push("");}
+    const dv=derivedEvidence(x);
+    if(dv.length||x.evidence.length){
+      L.push("**Evidence**");L.push("");
+      dv.forEach(e=>L.push("- ["+e.source+"] "+e.text));
+      x.evidence.forEach(e=>L.push("- ["+EV_KINDS[e.kind].label+(e.source?" · "+e.source:"")+
+        (e.on?" · "+fmtDate(e.on):"")+"] "+e.text));
+      L.push("");}
+    if(x.raisedOn){L.push("**Raised with them** "+fmtDate(x.raisedOn)+
+      (x.vendorResponse?" — response: "+x.vendorResponse:"")+".");L.push("");}
+    /* the inference is labelled as such, never presented as a finding */
+    if(x.inference){L.push("> _My reading (not a documented fact): "+x.inference+"_");L.push("");}
+  });
+  return L.join("\n");
+}
+function packHtml(team,since){
+  const r=perfRollup(team,since);
+  const H=[];
+  H.push(`<h1>Performance evidence pack</h1><div class="meta">${esc(team?teamOf(team).name:"All teams")} · compiled ${fmtDate(todayStr())} · ${since?"since "+fmtDate(since):"all recorded incidents"}</div>`);
+  H.push(`<h3>Summary</h3><p class="nums"><b>${r.totals.n}</b> incidents · <b>${r.totals.days}</b> days lost ·
+    <b>${r.totals.etas}</b> ETAs missed · <b>${r.totals.customer}</b> reached the end user · <b>${r.totals.escalated}</b> needed escalation</p>`);
+  H.push(`<h3>Recurring failure modes</h3><ul>${r.kinds.map(k=>`<li><b>${esc(FAIL_KINDS[k.kind].label)}</b> <i>(${esc(FAIL_KINDS[k.kind].group)})</i> — ${k.n} incident${k.n===1?"":"s"}</li>`).join("")}</ul>
+    <p class="nums"><i>A single incident usually involves several of these, so the counts overlap. The totals above are the non-overlapping figures.</i></p>`);
+  H.push(`<h3>Incidents</h3>`);
+  r.list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(x=>{
+    const dv=derivedEvidence(x);
+    H.push(`<div class="bblock"><h4>${fmtDate(x.date)} — ${esc(x.title||"(untitled)")}</h4>
+      <p class="nums">${INC_SEV[x.severity].label} severity${x.costDays?` · ${x.costDays} days lost`:""}${x.etasBurned?` · ${x.etasBurned} ETAs burned`:""}${x.customerVisible?" · reached the end user":""}${x.escalated?" · needed escalation":""}</p>
+      ${x.kinds.length?`<p class="nums"><b>Failure modes:</b> ${x.kinds.map(k=>esc(FAIL_KINDS[k].label)).join(" · ")}</p>`:""}
+      ${x.narrative?`<p>${esc(x.narrative)}</p>`:""}
+      ${x.timeline.length?`<p class="nums"><b>Sequence</b></p><ul>${x.timeline.slice().sort((a,b)=>(a.date||"")<(b.date||"")?-1:1).map(s=>`<li>${s.date?fmtDate(s.date):"—"}${s.who?` · <i>${esc(s.who)}</i>`:""} — ${esc(s.what)}</li>`).join("")}</ul>`:""}
+      ${(dv.length||x.evidence.length)?`<p class="nums"><b>Evidence</b></p><ul>
+        ${dv.map(e=>`<li><i>[${esc(e.source)}]</i> ${esc(e.text)}</li>`).join("")}
+        ${x.evidence.map(e=>`<li><i>[${esc(EV_KINDS[e.kind].label)}${e.source?" · "+esc(e.source):""}${e.on?" · "+fmtDate(e.on):""}]</i> ${esc(e.text)}</li>`).join("")}</ul>`:""}
+      ${x.raisedOn?`<p class="nums">Raised with them ${fmtDate(x.raisedOn)}${x.vendorResponse?` — response: ${esc(x.vendorResponse)}`:""}.</p>`:""}
+      ${x.inference?`<blockquote>My reading (not a documented fact): ${esc(x.inference)}</blockquote>`:""}
+    </div>`);});
+  return H.join("");
+}
+function openEvidencePack(team,since){
+  const root=document.getElementById("modalRoot");
+  const draw=()=>{
+    root.innerHTML=`<div class="modal-bg"><div class="modal" style="width:860px">
+      <h2>📄 Evidence pack</h2>
+      <div class="row" style="align-items:flex-end;margin-bottom:12px;flex-wrap:wrap">
+        <div class="field" style="margin:0;flex:0 0 200px"><label>Team</label>
+          <select id="ep-team"><option value="">All teams</option>${state.settings.teams.map(t=>`<option value="${esc(t.id)}" ${team===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div>
+        <div class="field" style="margin:0;flex:0 0 190px"><label>Period</label>
+          <select id="ep-since"><option value="">All time</option>
+            ${[["3 months",addDays(-90)],["6 months",addDays(-182)],["12 months",addDays(-365)]].map(([l,d])=>`<option value="${d}" ${since===d?"selected":""}>Last ${l}</option>`).join("")}</select></div>
+        <div style="flex:1"></div>
+      </div>
+      <p class="faint" style="font-size:11.5px;margin:-4px 0 10px">Separate from the Boss Brief on purpose — conduct never rides along in a routine status update. Your inferences are included but labelled as inferences.</p>
+      <div class="specpaper"><div class="briefdoc" id="ep-doc">${packHtml(team,since)}</div></div>
+      <div class="modal-foot">
+        <button id="ep-x" class="ghost">Close</button>
+        <button id="ep-md">📋 Copy Markdown</button>
+        <button id="ep-dl">⬇ .md</button>
+        <button id="ep-print" class="primary">🖨 Print / PDF</button></div></div></div>`;
+    root.querySelector("#ep-team").onchange=e=>{team=e.target.value;draw();};
+    root.querySelector("#ep-since").onchange=e=>{since=e.target.value;draw();};
+    root.querySelector("#ep-x").onclick=()=>{root.innerHTML="";};
+    root.querySelector("#ep-md").onclick=()=>{
+      navigator.clipboard.writeText(packMarkdown(team,since))
+        .then(()=>toast("Markdown copied")).catch(()=>toast("Copy blocked — use ⬇ .md",true));};
+    root.querySelector("#ep-dl").onclick=()=>{
+      const b=new Blob([packMarkdown(team,since)],{type:"text/markdown"});
+      const a=document.createElement("a");a.href=URL.createObjectURL(b);
+      a.download="performance-pack-"+todayStr()+".md";a.click();URL.revokeObjectURL(a.href);toast("Downloaded");};
+    root.querySelector("#ep-print").onclick=()=>{
+      const pa=document.getElementById("printArea");
+      pa.className="briefdoc";pa.innerHTML=packHtml(team,since);
+      setTimeout(()=>window.print(),60);};
+  };
+  draw();
+}
+
 /* ===================== RISK REGISTER ===================== */
 function activeRisk(){return state.risks.find(r=>r.id===activeRiskId);}
 function newRisk(pre){
@@ -5159,6 +5752,14 @@ function runGlobalSearch(qraw){
       m.actions.map(a=>a.text+" "+a.owner+" "+a.resolution).join(" ")].join(" ").toLowerCase();
     if(hay.includes(q))push("Meeting",m.title||MEETING_KINDS[m.kind].label,MEETING_KINDS[m.kind].label+" · "+m.date,
       ()=>{activeMeetingId=m.id;activeSyncId=null;syncFocusId=null;view="sync";renderApp();});});
+  state.incidents.forEach(x=>{
+    const hay=[x.title,x.narrative,x.inference,x.vendorResponse,
+      x.kinds.map(k=>FAIL_KINDS[k].label).join(" "),
+      x.evidence.map(e=>e.text+" "+e.source).join(" "),
+      x.timeline.map(t=>t.what+" "+t.who).join(" ")].join(" ").toLowerCase();
+    if(hay.includes(q))push("Incident",x.title||"(untitled)",
+      fmtDate(x.date)+(x.team?" · "+teamOf(x.team).name:""),
+      ()=>{activeIncidentId=x.id;perfView="log";view="perf";renderApp();});});
   state.risks.forEach(r=>{
     if((r.title+" "+r.detail+" "+r.owner+" "+r.mitigation).toLowerCase().includes(q))
       push("Risk",r.title||"(untitled)",RISK_SEV[r.severity].label+" · "+RISK_STATUS[r.status].label,
@@ -5295,7 +5896,7 @@ async function openSnapshots(){
       if(s.enc){const pw=await promptPassword("Snapshot is encrypted — password");if(pw===null)return;
         state=migrate(await decryptEnvelope(JSON.parse(s.data),pw));masterPassword=pw;}
       else state=migrate(JSON.parse(s.data));
-      activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=null;
+      activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;
       dirty=true;markDirty();root.innerHTML="";renderApp();toast("Restored snapshot "+s.date);
     }catch(e){toast("Couldn't restore: "+e.message,true);}
   });
@@ -5379,7 +5980,7 @@ async function unlockStartup(){
 function emptyState(){
   return migrate({version:1,settings:{teams:JSON.parse(JSON.stringify(DEF_TEAMS)),tags:[...DEF_TAGS],sources:[...DEF_SOURCES],
     encryption:false,autosave:true,staleDays:7,syncDays:{portal:[2,4],pnc:[]}},
-    tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],capacity:[],efforts:[],forecasts:[],approvals:[],risks:[]});
+    tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],capacity:[],efforts:[],forecasts:[],approvals:[],risks:[],incidents:[]});
 }
 /* Example data mirrors the workflow this app was built around, so the moving
    parts (queue reasons, slippage, hurdles, resolution) are visible on day one. */
@@ -5571,6 +6172,42 @@ function seedDemo(){
       raisedOn:todayStr(),reviewOn:addDays(21),
       mitigation:"Hold the decision until the vendor's Q4 forecast lands and PC-8903 has a firm date.",
       epicIds:[luca.id]})];
+  /* the Wave-2 tile episode: one incident carrying six distinct failure modes.
+     This is the shape the log exists for — the mix is what reveals the pattern. */
+  state.incidents=[
+    normIncident({date:"2026-06-29",team:"portal",severity:"high",status:"raised",
+      title:"Wave 2 tile change — declared done untested, then misdiagnosed",
+      kinds:["late-response","missed-eta","false-done","untested","misdiagnosis","deflection","weak-analysis","escalation-only","customer-visible","no-reuse"],
+      ticketIds:[t2.id],costDays:6,etasBurned:2,escalated:true,customerVisible:true,
+      narrative:"Work assigned 08-06. No ETA until 17-06, and only after a reminder on 16-06. Committed to code ready 28-06. On 27-06 they reported the code complete; the change did not render on the Fiori tile. They attributed the fault to the BTP team. On 29-06 that team demonstrated the root cause was in Portal's own code. A second ETA (03-07) was then given. After escalation the fix was delivered within one day. Both committed dates had already been communicated to the end user.",
+      inference:"The work was almost certainly not started in earnest until late, and never tested before being declared complete. The one-day turnaround after escalation suggests the capacity existed throughout.",
+      raisedOn:"2026-06-30",vendorResponse:"Acknowledged the testing gap; disputed the timeline.",
+      timeline:[
+        {id:uid(),date:"2026-06-08",who:"Me",what:"Work assigned; ETA requested."},
+        {id:uid(),date:"2026-06-16",who:"Me",what:"Reminder sent — still no ETA after eight days."},
+        {id:uid(),date:"2026-06-17",who:"Portal",what:"ETA given: code ready 28-06."},
+        {id:uid(),date:"2026-06-27",who:"Portal",what:"Reported code complete. Tile does not render the change."},
+        {id:uid(),date:"2026-06-28",who:"Portal",what:"Attributed the fault to the BTP team; restated the 28-06 ETA as still valid."},
+        {id:uid(),date:"2026-06-29",who:"BTP team",what:"Demonstrated the root cause sits in Portal's own code."},
+        {id:uid(),date:"2026-06-29",who:"Portal",what:"New ETA given: 03-07."},
+        {id:uid(),date:"2026-07-01",who:"Me",what:"Escalated. Fix delivered the following day."}],
+      evidence:[
+        {id:uid(),kind:"thirdparty",on:"2026-06-29",source:"BTP team analysis",
+         text:"BTP traced the failure to a missing target mapping in Portal's catalog — their own scope, not BTP's."},
+        {id:uid(),kind:"observed",on:"2026-06-27",source:"Me",
+         text:"Opened the launchpad myself on 27-06 after the completion notice; the tile was unchanged."},
+        {id:uid(),kind:"quote",on:"2026-06-28",source:"Portal lead, sync call",
+         text:"“The code is done on our side, this is a BTP problem now.”"},
+        {id:uid(),kind:"observed",on:"2026-06-08",source:"Wave 1 records",
+         text:"Wave 1 built the catalog framework this change extends, so the groundwork already existed."}]}),
+    normIncident({date:"2026-05-18",team:"portal",severity:"medium",status:"raised",
+      title:"Effort claim of 25h on work comparable to 5h",
+      kinds:["effort-inflation"],ticketIds:[],costDays:0,etasBurned:0,
+      narrative:"25 hours were billed against a single-field selection-screen change. Three comparable changes in the same quarter were billed at 4, 5 and 6 hours.",
+      inference:"The claim looks inflated rather than mistaken, given how closely the comparable items cluster.",
+      raisedOn:"2026-05-20",vendorResponse:"Said the figure included analysis time; no breakdown provided.",
+      evidence:[{id:uid(),kind:"observed",on:"2026-05-18",source:"Monthly effort report",
+         text:"25h claimed. The three closest comparable changes that quarter were 4h, 5h and 6h."}]})];
   state.approvals=[
     normApproval({team:"portal",kind:"prod",ticketId:t1.id,title:"Move the launchpad tile fix to Production",requestedOn:addDays(-3),status:"approved",decidedOn:addDays(-2),note:"CAB approved"}),
     normApproval({team:"portal",kind:"prod",ticketId:t2.id,title:"Move the payroll launchpad fix to Production",requestedOn:addDays(-1),status:"pending"}),
