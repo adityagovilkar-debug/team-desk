@@ -5095,14 +5095,31 @@ function insightsData(weeks){
     return {label:tm.name,b0:ts.filter(t=>slipCount(t)===0).length,
       b1:ts.filter(t=>slipCount(t)===1).length,b2:ts.filter(t=>slipCount(t)>=2).length};
   }).filter(r=>r.b0+r.b1+r.b2>0);
+  /* 7 — conduct: which KIND of failure each team has.
+     Deliberately the cross-team cut. The Performance tab's Patterns view goes deep
+     on one team; what Insights adds is the comparison and the trend. */
+  const AREA_ORDER=["Communication","Commitment","Quality","Analysis","Effort","Process","Impact"];
+  const areas=AREA_ORDER.map(g=>{const row={label:g};
+    teams.forEach(tm=>{row[tm.id]=state.incidents.filter(x=>x.team===tm.id
+      &&x.kinds.some(k=>FAIL_KINDS[k]&&FAIL_KINDS[k].group===g)).length;});
+    return row;}).filter(r=>teams.some(tm=>r[tm.id]>0));
+  /* 8 — conduct over time: is it getting better or worse? */
+  const im={};
+  state.incidents.forEach(x=>{const m=(x.date||"").slice(0,7);if(!m)return;
+    (im[m]=im[m]||{})[x.team]=(im[m][x.team]||0)+1;});
+  const incMonths=Object.keys(im).sort().map(m=>{const row={label:monthLabel(m).slice(0,3)};
+    teams.forEach(tm=>{row[tm.id]=im[m][tm.id]||0;});return row;});
   /* headline stat tiles */
   const open=state.tickets.filter(isOpen);
   const closed=state.tickets.filter(t=>cycleDays(t)!==null);
   const withP=state.tickets.filter(t=>t.promises.length);
-  return {S,throughput,ageing,delays,cycle,load,rel,wk,
+  return {S,throughput,ageing,delays,cycle,load,rel,wk,areas,incMonths,
+    hasIncidents:state.incidents.length>0,
     kpi:{open:open.length,blocked:open.filter(t=>openHurdles(t).length).length,
       median:closed.length?medianOf(closed.map(cycleDays)):null,
-      onTime:withP.length?Math.round(withP.filter(t=>slipCount(t)===0).length/withP.length*100):null}};
+      onTime:withP.length?Math.round(withP.filter(t=>slipCount(t)===0).length/withP.length*100):null,
+      failDays:state.incidents.reduce((a,x)=>a+num(x.costDays),0),
+      incidents:state.incidents.length}};
 }
 function renderInsights(){
   const side=document.getElementById("side");
@@ -5140,6 +5157,7 @@ function renderInsights(){
       <div class="kpi ${d.kpi.blocked?"bad":""}"><b>${d.kpi.blocked}</b><span>blocked</span></div>
       <div class="kpi"><b>${d.kpi.median===null?"—":d.kpi.median}</b><span>median days to close</span></div>
       <div class="kpi ${d.kpi.onTime!==null&&d.kpi.onTime<60?"warn":""}"><b>${d.kpi.onTime===null?"—":d.kpi.onTime+"%"}</b><span>first ETA met</span></div>
+      ${d.hasIncidents?`<div class="kpi ${d.kpi.failDays?"bad":""}"><b>${d.kpi.failDays}</b><span>days lost to failures</span></div>`:""}
     </div>
 
     <div class="chgrid">
@@ -5182,9 +5200,22 @@ function renderInsights(){
                 {key:"b1",label:"Slipped once",color:"var(--ord-2)"},
                 {key:"b2",label:"Slipped 2+",color:"var(--ord-3)"}]))
           : null,"No ETAs logged yet — log them during syncs and this fills in.")}
+
+      ${d.hasIncidents?card("Where the failures are","Which kind of failure does each team have?",
+        d.areas.length
+          ? chLegend(d.S)+(T?chTable(["Area",...d.S.map(s=>s.label)],d.areas.map(r=>[r.label,...d.S.map(s=>r[s.key])]))
+            :chBarsH(d.areas,{series:d.S,unit:""}))
+          : null,"No failure modes tagged yet."):""}
+
+      ${d.hasIncidents?card("Failure trend","Is their conduct improving?",
+        d.incMonths.length>1
+          ? chLegend(d.S)+(T?chTable(["Month",...d.S.map(s=>s.label)],d.incMonths.map(r=>[r.label,...d.S.map(s=>r[s.key])]))
+            :chCols(d.incMonths,d.S,{unit:" incidents"}))
+          : null,"Needs incidents across at least two months."):""}
     </div>
     <p class="faint" style="font-size:11.5px;margin-top:16px">
-      Skill coverage lives in <b>People → ⊞ Skill matrix</b>, which answers a different question and has its own screen.</p>
+      Skill coverage lives in <b>People → ⊞ Skill matrix</b>, and the evidence behind the failure
+      charts lives in <b>Performance → Patterns</b> — both answer different questions and have their own screens.</p>
   </div>`;
   det.querySelector("#inBrief2").onclick=openBossBrief;
   wireChartTips(det);

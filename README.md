@@ -190,9 +190,16 @@ Six charts, each answering exactly one question. Hand-rolled SVG — no CDN, off
 | Cycle time by tag | Is their estimate realistic? |
 | Current load | Who's drowning? |
 | Commitment reliability | How often does the first ETA hold? |
+| Where the failures are | Which *kind* of failure does each team have? |
+| Failure trend | Is their conduct improving? |
 
-Plus a KPI row (open / blocked / median days to close / first-ETA-met rate). Every chart has
-hover + keyboard-focus tooltips and a **table view** toggle for reading or pasting the numbers.
+The last two appear only once something is logged in the Performance log, and they take the
+cross-team cut deliberately — Performance → Patterns goes deep on one team, Insights compares
+them and shows the trend.
+
+Plus a KPI row (open / blocked / median days to close / first-ETA-met rate, and days lost to
+failures once incidents exist). Every chart has hover + keyboard-focus tooltips and a
+**table view** toggle for reading or pasting the numbers.
 
 **On colour.** The team palette was validated with a contrast/CVD checker against this app's
 own card surface, not eyeballed. The original pair — blue `#4ea1ff` and violet `#a97cff` —
