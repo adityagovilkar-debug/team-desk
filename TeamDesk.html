@@ -165,6 +165,21 @@
   .side-tools{padding:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
   .filters{display:flex;gap:6px;flex-wrap:wrap}
   .filters select{width:auto;flex:1;min-width:0;padding:5px 6px;font-size:12px}
+  /* multi-select status filter — chips beat a <select multiple>, which needs
+     ctrl-clicking and hides what's selected behind a scroll box */
+  .statusfilter{display:flex;flex-wrap:wrap;gap:4px}
+  .sfchip{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:5px;
+    border:1px solid var(--line2);background:transparent;color:var(--faint);
+    font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;transition:.12s}
+  .sfchip:hover{border-color:var(--faint);color:var(--muted)}
+  .sfchip b{font-size:10px;font-weight:700;opacity:.75;font-variant-numeric:tabular-nums}
+  .sfchip.on{background:var(--chip)}
+  .sfchip.on.new{color:var(--accent);border-color:var(--tint-blue-bd)}
+  .sfchip.on.progress{color:var(--teal);border-color:var(--tint-teal-bd)}
+  .sfchip.on.blocked{color:var(--red);border-color:var(--tint-red-bd)}
+  .sfchip.on.review{color:var(--amber);border-color:var(--tint-amber-bd)}
+  .sfchip.on.done{color:var(--green);border-color:var(--tint-green-bd)}
+  .sfchip.clear{border-style:dashed}
   .stats{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:11px}
   .stat{flex:1;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px 2px}
   .stat b{display:block;font-size:16px;font-weight:700}
@@ -1363,7 +1378,11 @@ function normHurdle(h){return {id:h.id||uid(),text:h.text||"",kind:HURDLE_KINDS[
 function normPromise(p){return {id:p.id||uid(),eta:p.eta||"",givenOn:p.givenOn||todayStr(),note:p.note||""};}
 function normUpdate(u){return {id:u.id||uid(),ts:u.ts||Date.now(),text:u.text||"",syncId:u.syncId||"",by:u.by||""};}
 function normAction(a){return {id:a.id||uid(),text:a.text||"",owner:a.owner||"",due:a.due||"",done:!!a.done,
-  resolution:a.resolution||"",fromSyncId:a.fromSyncId||""};}
+  resolution:a.resolution||"",fromSyncId:a.fromSyncId||"",
+  /* whether this keeps surfacing in the team's syncs until closed. Defaults ON —
+     an older file has no flag and its actions should still carry — but a minor
+     action from a call can be muted so the queue doesn't fill with noise. */
+  carry:a.carry!==false};}
 function normPoint(p){return {id:p.id||uid(),text:p.text||"",by:p.by||""};}
 /* Subtasks: a flat checklist inside ONE ticket. Lets one "decommission system X"
    ticket hold its phases (analyse → migrate → decommission) instead of forcing a
@@ -2335,7 +2354,13 @@ function renderTicketSidebar(){
       <button class="primary" id="btnNew" style="width:100%">＋ New ticket</button>
       <div class="filters">
         <select id="fTeam"><option value="">All teams</option>${state.settings.teams.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("")}</select>
-        <select id="fStatus"><option value="">Any status</option>${Object.entries(MY_STATUS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("")}</select>
+      </div>
+      <div class="statusfilter">
+        ${Object.entries(MY_STATUS).map(([k,v])=>{
+          const on=(f._sts||[]).includes(k), n=state.tickets.filter(t=>t.myStatus===k).length;
+          return `<span class="sfchip ${v.cls} ${on?"on":""}" data-sf="${k}"
+            title="${on?"Showing":"Click to show only"} ${esc(v.label)}">${esc(v.label)}<b>${n}</b></span>`;}).join("")}
+        ${(f._sts||[]).length?`<span class="sfchip clear" data-sfclear="1">clear</span>`:""}
       </div>
       <div class="filters">
         <select id="fTag"><option value="">Any tag</option>${state.settings.tags.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
@@ -2348,7 +2373,15 @@ function renderTicketSidebar(){
     <div class="listwrap" id="tkList"></div>`;
   const q=(id,v)=>{const el=side.querySelector(id);el.value=v||"";return el;};
   q("#fTeam",f._team).onchange=e=>{f._team=e.target.value;renderTicketSidebar();};
-  q("#fStatus",f._st).onchange=e=>{f._st=e.target.value;renderTicketSidebar();};
+  side.querySelectorAll("[data-sf]").forEach(c=>c.onclick=e=>{
+    const k=c.dataset.sf;f._sts=f._sts||[];
+    /* plain click narrows to just that status — the common case is "only these";
+       shift-click builds a set without wiping what you already picked */
+    if(e.shiftKey)f._sts=f._sts.includes(k)?f._sts.filter(x=>x!==k):f._sts.concat(k);
+    else f._sts=(f._sts.length===1&&f._sts[0]===k)?[]:[k];
+    renderTicketSidebar();});
+  const sfc=side.querySelector("[data-sfclear]");
+  if(sfc)sfc.onclick=()=>{f._sts=[];renderTicketSidebar();};
   q("#fTag",f._tag).onchange=e=>{f._tag=e.target.value;renderTicketSidebar();};
   q("#fWho",f._who).onchange=e=>{f._who=e.target.value;renderTicketSidebar();};
   side.querySelector("#fHide").onchange=e=>{f._hide=e.target.checked;renderTicketSidebar();};
@@ -2356,10 +2389,12 @@ function renderTicketSidebar(){
 
   let list=state.tickets.slice();
   if(f._team)list=list.filter(t=>t.team===f._team);
-  if(f._st)list=list.filter(t=>t.myStatus===f._st);
+  if((f._sts||[]).length)list=list.filter(t=>f._sts.includes(t.myStatus));
   if(f._tag)list=list.filter(t=>t.tags.includes(f._tag));
   if(f._who)list=list.filter(t=>t.assignees.includes(f._who));
-  if(f._hide)list=list.filter(t=>t.myStatus!=="done");
+  /* an explicit status selection wins — otherwise ticking "Done" then having it
+     hidden by the checkbox would look like a bug */
+  if(f._hide&&!(f._sts||[]).length)list=list.filter(t=>t.myStatus!=="done");
   list.sort((a,b)=>{
     const ao=isOpen(a)?0:1,bo=isOpen(b)?0:1;if(ao!==bo)return ao-bo;
     return (b.updatedAt||0)-(a.updatedAt||0);
@@ -2373,7 +2408,7 @@ function renderTicketSidebar(){
 
   const wrap=side.querySelector("#tkList");
   if(!list.length){wrap.innerHTML=`<div class="empty">No tickets match.<br><br><button class="sm" id="clr">Clear filters</button></div>`;
-    const c=wrap.querySelector("#clr");if(c)c.onclick=()=>{f._team=f._st=f._tag=f._who="";f._hide=false;renderTicketSidebar();};return;}
+    const c=wrap.querySelector("#clr");if(c)c.onclick=()=>{f._team=f._tag=f._who="";f._sts=[];f._hide=false;renderTicketSidebar();};return;}
   wrap.innerHTML=list.map(t=>{
     const h=openHurdles(t).length,sl=slipCount(t),miss=promiseMissed(t);
     const stale=daysSince(lastUpdateTs(t));
@@ -2990,9 +3025,9 @@ function queueFor(team){
 function carriedActions(team,exceptId){
   const out=[];
   state.syncs.filter(s=>s.team===team&&s.id!==exceptId).forEach(s=>
-    s.actions.forEach(a=>{if(!a.done)out.push({owner:s,kind:"sync",action:a});}));
+    s.actions.forEach(a=>{if(!a.done&&a.carry)out.push({owner:s,kind:"sync",action:a});}));
   state.meetings.filter(m=>m.team===team&&m.id!==exceptId).forEach(m=>
-    m.actions.forEach(a=>{if(!a.done)out.push({owner:m,kind:"meeting",action:a});}));
+    m.actions.forEach(a=>{if(!a.done&&a.carry)out.push({owner:m,kind:"meeting",action:a});}));
   /* oldest first — something that has survived several calls should lead the list */
   return out.sort((a,b)=>(a.owner.date||"")<(b.owner.date||"")?-1:1);
 }
@@ -3289,6 +3324,8 @@ function actionRow(a,s,carried){
     <span class="at" data-atx="${a.id}">${esc(a.text||"(what needs doing?)")}</span>
     <input class="ow" value="${esc(a.owner)}" placeholder="owner" data-aow="${a.id}">
     <input class="du" type="date" value="${esc(a.due)}" data-adue="${a.id}">
+    <button class="ghost sm" data-acarry="${a.id}" style="${a.carry?"color:var(--accent)":"opacity:.4"}"
+      title="${a.carry?"Carries into every sync until closed — click to mute":"Muted from the sync queue — click to carry it again"}">${a.carry?"⇄":"⇄̸"}</button>
     <button class="ghost sm" data-ares="${a.id}" title="Record the answer / outcome">📝</button>
     <button class="ghost sm nact" data-adel2="${a.id}">✕</button>
     ${a.resolution?`<div class="ares" data-aresx="${a.id}">↳ ${esc(a.resolution)}</div>`:""}
@@ -3299,12 +3336,16 @@ function wireActionRows(host){
   /* the owner may be a sync OR a meeting — both have .actions and a matching id */
   const find=el=>{const row=el.closest(".actitem");
     const s=state.syncs.find(x=>x.id===row.dataset.sid)||state.meetings.find(x=>x.id===row.dataset.sid);
-    return {s,a:s.actions.find(y=>y.id===(el.dataset.achk||el.dataset.atx||el.dataset.aow||el.dataset.adue||el.dataset.ares||el.dataset.aresx||el.dataset.adel2))};};
+    return {s,a:s.actions.find(y=>y.id===(el.dataset.achk||el.dataset.atx||el.dataset.aow||el.dataset.adue||el.dataset.ares||el.dataset.aresx||el.dataset.adel2||el.dataset.acarry))};};
   host.querySelectorAll("[data-achk]").forEach(b=>b.onclick=()=>{const{s,a}=find(b);a.done=!a.done;touch(s);renderSync();});
   host.querySelectorAll("[data-atx]").forEach(el=>el.onclick=()=>{const{s,a}=find(el);
     editInline(el,a.text,v=>{a.text=v;touch(s);renderSync();},true);});
   host.querySelectorAll("[data-aow]").forEach(i=>i.onchange=e=>{const{s,a}=find(i);a.owner=e.target.value;touch(s);});
   host.querySelectorAll("[data-adue]").forEach(i=>i.onchange=e=>{const{s,a}=find(i);a.due=e.target.value;touch(s);});
+  host.querySelectorAll("[data-acarry]").forEach(b=>b.onclick=()=>{const{s,a}=find(b);
+    a.carry=!a.carry;touch(s);
+    toast(a.carry?"Will carry into every sync":"Muted from the sync queue");
+    if(view==="sync")renderSync();else renderApp();});
   host.querySelectorAll("[data-ares]").forEach(b=>b.onclick=()=>{const{s,a}=find(b);
     const v=prompt("Record the answer / outcome:",a.resolution||"");if(v===null)return;a.resolution=v;touch(s);renderSync();});
   host.querySelectorAll("[data-aresx]").forEach(el=>el.onclick=()=>{const{s,a}=find(el);

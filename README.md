@@ -22,6 +22,9 @@ One record per JIRA / ServiceNow ticket, tagged to a team. Portal Team and P&C I
 colour-demarcated everywhere (blue / purple) and never mix by accident.
 
 - **Quick-add** — ticket ID + title + team is enough. Alt+N. Everything else optional.
+- **Multi-select status filter** — status chips with live counts. Click one to show only that
+  status; **shift-click** to build a set. "New + In progress, skipping blocked and done" is two
+  clicks. An explicit selection overrides the *Hide done* checkbox, so the two can't contradict.
 - **Two status fields** — *their* status (free text, JIRA/SNOW wording varies) and *your*
   status. When they contradict each other, a banner says so. That disagreement is
   information.
@@ -306,6 +309,8 @@ specific people and demands.
   quarter's effort forecast"* keeps surfacing at the top of the Portal queue — labelled with
   the call it came from and how long it has been open — until you tick it off. You can close
   it straight from the queue, and it asks for the outcome while it's being said.
+- Each action has a **⇄ carry toggle**. It defaults on, but a minor action from a call can be
+  muted so it stays on Today without filling the sync queue.
 - Scoped meetings surface where they belong: an epic-review meeting shows on that **epic's
   page**, a 1:1 shows on the **person's card**. Log buttons there prefill the scope.
 - Recent syncs and meetings share one "Recent calls" list.
