@@ -2983,11 +2983,27 @@ function queueFor(team){
     return {t,rs,score:rs.reduce((a,r)=>a+r.w,0)};
   }).sort((a,b)=>b.score-a.score||(lastUpdateTs(a.t)-lastUpdateTs(b.t)));
 }
-function carriedActions(team,exceptSyncId){
+/* An open commitment belongs to the TEAM, not to the call that produced it. An
+   action from a governance meeting — "send next quarter's effort forecast" — has
+   to keep surfacing in that team's syncs until it is closed, or the only place it
+   lives is a meeting record he has no reason to reopen. */
+function carriedActions(team,exceptId){
   const out=[];
-  state.syncs.filter(s=>s.team===team&&s.id!==exceptSyncId).forEach(s=>
-    s.actions.forEach(a=>{if(!a.done)out.push({sync:s,action:a});}));
-  return out;
+  state.syncs.filter(s=>s.team===team&&s.id!==exceptId).forEach(s=>
+    s.actions.forEach(a=>{if(!a.done)out.push({owner:s,kind:"sync",action:a});}));
+  state.meetings.filter(m=>m.team===team&&m.id!==exceptId).forEach(m=>
+    m.actions.forEach(a=>{if(!a.done)out.push({owner:m,kind:"meeting",action:a});}));
+  /* oldest first — something that has survived several calls should lead the list */
+  return out.sort((a,b)=>(a.owner.date||"")<(b.owner.date||"")?-1:1);
+}
+function carriedLabel(c){
+  return c.kind==="meeting"
+    ? MEETING_KINDS[c.owner.kind].icon+" "+(c.owner.title||MEETING_KINDS[c.owner.kind].label)
+    : "🎙 "+(c.owner.title||"sync");
+}
+function carriedAge(c){
+  const d=daysSince(new Date((c.owner.date||todayStr())+"T12:00:00").getTime());
+  return d==null?0:Math.max(0,d);
 }
 function openAgendaModal(prefTeam,prefTicketId){
   const root=document.getElementById("modalRoot");
@@ -3052,11 +3068,16 @@ function renderSync(){
                 <button class="sm" data-agdone="${esc(a.id)}" title="Raised it — done">✓</button>
                 <button class="ghost sm" data-agdel="${esc(a.id)}">✕</button></div>
               <div class="qtitle">${esc(a.text)}</div></div>`;}).join("")}`:"";})()}
-        ${carried.length?`<div class="qsec">Carried over from last time</div>
-          ${carried.map(c=>`<div class="qrow carried" data-carry="${c.action.id}">
+        ${carried.length?`<div class="qsec">Still open (${carried.length}) — carried into every sync until closed</div>
+          ${carried.map(c=>{const age=carriedAge(c),late=c.action.due&&daysUntil(c.action.due)<0;
+            return `<div class="qrow carried" data-carry="${c.action.id}">
+            <div class="qtop"><span class="tpbadge" style="color:var(--muted);border-color:var(--line2)">${esc(carriedLabel(c)).slice(0,30)}</span>
+              <span style="margin-left:auto"></span>
+              <button class="sm" data-cardone="${esc(c.owner.id)}:${esc(c.action.id)}" title="Close this out">✓</button></div>
             <div class="qtitle" style="white-space:normal">${esc(c.action.text)}</div>
             <div class="qwhy"><span class="warnchip">${esc(c.action.owner||"unassigned")}</span>
-            ${c.action.due?`<span class="warnchip info">due ${fmtDate(c.action.due)}</span>`:""}</div></div>`).join("")}`:""}
+              ${c.action.due?`<span class="warnchip ${late?"bad":"info"}">due ${fmtDate(c.action.due)}</span>`:""}
+              ${age>=7?`<span class="warnchip ${age>=21?"bad":""}">open ${age}d</span>`:""}</div></div>`;}).join("")}`:""}
         ${(()=>{const tg=tpsForTeam(s.team);return tg.length?`<div class="qsec">Talking points</div>
           ${tg.flatMap(x=>x.tps.map(tp=>`<div class="qrow tp">
             <div class="qtop"><span class="tpbadge">🗣 ${esc(x.p.name)}</span>
@@ -3087,6 +3108,15 @@ function renderSync(){
     const [pid,tpid]=b.dataset.tpdone.split(":");
     const per=personById(pid);const tp=per.talkingPoints.find(x=>x.id===tpid);
     tp.done=true;tp.doneOn=todayStr();touch(per);renderSync();toast("Raised ✓");});
+  wrap.querySelectorAll("[data-cardone]").forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const [oid,aid]=b.dataset.cardone.split(":");
+    const owner=state.syncs.find(x=>x.id===oid)||state.meetings.find(x=>x.id===oid);
+    if(!owner)return;
+    const a=owner.actions.find(x=>x.id===aid);
+    /* capture the outcome while it is being said, not later */
+    const res=prompt("Closing this out. What was the outcome?",a.resolution||"");
+    if(res===null)return;
+    a.done=true;a.resolution=res;touch(owner);renderSync();toast("Closed ✓");});
   wrap.querySelectorAll("[data-carry]").forEach(r=>r.onclick=()=>{syncFocusId=null;renderSync();
     setTimeout(()=>{const el=document.getElementById("act-"+r.dataset.carry);if(el)el.scrollIntoView({block:"center"});},30);});
 
@@ -3221,8 +3251,9 @@ function renderSyncNotes(host,s){
     <div class="sec-title" style="margin-top:22px"><h3>Action points</h3><div class="ln"></div><button class="sm" id="sn-addact">＋ Action</button><button class="sm" id="sn-adddec">🧭 Decision</button></div>
     ${s.actions.length?s.actions.map(a=>actionRow(a,s)).join(""):`<p class="faint" style="font-size:12px">No actions from this sync yet.</p>`}
 
-    ${carried.length?`<div class="sec-title" style="margin-top:22px"><h3>Still open from earlier syncs</h3><div class="ln"></div></div>
-      ${carried.map(c=>actionRow(c.action,c.sync,true)).join("")}`:""}
+    ${carried.length?`<div class="sec-title" style="margin-top:22px"><h3>Still open from earlier calls</h3><div class="ln"></div>
+        <span class="faint" style="font-size:11px">syncs and meetings alike</span></div>
+      ${carried.map(c=>actionRow(c.action,c.owner,true)).join("")}`:""}
 
     <div class="field" style="margin-top:22px"><label>General notes</label>
       <textarea id="sn-notes" style="min-height:120px">${esc(s.notes)}</textarea></div>
@@ -3261,7 +3292,7 @@ function actionRow(a,s,carried){
     <button class="ghost sm" data-ares="${a.id}" title="Record the answer / outcome">📝</button>
     <button class="ghost sm nact" data-adel2="${a.id}">✕</button>
     ${a.resolution?`<div class="ares" data-aresx="${a.id}">↳ ${esc(a.resolution)}</div>`:""}
-    ${carried?`<div class="ares" style="color:var(--faint)">from ${esc(s.title||s.date)}</div>`:""}
+    ${carried?`<div class="ares" style="color:var(--faint)">from ${esc(s.title||"a call")} · ${fmtDate(s.date)}</div>`:""}
   </div>`;
 }
 function wireActionRows(host){

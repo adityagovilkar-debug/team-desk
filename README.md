@@ -301,6 +301,11 @@ specific people and demands.
 
 - Its **actions feed Today's open action points** and its **decisions feed the Boss Brief**,
   exactly like a sync — nothing is siloed because it happened in a general call.
+- **Its open actions also carry into that team's syncs, every sync, until closed.** An
+  open commitment belongs to the team, not to the call that produced it: *"send next
+  quarter's effort forecast"* keeps surfacing at the top of the Portal queue — labelled with
+  the call it came from and how long it has been open — until you tick it off. You can close
+  it straight from the queue, and it asks for the outcome while it's being said.
 - Scoped meetings surface where they belong: an epic-review meeting shows on that **epic's
   page**, a 1:1 shows on the **person's card**. Log buttons there prefill the scope.
 - Recent syncs and meetings share one "Recent calls" list.
