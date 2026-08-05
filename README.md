@@ -22,6 +22,9 @@ One record per JIRA / ServiceNow ticket, tagged to a team. Portal Team and P&C I
 colour-demarcated everywhere (blue / purple) and never mix by accident.
 
 - **Quick-add** — ticket ID + title + team is enough. Alt+N. Everything else optional.
+- **Filters only offer tags in use.** The tag vocabulary is curated, not auto-pruned — it
+  deliberately holds tags nothing uses yet — but a *filter* offering a value that returns
+  nothing is just a dead option. The ⋯ menu lists unused tags so you can drop them deliberately.
 - **Multi-select status filter** — status chips with live counts. Click one to show only that
   status; **shift-click** to build a set. "New + In progress, skipping blocked and done" is two
   clicks. An explicit selection overrides the *Hide done* checkbox, so the two can't contradict.
@@ -60,6 +63,13 @@ Each ticket shows *why* it's in the queue. The capture pane shows what they said
 warns about open hurdles, and takes the update, both statuses and a new ETA in one place —
 **everything lands directly on the ticket**, so there's no re-typing after the call.
 Ctrl+Enter saves and jumps to the next ticket.
+
+**Tickets on the same epic are grouped in the queue**, because the call runs epic-first: the
+epic comes up, then each ticket under it. A group is ordered by its *most urgent* ticket, so
+grouping never buries something that needed asking. Click the epic header to open **one screen
+for all its tickets** — your headline line for context, then a compact row each (what they
+said, status, new ETA), with *Save all & mark covered* at the bottom. Depth — hurdles, gates,
+POCs, decisions — stays one click away on the individual pane, which is untouched.
 
 Closing a sync tells you what wasn't covered and what carries over. Open action points from
 previous syncs appear at the top of the next one. Live syncs are persisted immediately, so a

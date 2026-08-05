@@ -615,6 +615,31 @@
   .qrow.tp{border-left-color:var(--teal);cursor:default}
   .qrow.tp .qtitle{white-space:normal}
   .tpbadge{font-size:10px;font-weight:700;color:var(--teal);border:1px solid var(--tint-teal-bd);background:var(--chip);border-radius:4px;padding:1px 6px}
+  /* epic grouping in the queue */
+  .qepic{margin-bottom:8px}
+  .qe-head{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;
+    border:1px dashed var(--line2);background:var(--chip);margin-bottom:5px}
+  .qe-head:hover{border-color:var(--accent);border-style:solid}
+  .qe-name{font-size:11.5px;font-weight:700;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qe-n{font-size:10px;font-weight:700;color:var(--muted);background:var(--panel);border-radius:9px;padding:0 6px;flex:0 0 auto}
+  .qe-go{margin-left:auto;font-size:9.5px;color:var(--faint);white-space:nowrap;flex:0 0 auto}
+  .qe-head:hover .qe-go{color:var(--accent)}
+  .qe-items{margin-left:10px;padding-left:8px;border-left:1px dotted var(--line2)}
+
+  /* epic group capture rows */
+  .gerow{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:10px 12px;margin-bottom:10px}
+  .gerow.covered{opacity:.6;border-left-color:var(--green)}
+  .gerow .ge-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}
+  .gerow .ge-title{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gerow .ge-last{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:7px}
+  .gerow .ge-said{min-height:52px;font-size:12.5px}
+  .gerow .ge-fields{display:flex;gap:7px;margin-top:7px;flex-wrap:wrap}
+  .gerow .ge-fields select{flex:0 0 130px}
+  .gerow .ge-fields input[type="date"]{flex:0 0 150px}
+  .gerow .ge-fields input:not([type="date"]){flex:1;min-width:110px}
+  .gerow .ge-fields button{flex:0 0 auto}
+
   .qrow.agenda{border-left-color:var(--accent2);cursor:default}
   .qrow.agenda .qtitle{white-space:normal}
   .agbadge{font-size:10px;font-weight:700;color:var(--accent2);border:1px solid var(--tint-violet-bd);background:var(--chip);border-radius:4px;padding:1px 6px}
@@ -1197,7 +1222,7 @@ let state={version:1,settings:{teams:JSON.parse(JSON.stringify(DEF_TEAMS)),tags:
 let fileHandle=null, dirty=false, autoSaveTimer=null, lastSaveAuto=false;
 let view="today";
 let activeId=null, activeTab="work";
-let activeSyncId=null, syncFocusId=null, activeMeetingId=null;
+let activeSyncId=null, syncFocusId=null, activeMeetingId=null, syncEpicId=null;
 let activePersonId=null, activeEpicId=null, peopleMatrix=false, matrixSkill="";
 let activePatternId=null, activeContactId=null, activeRiskId=null, knowledgeTab="patterns";
 let activeIncidentId=null, perfView="log", perfTeam="", perfKind="", perfSince="";
@@ -2067,6 +2092,12 @@ function canonTag(raw){
   return n;
 }
 function tagOptionsHtml(){return state.settings.tags.map(t=>`<option value="${esc(t)}">`).join("");}
+/* Tags actually carried by a ticket right now. The managed vocabulary is offered
+   when you're TYPING a tag — that's its job, and it deliberately holds tags
+   nothing uses yet — but a FILTER must only offer values that return something,
+   or removing the last use of a tag leaves a dead option behind forever. */
+function tagsInUse(){return [...new Set(state.tickets.flatMap(t=>t.tags))].sort((a,b)=>a.localeCompare(b));}
+function unusedTags(){const used=new Set(tagsInUse());return state.settings.tags.filter(t=>!used.has(t));}
 function distinct(arr){return [...new Set(arr.filter(Boolean))].sort();}
 function theirStatusOptions(){return distinct(state.tickets.map(t=>t.theirStatus)).map(s=>`<option value="${esc(s)}">`).join("");}
 
@@ -2363,7 +2394,12 @@ function renderTicketSidebar(){
         ${(f._sts||[]).length?`<span class="sfchip clear" data-sfclear="1">clear</span>`:""}
       </div>
       <div class="filters">
-        <select id="fTag"><option value="">Any tag</option>${state.settings.tags.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+        <select id="fTag"><option value="">Any tag</option>${(()=>{
+          const inUse=tagsInUse();
+          /* keep the current pick listed even if its last ticket just lost the tag,
+             so the filter doesn't silently reset itself under you */
+          if(f._tag&&!inUse.includes(f._tag))inUse.push(f._tag);
+          return inUse.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("");})()}</select>
         <select id="fWho"><option value="">Anyone</option>${state.people.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>
       </div>
       <label style="display:flex;align-items:center;gap:7px;text-transform:none;font-size:12px;letter-spacing:0;color:var(--muted);margin:0">
@@ -3119,7 +3155,27 @@ function renderSync(){
               <span style="margin-left:auto"></span>
               <button class="sm" data-tpdone="${esc(x.p.id)}:${esc(tp.id)}" title="Raised it — done">✓</button></div>
             <div class="qtitle">${esc(tp.text)}</div></div>`)).join("")}`:"";})()}
-        ${pending.length?`<div class="qsec">Tickets (${pending.length})</div>`+pending.map(x=>qrowHtml(x,false)).join(""):
+        ${pending.length?`<div class="qsec">Tickets (${pending.length})</div>`+(()=>{
+          /* Group by epic, because that's how the conversation actually runs — the
+             epic comes up and then each ticket under it. A group is ordered by its
+             MOST urgent ticket, so grouping never buries something that needs asking. */
+          const blocks=[],byEpic={};
+          pending.forEach(x=>{const e=x.t.epicId?epicById(x.t.epicId):null;
+            if(e){(byEpic[e.id]=byEpic[e.id]||{epic:e,items:[]}).items.push(x);}
+            else blocks.push({kind:"t",score:x.score,x});});
+          Object.values(byEpic).forEach(g=>blocks.push({kind:"e",
+            score:Math.max(...g.items.map(i=>i.score)),epic:g.epic,items:g.items}));
+          blocks.sort((a,b)=>b.score-a.score);
+          return blocks.map(b=>{
+            if(b.kind==="t")return qrowHtml(b.x,false);
+            const covered=b.items.filter(i=>coveredIds.has(i.t.id)).length;
+            return `<div class="qepic">
+                <div class="qe-head" data-qepic="${esc(b.epic.id)}" title="Open all ${b.items.length} together">
+                  <span class="qe-name">◆ ${esc(b.epic.name)}</span>
+                  <span class="qe-n">${b.items.length}</span>
+                  <span class="qe-go">open together →</span></div>
+                <div class="qe-items">${b.items.map(x=>qrowHtml(x,false)).join("")}</div>
+              </div>`;}).join("");})():
           `<div class="qsec">Tickets</div><p class="faint" style="font-size:12px;padding:6px">${done.length?"All covered ✓":"No open tickets for this team."}</p>`}
         ${done.length?`<div class="qsec">Covered</div>`+done.map(x=>qrowHtml(x,true)).join(""):""}
       </div>
@@ -3128,7 +3184,7 @@ function renderSync(){
 
   wrap.querySelector("#sq-new").onclick=()=>openQuickAdd(s.team);
   wrap.querySelector("#sq-agenda").onclick=()=>openAgendaModal(s.team);
-  wrap.querySelector("#sq-notes").onclick=()=>{syncFocusId=null;renderSync();};
+  wrap.querySelector("#sq-notes").onclick=()=>{syncFocusId=null;syncEpicId=null;renderSync();};
   wrap.querySelector("#sq-close").onclick=()=>closeSync(s);
   wrap.querySelectorAll("[data-agdone]").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const a=state.agenda.find(x=>x.id===b.dataset.agdone);a.done=true;a.doneOn=todayStr();
@@ -3138,7 +3194,8 @@ function renderSync(){
     state.agenda=state.agenda.filter(x=>x.id!==b.dataset.agdel);markDirty();renderSync();});
   wrap.querySelectorAll("[data-agjump]").forEach(el=>el.onclick=e=>{e.stopPropagation();
     syncFocusId=state.agenda.find(x=>x.id===el.dataset.agjump).ticketId;renderSync();});
-  wrap.querySelectorAll("[data-q]").forEach(r=>r.onclick=()=>{syncFocusId=r.dataset.q;renderSync();});
+  wrap.querySelectorAll("[data-q]").forEach(r=>r.onclick=()=>{syncFocusId=r.dataset.q;syncEpicId=null;renderSync();});
+  wrap.querySelectorAll("[data-qepic]").forEach(h=>h.onclick=()=>{syncEpicId=h.dataset.qepic;syncFocusId=null;renderSync();});
   wrap.querySelectorAll("[data-tpdone]").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const [pid,tpid]=b.dataset.tpdone.split(":");
     const per=personById(pid);const tp=per.talkingPoints.find(x=>x.id===tpid);
@@ -3155,7 +3212,9 @@ function renderSync(){
   wrap.querySelectorAll("[data-carry]").forEach(r=>r.onclick=()=>{syncFocusId=null;renderSync();
     setTimeout(()=>{const el=document.getElementById("act-"+r.dataset.carry);if(el)el.scrollIntoView({block:"center"});},30);});
 
-  if(focus)renderCapture(document.getElementById("capture"),s,focus);
+  const gEpic=syncEpicId?epicById(syncEpicId):null;
+  if(gEpic)renderEpicCapture(document.getElementById("capture"),s,gEpic);
+  else if(focus)renderCapture(document.getElementById("capture"),s,focus);
   else renderSyncNotes(document.getElementById("capture"),s);
 }
 function qrowHtml(x,covered){
@@ -3256,6 +3315,102 @@ function renderCapture(host,s,t){
   };
   said.onkeydown=e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();
     const c=s.covered.find(x=>x.ticketId===t.id);if(c&&c.done)return;save();}};
+}
+/* ---- epic group capture ----
+   The sync conversation runs epic-first: the epic comes up, then each ticket under
+   it. This is one screen for all of them — a compact row per ticket rather than the
+   full single-ticket pane, because four copies of that would be unreadable. Depth
+   (gates, hurdles, POCs, decisions) stays one click away on the individual pane. */
+function renderEpicCapture(host,s,e){
+  const sig=epicSignals(e);
+  const mine=sig.ts.filter(t=>t.team===s.team&&isOpen(t))
+    .sort((a,b)=>{const qa=queueFor(s.team);const f=id=>{const h=qa.find(x=>x.t.id===id);return h?h.score:0;};
+      return f(b.id)-f(a.id);});
+  const cov=id=>s.covered.find(c=>c.ticketId===id);
+  const dis=healthDisagrees(e);
+  host.innerHTML=`
+    <div class="capture-head">
+      <div style="flex:1;min-width:0">
+        <div class="dh-id"><span class="mono" style="color:var(--accent)">◆ ${esc(e.code||"EPIC")}</span>
+          <span class="pill ${EPIC_HEALTH[e.health].cls}">${EPIC_HEALTH[e.health].label}</span>
+          ${teamPill(s.team)}
+          <span class="faint" style="font-weight:400">${mine.length} open here · ${sig.done} done overall</span></div>
+        <h2>${esc(e.name)}</h2></div>
+      <button class="sm" id="ge-open" title="Open the full epic">↗ Full epic</button>
+      <button class="sm" id="ge-back">← Queue</button>
+    </div>
+    ${e.headline.text?`<div class="lastsaid"><div class="ls-h">Your line on this epic</div>${esc(e.headline.text)}
+      <div class="faint" style="font-size:10.5px;margin-top:5px">— as at ${e.headline.on?fmtDate(e.headline.on):"undated"}</div></div>`:""}
+    ${dis?`<div class="disagree">⚠ You have this as <b>${EPIC_HEALTH[e.health].label}</b>, but the tickets read
+      <b>${EPIC_HEALTH[dis].label}</b>${sig.blocked.length?` — ${sig.blocked.length} blocked`:""}${sig.missed.length?`, ${sig.missed.length} missed ETA`:""}.</div>`:""}
+
+    ${mine.length?mine.map(t=>{
+      const c=cov(t.id),lastUp=t.updates.length?t.updates.slice().sort((a,b)=>b.ts-a.ts)[0]:null;
+      const lp=latestPromise(t),ob=openBlockersOf(t);
+      return `<div class="gerow ${c&&c.done?"covered":""}" data-ge="${esc(t.id)}">
+        <div class="ge-top">
+          <span class="mono" style="color:${teamColor(t.team)};font-size:11.5px;font-weight:600">${esc(t.ticketId||"—")}</span>
+          <span class="ge-title">${esc(t.title||"(untitled)")}</span>
+          ${slipCount(t)?`<span class="warnchip">${slipCount(t)}× slipped</span>`:""}
+          ${promiseMissed(t)?`<span class="warnchip bad">ETA missed</span>`:""}
+          ${ob.length?`<span class="warnchip ${crossTeamBlockers(t).length?"bad":""}">⛓ ${ob.length}</span>`:""}
+          ${openHurdles(t).length?`<span class="warnchip">🚧</span>`:""}
+          ${c&&c.done?`<span class="warnchip good">✓ covered</span>`:""}
+          <span style="margin-left:auto"></span>
+          <button class="ghost sm" data-gefull="${esc(t.id)}" title="Open this one on its own">↗</button></div>
+        ${lastUp?`<div class="ge-last">Last: ${esc(lastUp.text.slice(0,130))}${lastUp.text.length>130?"…":""}</div>`:
+          `<div class="ge-last faint">No update recorded yet.</div>`}
+        <textarea class="ge-said" data-gesaid="${esc(t.id)}" placeholder="What did they say about this one?">${esc(c&&c.draft||"")}</textarea>
+        <div class="ge-fields">
+          <select data-gemy="${esc(t.id)}">${Object.entries(MY_STATUS).map(([k,v])=>`<option value="${k}" ${t.myStatus===k?"selected":""}>${v.label}</option>`).join("")}</select>
+          <input data-gether="${esc(t.id)}" value="${esc(t.theirStatus)}" placeholder="their status">
+          <input type="date" data-geeta="${esc(t.id)}" title="New ETA if given">
+          <button class="sm ${c&&c.done?"":"go"}" data-gecov="${esc(t.id)}">${c&&c.done?"↩ Reopen":"✓ Covered"}</button>
+        </div>
+      </div>`;}).join("")
+      :`<p class="faint" style="font-size:12px">Nothing open for ${esc(teamOf(s.team).name)} on this epic right now.</p>`}
+
+    ${mine.length?`<div class="row" style="margin-top:14px">
+      <button class="go" id="ge-saveall" style="flex:1">✓ Save all &amp; mark covered</button></div>
+      <p class="faint" style="font-size:11px;margin-top:9px">Everything typed here lands on its own ticket, exactly as it would one at a time.
+        Hurdles, gates, POCs and decisions live on the individual pane — use ↗ for those.</p>`:""}`;
+
+  const q=x=>host.querySelector(x);
+  q("#ge-back").onclick=()=>{syncEpicId=null;renderSync();};
+  q("#ge-open").onclick=()=>{activeEpicId=e.id;syncEpicId=null;view="epics";renderApp();};
+  host.querySelectorAll("[data-gefull]").forEach(b=>b.onclick=()=>{
+    syncFocusId=b.dataset.gefull;syncEpicId=null;renderSync();});
+  /* keep drafts on blur so switching rows or views never loses a half-typed note */
+  const draftSave=id=>{const ta=host.querySelector(`[data-gesaid="${id}"]`);if(!ta)return;
+    let c=s.covered.find(x=>x.ticketId===id);
+    if(!c){c={ticketId:id,draft:"",done:false};s.covered.push(c);}
+    c.draft=ta.value;touch(s);};
+  host.querySelectorAll("[data-gesaid]").forEach(ta=>ta.onblur=()=>draftSave(ta.dataset.gesaid));
+  host.querySelectorAll("[data-gemy]").forEach(sel=>sel.onchange=ev=>{
+    const t=ticketByRef(sel.dataset.gemy);setStatus(t,ev.target.value);touch(t);renderSync();});
+  host.querySelectorAll("[data-gether]").forEach(i=>i.onchange=ev=>{
+    const t=ticketByRef(i.dataset.gether);t.theirStatus=ev.target.value.trim();touch(t);});
+  /* commit one row: note → update, ETA → ledger, mark covered */
+  const commit=id=>{
+    const t=ticketByRef(id);if(!t)return false;
+    const ta=host.querySelector(`[data-gesaid="${id}"]`),ei=host.querySelector(`[data-geeta="${id}"]`);
+    const txt=ta?ta.value.trim():"";
+    if(txt)t.updates.push(normUpdate({text:txt,syncId:s.id}));
+    if(ei&&ei.value)t.promises.push(normPromise({eta:ei.value,givenOn:s.date,note:"given in "+(s.title||"sync")}));
+    let c=s.covered.find(x=>x.ticketId===id);
+    if(!c){c={ticketId:id,draft:"",done:true};s.covered.push(c);}
+    c.done=true;c.draft="";touch(t);return true;
+  };
+  host.querySelectorAll("[data-gecov]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.gecov,c=s.covered.find(x=>x.ticketId===id);
+    if(c&&c.done){c.done=false;touch(s);renderSync();return;}
+    commit(id);touch(s);renderSync();toast("Captured on "+(ticketByRef(id).ticketId||"ticket"));});
+  const sa=q("#ge-saveall");
+  if(sa)sa.onclick=()=>{
+    let n=0;mine.forEach(t=>{const c=s.covered.find(x=>x.ticketId===t.id);
+      if(!(c&&c.done)){commit(t.id);n++;}});
+    touch(s);syncEpicId=null;renderSync();
+    toast(n?n+" ticket"+(n===1?"":"s")+" captured":"Nothing left to cover");};
 }
 function nextInQueue(s,fromId){
   const cov=new Set(s.covered.filter(c=>c.done).map(c=>c.ticketId));
@@ -5905,6 +6060,12 @@ function openMenu(){
       <div class="field"><label>“No movement” threshold (days)</label><input type="number" id="mn-stall" value="${state.settings.stallDays}" min="1"></div>
       <div class="field"><label>Tag vocabulary</label><input id="mn-tags" value="${esc(state.settings.tags.join(", "))}"></div>
     </div>
+    ${(()=>{const un=unusedTags();return un.length?`<div class="field" style="margin-top:-6px">
+      <p class="faint" style="font-size:11px;margin:0 0 5px">
+        ${un.length} tag${un.length===1?"":"s"} no ticket uses — kept because the vocabulary is yours to curate, not auto-pruned.
+        Filters only ever offer tags in use.</p>
+      <div class="chiprow">${un.map(t=>`<span class="chip" data-untag="${esc(t)}" title="Remove from the vocabulary">${esc(t)} <span class="x">✕</span></span>`).join("")}
+        <button class="sm ghost" id="mn-tagprune">Remove all ${un.length}</button></div></div>`:"";})()}
     <details style="margin-bottom:14px"><summary style="cursor:pointer;font-size:12.5px;color:var(--muted)">🚥 Gate templates <span class="faint">— checklists offered on tickets; edits only affect future attachments</span></summary>
       <div id="mn-gates" style="margin-top:10px">
         ${state.settings.gateTemplates.map(g=>`<div class="row" style="margin-bottom:7px">
@@ -5953,7 +6114,13 @@ function openMenu(){
   root.querySelector("#mn-gtadd").onclick=()=>{
     state.settings.gateTemplates.push({id:uid(),name:"New template",steps:["Step 1","Step 2"]});markDirty();openMenu();};
   root.querySelector("#mn-tags").onchange=e=>{
-    state.settings.tags=e.target.value.split(",").map(s=>s.trim()).filter(Boolean);markDirty();};
+    state.settings.tags=e.target.value.split(",").map(s=>s.trim()).filter(Boolean);markDirty();openMenu();};
+  root.querySelectorAll("[data-untag]").forEach(c=>c.onclick=()=>{
+    state.settings.tags=state.settings.tags.filter(t=>t!==c.dataset.untag);markDirty();openMenu();});
+  const prune=root.querySelector("#mn-tagprune");
+  if(prune)prune.onclick=()=>{const un=new Set(unusedTags());
+    state.settings.tags=state.settings.tags.filter(t=>!un.has(t));markDirty();openMenu();
+    toast("Removed "+un.size+" unused tag"+(un.size===1?"":"s"));};
   root.querySelector("#mn-auto").onchange=e=>{state.settings.autosave=e.target.checked;markDirty();};
   root.querySelector("#mn-enc").onclick=()=>{close();setMasterPassword();};
   root.querySelector("#mn-snap").onclick=()=>{close();openSnapshots();};
@@ -6174,12 +6341,23 @@ function seedDemo(){
     assignees:[john.id],epicId:luca.id,raisedDate:"2026-06-20",startedDate:"2026-06-24",
     estHours:"30",promises:[{eta:"2026-08-14",givenOn:"2026-06-24",note:""}],
     updates:[{id:uid(),ts:Date.now()-DAY*4,text:"Tiles laid out, waiting on the real data shape from P&C."}]});
+  /* two more Portal tickets on LUCA, so the epic grouping in the sync queue has
+     something real to group — an epic normally spans several tickets per team */
+  const t6b=normTicket({ticketId:"MYIN-2418",source:"JIRA",team:"portal",title:"LUCA — roles and authorisations for the dashboard",
+    tags:["Fiori","Authorizations"],priority:"P3",myStatus:"progress",theirStatus:"In Progress",
+    assignees:[meera.id],epicId:luca.id,raisedDate:"2026-06-22",startedDate:"2026-07-01",
+    estHours:"12",promises:[{eta:"2026-08-07",givenOn:"2026-07-01",note:""}],
+    updates:[{id:uid(),ts:Date.now()-DAY*6,text:"Catalog and role skeleton done; needs the final tile list before it can be finished."}]});
+  const t6c=normTicket({ticketId:"MYIN-2427",source:"JIRA",team:"portal",title:"LUCA — export the headcount view to the payroll pack",
+    tags:["Fiori","OData"],priority:"P4",myStatus:"new",theirStatus:"New",
+    epicId:luca.id,raisedDate:addDays(-5),
+    updates:[]});
   const t7=normTicket({ticketId:"PC-8850",source:"ServiceNow",team:"pnc",title:"LUCA — payroll mapping table",
     tags:["ABAP"],priority:"P3",myStatus:"done",theirStatus:"Closed",
     assignees:[deepa.id],epicId:luca.id,raisedDate:"2026-05-20",startedDate:"2026-05-22",closedDate:"2026-06-04",
     estHours:"20",actHours:"12",
     updates:[{id:uid(),ts:Date.now()-DAY*46,text:"Done early. Deepa turned this round quickly."}]});
-  [t1,t2,t3,t4,t5,t6,t7].forEach(t=>{if(t.raisedDate)t.createdAt=new Date(t.raisedDate+"T09:00:00").getTime();});
+  [t1,t2,t3,t4,t5,t6,t6b,t6c,t7].forEach(t=>{if(t.raisedDate)t.createdAt=new Date(t.raisedDate+"T09:00:00").getTime();});
   /* one pattern already promoted, so the lookalike path is visible on day one:
      MYIN-1234 was written up, and MYIN-2345 is the recurrence it should catch */
   const pat=normPattern({title:"Launchpad tiles blank for a business role",
@@ -6247,7 +6425,7 @@ function seedDemo(){
   state.agenda=[
     normAgenda({team:"portal",text:"Boss asked: does anyone in Portal recall the old 'Meridian' portal migration from ~2022? He wants a name to ask."}),
     normAgenda({team:"portal",text:"Technical question on the SSO loop demand — are we sure the mobile reset path is the only trigger?",ticketId:t3.id})];
-  state.tickets=[t2,t3,t4,t5,t6,t7,t1,sysC,sysD,sysB];
+  state.tickets=[t2,t3,t4,t5,t6,t6b,t6c,t7,t1,sysC,sysD,sysB];
   state.syncs=[s1];
   /* Portal is outsourced — seed the effort subsystem so it's visible on day one */
   state.settings.teams.find(t=>t.id==="portal").outsourced=true;
