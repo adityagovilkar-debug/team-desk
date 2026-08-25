@@ -270,6 +270,11 @@ view can be added once a few months of real data exist.
 Possible next steps, none committed:
 
 - Tune the lookalike thresholds (`1.2` strip / `2.2` Today card) against a real corpus
+- Tune `MENTION_SIM_MIN` (`0.45`) once there are real incident notes in the file
+- Status history & dwell time — which would let the roll-call's "never empties" flag say whether
+  it's the *same* pile, at least for the demands you track
+- Vendor obligation chasing ("August hours not yet received")
+- Person workload forecast
 - A tools cockpit / launcher across Demand Desk, Team Desk and future apps (designed, not built)
 - Trend arrows on the KPI tiles once there's enough history to compare periods
 
@@ -411,6 +416,99 @@ click, not a retype.
 
 Subtasks are the ad-hoc breakdown of *this* ticket; **delivery gates** remain the standardized
 pipeline checklist (dev → QA → prod) from templates. A ticket can have both.
+
+## Roll-call — the numbers they read out
+
+Most syncs open with headline counts rather than a walk through every demand: *"two blocked,
+seven in validation, three in progress, one waiting."* Those numbers are now recorded per call,
+per team, as the first row of the sync queue.
+
+**They are recorded as a claim, not derived.** Team Desk already knows how many of *your* tickets
+sit in each status, and charting that would have cost nothing — but it measures your tracking,
+not their queue. They say seven in validation; you may only track four of those. Deriving the
+figure would quietly answer a different question than the one asked in the call.
+
+Their status names are a small managed list per team (`✎ statuses`), because "validation" one
+week and "In validation" the next are two series, and the trend dies. The list is theirs, not
+your five `myStatus` values.
+
+**Entry is the whole design constraint.** The pane pre-fills last call's figures — most cells
+don't change — so it's a few keystrokes during a live call. Typing any number records it; the
+button is for the week nothing changed, where confirming is the deliberate act. That is also why
+an untouched pre-fill is a *draft*: it is last week's data wearing this week's date, and it is
+discarded when the sync closes rather than entering the trend as a fabricated data point.
+
+Number inputs patch only the derived nodes around them rather than re-rendering the pane —
+otherwise a re-render on `change` steals focus mid-tab, which in a live call is the difference
+between usable and not.
+
+Four readings, in descending order of usefulness:
+
+| Reading | What it answers |
+| --- | --- |
+| **Flow** | In-progress falls, validation rises, done doesn't move → work is piling at a stage. The strongest signal weekly counts can give. |
+| **Balance check** | They said 3 closed and 1 new, but the total didn't move. Arithmetic, dated, in your own record. |
+| **Reconciliation** | Their declared count vs. what you track, per status. |
+| **Level** | Total open over time. Least interesting; most often the only thing anyone tracks. |
+
+The balance check is **silent unless both "closed since" and "new since" were stated** — with one
+missing, arrivals confound the sum and the tool would be accusing them on incomplete numbers.
+`""` and `0` are therefore stored as different things: didn't say, versus said none.
+
+The reconciliation joins on **their** words: a ticket's `theirStatus` uses the same vocabulary the
+roll-call does, so no mapping table is needed, and keeping `theirStatus` current suddenly pays for
+itself. Open tickets whose `theirStatus` isn't in the list are counted and called out, so the
+"you track" figures are never silently wrong.
+
+### What counts deliberately cannot tell you
+
+"2 blocked" every week looks stable, but the *same* 2 blocked for eight weeks is a completely
+different story from 2 fresh ones each week — and counts alone cannot distinguish them. The tool
+flags the softer, checkable version only: a status that **never drains and never really moves**
+(`min ≥ 2` and `max − min ≤ 1` across at least 4 calls), and says in as many words that whether
+it is the same items is exactly what it can't know. A bare floor test was tried first and flagged
+"In progress", which is supposed to be non-empty and tells you nothing.
+
+### Trend view
+
+Insights carries one block per team: **small multiples** — one thin line per status, one panel per
+row. A stacked area would hide the one thing that matters, which stage is filling while the others
+drain. The status rows share a scale so they're comparable; totals and incident counts are
+different quantities an order of magnitude larger and carry their own, or every status line
+flattens onto the baseline. Single pen throughout — every panel is labelled, so colour would carry
+no information and only risk another palette that fails on a deuteranope.
+
+Below the lines sit the three readings, and the header states plainly that these figures are
+self-reported by the party being measured. The Boss Brief repeats that caveat and lists every call
+in the covered window whose arithmetic failed.
+
+## Incidents raised in calls
+
+They mention an incident, say they'll close it, and by the next call it's closed — with the answer
+walking out of the room. These are logged as deliberately thin notes: what it was, the area, their
+reference, and then the three fields that make it knowledge rather than a diary entry — **what
+actually happened**, what they did, and what would stop it next time.
+
+Two structural decisions:
+
+**Not the performance log.** That one is boss-facing evidence about *conduct*, and filling it with
+routine operational incidents would make "N incidents this quarter" meaningless. There is a
+one-click **promote** for when the handling turns out to be the story — a false "closed", a missed
+callback, no explanation at all — which carries the note across and cites itself as evidence.
+
+**Not a ticket.** Tickets carry gates, promises, epics, assignees, dependencies and effort. A
+mention needs four fields, and forcing it into `normTicket` would pollute every rollup — ageing,
+portfolio, workload — with things that were never work you manage.
+
+The mechanic that makes it work is the same one the action points use: **an unanswered note
+follows you into every sync for that team until you write down what happened.** Marking it
+*Closed, never explained* is the deliberate give-up — it stops the chase and records that they
+never said, which is its own signal and its own count in Insights.
+
+Notes run through their own similarity pass (`similarMentions`), so the fourth time the same
+interface falls over you get told. It requires **two shared meaningful words minimum**, because a
+single rare token matching is exactly how the ticket lookalikes produced false positives.
+Recurring notes and unexplained ones surface to the Boss Brief; routine ones stay out.
 
 ## Sync capture — you mark covered, nothing else does
 

@@ -640,6 +640,53 @@
   .gerow .ge-fields input:not([type="date"]){flex:1;min-width:110px}
   .gerow .ge-fields button{flex:0 0 auto}
 
+  /* roll-call + mentioned incidents in the queue */
+  .qrow.rollcall{border-left-color:var(--accent)}
+  .qrow.rollcall .qtitle{white-space:normal}
+  .rcbadge{font-size:10px;font-weight:700;color:var(--accent);border:1px solid var(--tint-blue-bd);background:var(--chip);border-radius:4px;padding:1px 6px}
+  .qrow.mention{border-left-color:var(--amber)}
+  .qrow.mention .qtitle{white-space:normal}
+  .mnbadge{font-size:10px;font-weight:700;color:var(--amber);border:1px solid var(--line2);background:var(--chip);border-radius:4px;padding:1px 6px}
+  /* roll-call capture */
+  .rc-lane{border:1px solid var(--line);border-radius:9px;padding:11px 13px 13px;margin-top:14px;background:var(--panel)}
+  .rc-lh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .rc-lh b{font-size:12.5px}
+  .rc-icon{font-size:13px;color:var(--muted)}
+  .rc-total{font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;margin-left:4px}
+  .rc-total small{font-size:9.5px;font-weight:400;color:var(--faint);margin-left:4px;letter-spacing:.4px;text-transform:uppercase}
+  .rc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:9px}
+  .rc-cell{background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:7px 9px 8px;min-width:0}
+  .rc-cell label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+    font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rc-cell input{width:100%;font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;padding:3px 6px}
+  .rc-sub{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;margin-top:6px;font-size:10.5px}
+  .rc-d{font-family:var(--mono);font-weight:700;color:var(--faint)}
+  .rc-d.up{color:var(--amber)} .rc-d.down{color:var(--green)}
+  .rc-der{color:var(--muted);border-bottom:1px dotted var(--line2);cursor:help}
+  .rc-der.off{color:var(--amber)}
+  .rc-floor{flex:0 0 100%;color:var(--amber);font-size:10px;cursor:help}
+  .rc-flow{display:flex;gap:11px;margin-top:11px;flex-wrap:wrap}
+  .rc-flow .field{flex:1;min-width:150px;margin:0}
+  .rc-bal{margin-top:9px;font-size:11.5px;color:var(--muted);line-height:1.5;
+    border-top:1px dotted var(--line2);padding-top:8px}
+  .rc-bal.ok{color:var(--green)} .rc-bal.off{color:var(--red);font-weight:600}
+  .rc-note{margin-top:9px;font-size:11px;color:var(--faint);line-height:1.5}
+  /* incident notes in the knowledge list */
+  .mcard{border-bottom:1px solid var(--line);padding:9px 10px;cursor:pointer}
+  .mcard:hover{background:var(--panel2)} .mcard.active{background:var(--panel2);box-shadow:inset 3px 0 0 var(--amber)}
+  .mcard.needs .p2t::after{content:" \25CF";color:var(--amber);font-size:9px;vertical-align:middle}
+  /* the three readings under a roll-call trend */
+  .rollread{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:1px;margin-top:14px;
+    background:var(--line);border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .rollread .rr{background:var(--panel);padding:9px 11px 11px;min-width:0}
+  .rr-h{font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);font-weight:700;margin-bottom:7px}
+  .rr-b{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+  .rr-up,.rr-dn,.rr-bad{font-family:var(--mono);font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px;
+    border:1px solid var(--line2);background:var(--chip)}
+  .rr-up{color:var(--amber)} .rr-dn{color:var(--green)} .rr-bad{color:var(--red)}
+  .rr-n{font-size:11px;color:var(--muted);line-height:1.55;margin-top:4px}
+  .rr-n.faint{color:var(--faint);font-size:10.5px}
+  .chnote{font-size:10.5px;color:var(--faint);line-height:1.5;margin:6px 0 0}
   .qrow.agenda{border-left-color:var(--accent2);cursor:default}
   .qrow.agenda .qtitle{white-space:normal}
   .agbadge{font-size:10px;font-weight:700;color:var(--accent2);border:1px solid var(--tint-violet-bd);background:var(--chip);border-radius:4px;padding:1px 6px}
@@ -1189,6 +1236,40 @@ const EV_KINDS={
 const RISK_SEV={high:{label:"High",cls:"blocked"},medium:{label:"Medium",cls:"review"},low:{label:"Low",cls:"progress"}};
 const RISK_STATUS={open:{label:"Open"},mitigating:{label:"Mitigating"},accepted:{label:"Accepted"},closed:{label:"Closed"}};
 const RISK_REVIEW_DAYS=30;   /* default gap before a risk asks to be looked at again */
+/* ---- roll-call ----
+   The headline numbers they read out at the top of a call: "2 blocked, 7 in
+   validation, 3 in progress, 1 waiting". Recorded as a CLAIM, dated — deliberately
+   NOT derived from his own tickets, because their queue is bigger than his tracking
+   and deriving it would quietly answer a different question. What that buys is the
+   reconciliation against what he does track, and the arithmetic between calls.
+   Statuses are THEIR words, per team: a stable list, or "validation" and
+   "In validation" become two series and the trend dies. */
+const ROLL_LANES={
+  demands:{label:"Demands",icon:"▤"},
+  incidents:{label:"Incidents",icon:"⚠"}
+};
+const DEF_ROLL_STATUSES={
+  demands:["In progress","In validation","Blocked","Waiting on us"],
+  incidents:["Open","In progress","Awaiting closure"]
+};
+const ROLL_SOURCES={call:{label:"Said in the call"},email:{label:"Sent by email"},report:{label:"From their report"}};
+const ROLL_FLOOR_WINDOW=8;   /* how far back the "this never empties" check looks */
+const ROLL_FLOOR_MIN=4;      /* …and the fewest calls it will draw any conclusion from */
+/* ---- incidents mentioned in a call ----
+   Raised in passing, never worth a ticket, closed by the next call — and the answer
+   walks out of the room with them. Deliberately NOT the performance log: that one is
+   boss-facing evidence about conduct, and filling it with routine operational noise
+   would make "N incidents this quarter" meaningless. A note can be promoted into it
+   if the HANDLING turns out to be the story. */
+const MENTION_STATUS={
+  open:{label:"Open — they'll close it",cls:"progress"},
+  ongoing:{label:"Still running",cls:"review"},
+  closed:{label:"Closed",cls:"delivered"},
+  unexplained:{label:"Closed, never explained",cls:"blocked"},
+  dropped:{label:"Dropped",cls:"done"}
+};
+const MENTION_CHASE_DAYS=14; /* past this, an unanswered mention is probably gone for good */
+const MENTION_SIM_MIN=0.45;  /* recurrence threshold — tune once there are real notes in here */
 /* Words that carry no signal in a ticket corpus. "error", "issue", "user" and friends
    are in here because they appear in half the tickets and would match everything. */
 const STOPWORDS=new Set(("the a an and or but if then for to of in on at by with from is are was were be been being "+
@@ -1217,14 +1298,16 @@ const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let state={version:1,settings:{teams:JSON.parse(JSON.stringify(DEF_TEAMS)),tags:[...DEF_TAGS],sources:[...DEF_SOURCES],
   encryption:false,autosave:true,staleDays:7,syncDays:{portal:[2,4],pnc:[]}},
   tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],
-  capacity:[],efforts:[],forecasts:[],approvals:[],risks:[],incidents:[]};
+  capacity:[],efforts:[],forecasts:[],approvals:[],risks:[],incidents:[],rollcalls:[],mentions:[]};
 
 let fileHandle=null, dirty=false, autoSaveTimer=null, lastSaveAuto=false;
 let view="today";
 let activeId=null, activeTab="work";
 let activeSyncId=null, syncFocusId=null, activeMeetingId=null, syncEpicId=null;
+let syncPane="", syncMentionId=null;
 let activePersonId=null, activeEpicId=null, peopleMatrix=false, matrixSkill="";
 let activePatternId=null, activeContactId=null, activeRiskId=null, knowledgeTab="patterns";
+let activeMentionId=null;
 let activeIncidentId=null, perfView="log", perfTeam="", perfKind="", perfSince="";
 let effortTab="capacity", effortTeam="", effortQuarter="";
 let masterPassword=null, pendingEncrypted=null;
@@ -1259,8 +1342,8 @@ async function recryptSnapshots(oldPw,newPw){try{
 
 /* ---------- persistence ---------- */
 let hadContent=false;
-function contentCount(){return state.tickets.length+state.people.length+state.syncs.length+state.contacts.length+state.epics.length+state.patterns.length+state.decisions.length+state.agenda.length+state.meetings.length+state.efforts.length+state.approvals.length+state.risks.length+state.incidents.length;}
-function isValidState(s){return s&&typeof s==="object"&&Array.isArray(s.tickets)&&Array.isArray(s.people)&&Array.isArray(s.contacts)&&Array.isArray(s.syncs)&&Array.isArray(s.epics)&&Array.isArray(s.patterns)&&Array.isArray(s.decisions)&&Array.isArray(s.agenda)&&Array.isArray(s.meetings)&&Array.isArray(s.capacity)&&Array.isArray(s.efforts)&&Array.isArray(s.forecasts)&&Array.isArray(s.approvals)&&Array.isArray(s.risks)&&Array.isArray(s.incidents);}
+function contentCount(){return state.tickets.length+state.people.length+state.syncs.length+state.contacts.length+state.epics.length+state.patterns.length+state.decisions.length+state.agenda.length+state.meetings.length+state.efforts.length+state.approvals.length+state.risks.length+state.incidents.length+state.rollcalls.length+state.mentions.length;}
+function isValidState(s){return s&&typeof s==="object"&&Array.isArray(s.tickets)&&Array.isArray(s.people)&&Array.isArray(s.contacts)&&Array.isArray(s.syncs)&&Array.isArray(s.epics)&&Array.isArray(s.patterns)&&Array.isArray(s.decisions)&&Array.isArray(s.agenda)&&Array.isArray(s.meetings)&&Array.isArray(s.capacity)&&Array.isArray(s.efforts)&&Array.isArray(s.forecasts)&&Array.isArray(s.approvals)&&Array.isArray(s.risks)&&Array.isArray(s.incidents)&&Array.isArray(s.rollcalls)&&Array.isArray(s.mentions);}
 function noteContent(){if(isValidState(state)&&contentCount()>0)hadContent=true;}
 function safeToPersist(){return isValidState(state)&&!(hadContent&&contentCount()===0);}
 function markDirty(){noteContent();dirty=true;renderSaveState();backupLocal();scheduleAutoSave();}
@@ -1492,6 +1575,34 @@ function normSync(s){return {id:s.id||uid(),date:s.date||todayStr(),team:s.team|
   points:(s.points||[]).map(normPoint),
   actions:(s.actions||[]).map(normAction),
   closed:!!s.closed,createdAt:s.createdAt||Date.now(),updatedAt:s.updatedAt||Date.now()};}
+/* A roll-call lane. "" for closed/added means THEY DIDN'T SAY; 0 means they said
+   none. The balance check stays silent unless both were actually stated, so the two
+   must never collapse into each other. */
+function optNum(v){const s=String(v==null?"":v).trim();
+  if(s==="")return "";const n=Math.max(0,Math.round(num(s)));return Number.isFinite(n)?String(n):"";}
+function normRollLane(l){
+  l=l||{};const seen=new Set(),counts=[];
+  (l.counts||[]).forEach(c=>{const st=String(c&&c.status||"").trim();
+    if(!st||seen.has(st.toLowerCase()))return;
+    seen.add(st.toLowerCase());
+    counts.push({status:st,n:Math.max(0,Math.round(num(c.n)))});});
+  return {counts,closed:optNum(l.closed),added:optNum(l.added)};
+}
+function normRollcall(r){return {id:r.id||uid(),team:r.team||"portal",date:r.date||todayStr(),
+  syncId:r.syncId||"",source:ROLL_SOURCES[r.source]?r.source:"call",
+  /* an untouched snapshot is a draft, never a data point — see rollRecorded() */
+  recorded:!!r.recorded,
+  demands:normRollLane(r.demands),incidents:normRollLane(r.incidents),
+  note:r.note||"",createdAt:r.createdAt||Date.now(),updatedAt:r.updatedAt||Date.now()};}
+function normMention(m){return {id:m.id||uid(),team:m.team||"portal",
+  title:m.title||"",area:m.area||"",ref:m.ref||"",
+  mentionedOn:m.mentionedOn||todayStr(),syncId:m.syncId||"",
+  status:MENTION_STATUS[m.status]?m.status:"open",closedOn:m.closedOn||"",
+  /* the three fields that make this knowledge rather than a diary entry */
+  what:m.what||"",action:m.action||"",prevent:m.prevent||"",
+  recurring:!!m.recurring,tags:[...new Set(m.tags||[])],
+  ticketId:m.ticketId||"",incidentId:m.incidentId||"",
+  createdAt:m.createdAt||Date.now(),updatedAt:m.updatedAt||Date.now()};}
 function migrate(d){
   d.version=1;
   d.settings=d.settings||{};
@@ -1507,6 +1618,13 @@ function migrate(d){
   S.dismissedSuggestions=Array.isArray(S.dismissedSuggestions)?S.dismissedSuggestions:[];
   S.lastBriefOn=S.lastBriefOn||"";
   S.stallDays=typeof S.stallDays==="number"?S.stallDays:14;
+  /* their status vocabulary, per team and per lane. Kept even for a team that has
+     since been removed — it costs nothing to keep and is tedious to retype. */
+  S.rollStatuses=(S.rollStatuses&&typeof S.rollStatuses==="object"&&!Array.isArray(S.rollStatuses))?S.rollStatuses:{};
+  S.teams.forEach(tm=>{const cur=S.rollStatuses[tm.id]||{};
+    S.rollStatuses[tm.id]={
+      demands:(Array.isArray(cur.demands)&&cur.demands.length)?cur.demands.map(String):[...DEF_ROLL_STATUSES.demands],
+      incidents:(Array.isArray(cur.incidents)&&cur.incidents.length)?cur.incidents.map(String):[...DEF_ROLL_STATUSES.incidents]};});
   S.gateTemplates=(S.gateTemplates&&S.gateTemplates.length)
     ?S.gateTemplates.map(g=>({id:g.id||uid(),name:g.name||"",steps:(g.steps||[]).map(String).filter(Boolean)}))
     :JSON.parse(JSON.stringify(DEF_GATE_TEMPLATES));
@@ -1525,6 +1643,8 @@ function migrate(d){
   d.approvals=(d.approvals||[]).map(normApproval);
   d.risks=(d.risks||[]).map(normRisk);
   d.incidents=(d.incidents||[]).map(normIncident);
+  d.rollcalls=(d.rollcalls||[]).map(normRollcall);
+  d.mentions=(d.mentions||[]).map(normMention);
   /* drop links that point at something deleted, in both directions */
   const eids=new Set(d.epics.map(e=>e.id));
   d.tickets.forEach(t=>{if(t.epicId&&!eids.has(t.epicId))t.epicId="";});
@@ -1546,6 +1666,13 @@ function migrate(d){
   /* an incident is a historical record — it outlives the demand it happened on */
   d.incidents.forEach(x=>{x.ticketIds=x.ticketIds.filter(t=>tids.has(t));});
   d.approvals.forEach(a=>{if(a.ticketId&&!tids.has(a.ticketId))a.ticketId="";});
+  /* a roll-call and an incident note both outlive the call that produced them —
+     keep the record, clear the dead link */
+  const sids=new Set(d.syncs.map(x=>x.id)),iids=new Set(d.incidents.map(x=>x.id));
+  d.rollcalls.forEach(r=>{if(r.syncId&&!sids.has(r.syncId))r.syncId="";});
+  d.mentions.forEach(m=>{if(m.syncId&&!sids.has(m.syncId))m.syncId="";
+    if(m.ticketId&&!tids.has(m.ticketId))m.ticketId="";
+    if(m.incidentId&&!iids.has(m.incidentId))m.incidentId="";});
   return d;
 }
 
@@ -1566,7 +1693,7 @@ async function loadFromText(txt,name){
 async function openFile(){if(!supportsFS)return importViaInput();
   try{const[h]=await window.showOpenFilePicker({types:[{description:"Team Desk data",accept:{"application/json":[".json"]}}]});
     const f=await h.getFile();if(!await loadFromText(await f.text(),h.name))return;
-    fileHandle=h;dirty=false;setFileLabel(h.name);rememberHandle();activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;backupLocal();renderApp();toast("Opened "+h.name);
+    fileHandle=h;dirty=false;setFileLabel(h.name);rememberHandle();activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;activeMentionId=null;syncSelectReset();backupLocal();renderApp();toast("Opened "+h.name);
   }catch(e){if(e.name!=="AbortError")toast("Couldn't open: "+e.message,true);}}
 function saveGuardOk(action){
   if(!isValidState(state)){toast("Save blocked — data looks corrupted; your file was NOT overwritten.",true);return false;}
@@ -1586,7 +1713,7 @@ async function exportDownload(){if(!saveGuardOk("download"))return;
   dirty=false;renderSaveState();maybeSnapshot();toast("Downloaded data file"+(isEncrypted()?" 🔒":""));}
 function importViaInput(){const i=document.createElement("input");i.type="file";i.accept=".json,application/json";
   i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();
-    r.onload=async()=>{try{if(!await loadFromText(r.result,f.name))return;dirty=false;activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
+    r.onload=async()=>{try{if(!await loadFromText(r.result,f.name))return;dirty=false;activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;activeMentionId=null;syncSelectReset();backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
     r.readAsText(f);};i.click();}
 
 function promptPassword(title,confirmIt){
@@ -2221,11 +2348,31 @@ function renderToday(){
   cards.push(dashCard("📈 Forecast vs contract",fcCards.map(x=>({
     main:x.tm.name+" — "+quarterLabel(x.sig.nq),sub:(x.sig.dir==="up"?"negotiate ~"+Math.abs(x.sig.pct)+"% more":"could reduce ~"+Math.abs(x.sig.pct)+"%"),
     go:()=>{effortTeam=x.tm.id;effortTab="capacity";view="effort";renderApp();}})),""));
+  /* roll-call figures that don't reconcile with the previous call. Not an accusation
+     — arithmetic — but it's the thing to raise while the call is still recent. */
+  const rollFlags=state.settings.teams.map(tm=>{
+    const rs=rollRecorded(tm.id);
+    if(rs.length<2)return null;
+    const b=rollBalance(rs[rs.length-1],rs[rs.length-2],"demands");
+    return (b&&b.gap!==0)?{tm,b,on:rs[rs.length-1].date}:null;
+  }).filter(Boolean);
+  cards.push(dashCard("📊 Their numbers don't add up",rollFlags.map(x=>({
+    main:x.tm.name+" — "+fmtDate(x.on),
+    sub:x.b.prevTotal+" − "+x.b.closed+" closed + "+x.b.added+" new = "+x.b.expected+", but they read out "+x.b.actual,
+    go:()=>{view="insights";renderApp();}})),"warn"));
   /* performance failures the data can spot — log them while the detail is fresh */
   const pfc=detectPerf();
   cards.push(dashCard("⚑ Worth logging against the team",pfc.map(c=>({
     main:c.title,sub:esc(FAIL_KINDS[c.kind].label)+" · "+c.why,
     go:()=>{perfView="log";activeIncidentId=null;view="perf";renderApp();}})),"warn"));
+  /* the answer that walked out of the room — an incident they raised and closed
+     without ever saying what happened. This is the whole reason the notes exist. */
+  const mnOpen=state.settings.teams.flatMap(tm=>openMentions(tm.id));
+  cards.push(dashCard("🔔 Incidents with no close-out",mnOpen.map(m=>({
+    main:m.title||"(unnamed incident)",
+    sub:teamOf(m.team).name+" · mentioned "+fmtDate(m.mentionedOn)+" · "+mentionAge(m)+"d"+
+      (mentionAge(m)>=MENTION_CHASE_DAYS?" — probably gone for good":""),
+    go:()=>{activeMentionId=m.id;knowledgeTab="mentions";view="knowledge";renderApp();}})),"warn"));
   /* live high-severity risks, and any risk whose review date has come round */
   const hiRisks=liveRisks().filter(r=>r.severity==="high");
   cards.push(dashCard("⚠ High risks",hiRisks.map(r=>({
@@ -3024,7 +3171,150 @@ function tabResolution(body,t){
   if(rg)rg.onclick=()=>{activePatternId=patternForTicket(t.id).id;knowledgeTab="patterns";view="knowledge";renderApp();};
 }
 
+/* ===================== ROLL-CALL ===================== */
+function eqStatus(a,b){return String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase();}
+function rollStatuses(team,lane){
+  const m=state.settings.rollStatuses[team];
+  return (m&&Array.isArray(m[lane])?m[lane]:DEF_ROLL_STATUSES[lane]).slice();
+}
+/* vocabulary order first, then anything an older snapshot still carries that has
+   since been renamed or removed — a number already recorded must never vanish
+   from the screen just because the list moved on */
+function rollNames(r,laneKey){
+  const vocab=rollStatuses(r.team,laneKey);
+  const extra=r[laneKey].counts.map(c=>c.status).filter(st=>!vocab.some(v=>eqStatus(v,st)));
+  return vocab.concat(extra);
+}
+function addRollStatus(team,lane,name){
+  const nm=String(name||"").trim();if(!nm)return "";
+  const m=state.settings.rollStatuses;
+  m[team]=m[team]||{demands:[...DEF_ROLL_STATUSES.demands],incidents:[...DEF_ROLL_STATUSES.incidents]};
+  const hit=m[team][lane].find(x=>eqStatus(x,nm));
+  if(hit)return hit;
+  m[team][lane].push(nm);markDirty();return nm;
+}
+function removeRollStatus(team,lane,name){
+  const m=state.settings.rollStatuses;if(!m[team])return;
+  m[team][lane]=m[team][lane].filter(x=>!eqStatus(x,name));markDirty();
+}
+function laneCount(lane,status){const c=lane.counts.find(x=>eqStatus(x.status,status));return c?c.n:null;}
+function rollTotal(lane){return lane.counts.reduce((a,c)=>a+c.n,0);}
+function setLaneCount(lane,nm,val){
+  const s=String(val==null?"":val).trim();
+  const i=lane.counts.findIndex(c=>eqStatus(c.status,nm));
+  if(s===""){if(i>=0)lane.counts.splice(i,1);return;}
+  const n=Math.max(0,Math.round(num(s)));
+  if(i>=0)lane.counts[i].n=n;else lane.counts.push({status:nm,n});
+}
+/* Only a RECORDED roll-call is a data point. Opening the pane pre-fills last week's
+   figures so the entry takes seconds — which means an untouched one is a copy of
+   last week, and letting that into the trend would be a fabrication, not a gap. */
+function rollRecorded(team){
+  return state.rollcalls.filter(r=>r.recorded&&(!team||r.team===team))
+    .sort((a,b)=>a.date===b.date?(a.createdAt-b.createdAt):(a.date<b.date?-1:1));
+}
+function lastRollcall(team,exceptId){
+  const a=rollRecorded(team).filter(r=>r.id!==exceptId);return a.length?a[a.length-1]:null;
+}
+function rollcallForSync(sid){return state.rollcalls.find(r=>r.syncId===sid)||null;}
+function rollSummaryLine(r){
+  const bit=k=>r[k].counts.filter(c=>c.n>0).map(c=>c.n+" "+c.status.toLowerCase()).join(" · ");
+  const a=bit("demands"),b=bit("incidents");
+  return esc((a?"Demands: "+a:"")+(a&&b?"   —   ":"")+(b?"Incidents: "+b:"")||"nothing above zero");
+}
+/* The reconciliation joins on THEIR words: a ticket's theirStatus uses the same
+   vocabulary the roll-call does, so no mapping table is needed — and keeping
+   theirStatus current suddenly pays for itself. */
+function derivedRoll(team,status){
+  return state.tickets.filter(t=>t.team===team&&isOpen(t)&&eqStatus(t.theirStatus,status)).length;
+}
+function derivedUnmatched(team,lane){
+  const vocab=rollStatuses(team,lane);
+  return state.tickets.filter(t=>t.team===team&&isOpen(t)&&!vocab.some(v=>eqStatus(v,t.theirStatus))).length;
+}
+/* The arithmetic. Silent unless BOTH "closed since" and "new since" were actually
+   stated: with one of them missing, arrivals confound the sum and the tool would be
+   accusing them on incomplete numbers. */
+function rollBalance(cur,prev,laneKey){
+  if(!prev)return null;
+  const L=cur[laneKey],P=prev[laneKey];
+  if(L.closed===""||L.added==="")return null;
+  const expected=rollTotal(P)+(+L.added)-(+L.closed);
+  return {expected,actual:rollTotal(L),gap:rollTotal(L)-expected,
+    prevTotal:rollTotal(P),closed:+L.closed,added:+L.added};
+}
+/* "The blocked pile never empties" is all a count can honestly say. Whether it is
+   the SAME pile is exactly what a count cannot know — the UI says so rather than
+   implying more. */
+function rollFloor(team,laneKey,status){
+  const rs=rollRecorded(team).slice(-ROLL_FLOOR_WINDOW).filter(r=>laneCount(r[laneKey],status)!==null);
+  if(rs.length<ROLL_FLOOR_MIN)return null;
+  const vals=rs.map(r=>laneCount(r[laneKey],status));
+  const min=Math.min(...vals),max=Math.max(...vals);
+  /* Two conditions, and both matter. A floor alone flags "In progress", which is
+     supposed to be non-empty and tells him nothing. What is worth saying is a level
+     that never drains AND never really moves: work sitting rather than flowing. */
+  return {n:rs.length,min,max,now:vals[vals.length-1],flag:min>=2&&(max-min)<=1};
+}
+function rollDeltas(cur,prev,laneKey){
+  const names=[...new Set(cur[laneKey].counts.map(c=>c.status)
+    .concat(prev?prev[laneKey].counts.map(c=>c.status):[]))];
+  return names.map(nm=>{
+    const a=laneCount(cur[laneKey],nm),b=prev?laneCount(prev[laneKey],nm):null;
+    return {status:nm,now:a===null?0:a,was:b,d:(a===null?0:a)-(b===null?0:b)};
+  }).filter(x=>x.now||x.was);
+}
+
+/* ============ INCIDENTS MENTIONED IN A CALL ============ */
+function mentionText(m){return [m.title,m.area,m.what,m.action,m.prevent].join(" ");}
+/* The chasing rule. Anything not deliberately parked stays on the list until the
+   close-out is written. Marking it "never explained" is the deliberate give-up: it
+   stops the chase AND records that they never said, which is its own signal. */
+function mentionNeedsAnswer(m){
+  return m.status!=="dropped"&&m.status!=="unexplained"&&!String(m.what||"").trim();
+}
+function mentionsFor(team){
+  return state.mentions.filter(m=>!team||m.team===team).sort((a,b)=>a.mentionedOn<b.mentionedOn?1:-1);
+}
+function openMentions(team){
+  return state.mentions.filter(m=>m.team===team&&mentionNeedsAnswer(m))
+    .sort((a,b)=>a.mentionedOn<b.mentionedOn?-1:1);   /* oldest first — it's been asked about longest */
+}
+function mentionAge(m){const d=daysUntil(m.mentionedOn);return d===null?0:Math.max(0,-d);}
+function mentionById(id){return state.mentions.find(m=>m.id===id)||null;}
+/* Similarity across notes only. Two shared meaningful words minimum — a single rare
+   token matching is exactly how the ticket lookalikes produced false positives. */
+function similarMentions(q,excludeId,limit){
+  const qT=new Set(tokenize(mentionText(q)));
+  if(!qT.size)return [];
+  const pool=state.mentions.filter(m=>m.id!==excludeId&&tokenize(mentionText(m)).length);
+  if(!pool.length)return [];
+  const df=Object.create(null);
+  pool.forEach(m=>new Set(tokenize(mentionText(m))).forEach(w=>{df[w]=(df[w]||0)+1;}));
+  const D={df,n:pool.length},norm=Math.sqrt(Math.max(1,qT.size));
+  const out=[];
+  pool.forEach(m=>{
+    const toks=new Set(tokenize(mentionText(m)));
+    let s=0;const shared=[];
+    qT.forEach(w=>{if(toks.has(w)){s+=idf(w,D);shared.push(w);}});
+    if(shared.length<2)return;
+    s/=norm;
+    if(s>0)out.push({m,score:s,shared});});
+  return out.filter(x=>x.score>=MENTION_SIM_MIN).sort((a,b)=>b.score-a.score).slice(0,limit||4);
+}
+
 /* ===================== SYNC MODE ===================== */
+/* One setter for what the right-hand pane shows. The capture pane has grown from
+   two states to five, and a handler that forgets to clear one of the others leaves
+   two panes claiming the screen — so nothing sets these directly any more. */
+function syncSelectReset(){syncFocusId=null;syncEpicId=null;syncPane="";syncMentionId=null;}
+function syncSelect(kind,id){
+  syncSelectReset();
+  if(kind==="ticket")syncFocusId=id;
+  else if(kind==="epic")syncEpicId=id;
+  else if(kind){syncPane=kind;syncMentionId=id||null;}
+  renderSync();
+}
 /* The queue is generated, not typed. Score decides what he gets asked about first. */
 function queueReasons(t,team){
   const out=[];
@@ -3100,7 +3390,7 @@ function startSync(team){
   const existing=state.syncs.find(s=>!s.closed&&s.team===team);
   if(existing){activeSyncId=existing.id;view="sync";renderApp();return;}
   const s=normSync({team,date:todayStr(),title:teamOf(team).name+" sync — "+fmtDate(todayStr())});
-  state.syncs.unshift(s);activeSyncId=s.id;syncFocusId=null;markDirty();
+  state.syncs.unshift(s);activeSyncId=s.id;syncSelectReset();markDirty();
   view="sync";renderApp();
 }
 function renderSync(){
@@ -3124,12 +3414,34 @@ function renderSync(){
         <div class="faint" style="font-size:11.5px">${pending.length} left · ${done.length} covered</div>
         <div class="quickadd">
           <button class="sm primary" id="sq-new">＋ Ticket</button>
+          <button class="sm" id="sq-ment">＋ Incident</button>
           <button class="sm" id="sq-agenda">📋 Add point</button>
           <button class="sm" id="sq-notes">📝 Meeting notes</button>
           <button class="sm" id="sq-close">✓ Close sync</button>
         </div>
       </div>
       <div class="queue-list" id="qlist">
+        ${(()=>{const rc=rollcallForSync(s.id);
+          /* first row of the call, because it is the first thing said in the call */
+          return `<div class="qrow rollcall ${syncPane==="rollcall"?"active":""}" data-qroll="1">
+            <div class="qtop"><span class="rcbadge">📊 roll-call</span>
+              <span style="margin-left:auto"></span>
+              ${rc&&rc.recorded?`<span class="qtick">✓</span>`:`<span class="warnchip">not recorded</span>`}</div>
+            <div class="qtitle">${rc&&rc.recorded
+              ?rollTotal(rc.demands)+" demands · "+rollTotal(rc.incidents)+" incidents"
+              :"Their numbers by status"}</div>
+            <div class="qwhy"><span class="warnchip info">${(()=>{const p=lastRollcall(s.team,rc?rc.id:null);
+              return p?"last call: "+rollTotal(p.demands)+" demands · "+fmtDate(p.date):"first one for this team";})()}</span></div>
+          </div>`;})()}
+        ${(()=>{const om=openMentions(s.team);return om.length?`<div class="qsec">🔔 Incidents they mentioned (${om.length}) — what happened?</div>
+          ${om.map(m=>`<div class="qrow mention ${m.id===syncMentionId&&syncPane==="mention"?"active":""}" data-qment="${esc(m.id)}">
+            <div class="qtop"><span class="mnbadge">🔔 ${esc(MENTION_STATUS[m.status].label)}</span>
+              ${m.ref?`<span class="qid">${esc(m.ref)}</span>`:""}
+              <span style="margin-left:auto"></span>
+              <span class="warnchip ${mentionAge(m)>=MENTION_CHASE_DAYS?"bad":""}">${mentionAge(m)}d</span></div>
+            <div class="qtitle">${esc(m.title||"(unnamed incident)")}</div>
+            <div class="qwhy">${m.area?`<span class="warnchip">${esc(m.area)}</span>`:""}
+              <span class="warnchip info">mentioned ${fmtDate(m.mentionedOn)} — no close-out yet</span></div></div>`).join("")}`:"";})()}
         ${(()=>{const ag=agendaFor(s.team);return ag.length?`<div class="qsec">📋 To raise (${ag.length})</div>
           ${ag.map(a=>{const tk=a.ticketId?ticketByRef(a.ticketId):null;
             return `<div class="qrow agenda">
@@ -3183,8 +3495,11 @@ function renderSync(){
     <div class="capture" id="capture"></div>`;
 
   wrap.querySelector("#sq-new").onclick=()=>openQuickAdd(s.team);
+  wrap.querySelector("#sq-ment").onclick=()=>syncSelect("mention",newMention(s.team,s.id).id);
+  wrap.querySelector("[data-qroll]").onclick=()=>syncSelect("rollcall");
+  wrap.querySelectorAll("[data-qment]").forEach(r=>r.onclick=()=>syncSelect("mention",r.dataset.qment));
   wrap.querySelector("#sq-agenda").onclick=()=>openAgendaModal(s.team);
-  wrap.querySelector("#sq-notes").onclick=()=>{syncFocusId=null;syncEpicId=null;renderSync();};
+  wrap.querySelector("#sq-notes").onclick=()=>syncSelect(null);
   wrap.querySelector("#sq-close").onclick=()=>closeSync(s);
   wrap.querySelectorAll("[data-agdone]").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const a=state.agenda.find(x=>x.id===b.dataset.agdone);a.done=true;a.doneOn=todayStr();
@@ -3193,9 +3508,9 @@ function renderSync(){
   wrap.querySelectorAll("[data-agdel]").forEach(b=>b.onclick=e=>{e.stopPropagation();
     state.agenda=state.agenda.filter(x=>x.id!==b.dataset.agdel);markDirty();renderSync();});
   wrap.querySelectorAll("[data-agjump]").forEach(el=>el.onclick=e=>{e.stopPropagation();
-    syncFocusId=state.agenda.find(x=>x.id===el.dataset.agjump).ticketId;renderSync();});
-  wrap.querySelectorAll("[data-q]").forEach(r=>r.onclick=()=>{syncFocusId=r.dataset.q;syncEpicId=null;renderSync();});
-  wrap.querySelectorAll("[data-qepic]").forEach(h=>h.onclick=()=>{syncEpicId=h.dataset.qepic;syncFocusId=null;renderSync();});
+    syncSelect("ticket",state.agenda.find(x=>x.id===el.dataset.agjump).ticketId);});
+  wrap.querySelectorAll("[data-q]").forEach(r=>r.onclick=()=>syncSelect("ticket",r.dataset.q));
+  wrap.querySelectorAll("[data-qepic]").forEach(h=>h.onclick=()=>syncSelect("epic",h.dataset.qepic));
   wrap.querySelectorAll("[data-tpdone]").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const [pid,tpid]=b.dataset.tpdone.split(":");
     const per=personById(pid);const tp=per.talkingPoints.find(x=>x.id===tpid);
@@ -3209,13 +3524,16 @@ function renderSync(){
     const res=prompt("Closing this out. What was the outcome?",a.resolution||"");
     if(res===null)return;
     a.done=true;a.resolution=res;touch(owner);renderSync();toast("Closed ✓");});
-  wrap.querySelectorAll("[data-carry]").forEach(r=>r.onclick=()=>{syncFocusId=null;renderSync();
+  wrap.querySelectorAll("[data-carry]").forEach(r=>r.onclick=()=>{syncSelect(null);
     setTimeout(()=>{const el=document.getElementById("act-"+r.dataset.carry);if(el)el.scrollIntoView({block:"center"});},30);});
 
   const gEpic=syncEpicId?epicById(syncEpicId):null;
-  if(gEpic)renderEpicCapture(document.getElementById("capture"),s,gEpic);
-  else if(focus)renderCapture(document.getElementById("capture"),s,focus);
-  else renderSyncNotes(document.getElementById("capture"),s);
+  const cap=document.getElementById("capture");
+  if(syncPane==="rollcall")renderRollcallCapture(cap,s);
+  else if(syncPane==="mention")renderMentionCapture(cap,s,mentionById(syncMentionId));
+  else if(gEpic)renderEpicCapture(cap,s,gEpic);
+  else if(focus)renderCapture(cap,s,focus);
+  else renderSyncNotes(cap,s);
 }
 function qrowHtml(x,covered){
   const t=x.t;
@@ -3376,10 +3694,10 @@ function renderEpicCapture(host,s,e){
         Hurdles, gates, POCs and decisions live on the individual pane — use ↗ for those.</p>`:""}`;
 
   const q=x=>host.querySelector(x);
-  q("#ge-back").onclick=()=>{syncEpicId=null;renderSync();};
+  q("#ge-back").onclick=()=>syncSelect(null);
   q("#ge-open").onclick=()=>{activeEpicId=e.id;syncEpicId=null;view="epics";renderApp();};
   host.querySelectorAll("[data-gefull]").forEach(b=>b.onclick=()=>{
-    syncFocusId=b.dataset.gefull;syncEpicId=null;renderSync();});
+    syncSelect("ticket",b.dataset.gefull);});
   /* keep drafts on blur so switching rows or views never loses a half-typed note */
   const draftSave=id=>{const ta=host.querySelector(`[data-gesaid="${id}"]`);if(!ta)return;
     let c=s.covered.find(x=>x.ticketId===id);
@@ -3409,14 +3727,287 @@ function renderEpicCapture(host,s,e){
   if(sa)sa.onclick=()=>{
     let n=0;mine.forEach(t=>{const c=s.covered.find(x=>x.ticketId===t.id);
       if(!(c&&c.done)){commit(t.id);n++;}});
-    touch(s);syncEpicId=null;renderSync();
+    touch(s);syncSelect(null);
     toast(n?n+" ticket"+(n===1?"":"s")+" captured":"Nothing left to cover");};
+}
+/* ---------- roll-call capture ---------- */
+/* Pre-filling last week's numbers is the single thing that makes this a 15-second
+   job instead of a chore that gets abandoned by week three. It is also why the
+   record starts as a DRAFT: an untouched pre-fill is last week's data wearing this
+   week's date. Typing any number records it; the button is there for the week
+   nothing changed, where confirming is the deliberate act. */
+function ensureRollcall(s){
+  let r=rollcallForSync(s.id);
+  if(r)return r;
+  const prev=lastRollcall(s.team);
+  r=normRollcall({team:s.team,date:s.date,syncId:s.id,source:"call",
+    demands:{counts:(prev?prev.demands.counts:[]).map(c=>({status:c.status,n:c.n}))},
+    incidents:{counts:(prev?prev.incidents.counts:[]).map(c=>({status:c.status,n:c.n}))}});
+  state.rollcalls.push(r);markDirty();
+  return r;
+}
+function rollCellSubHtml(r,laneKey,nm,prev){
+  const v=laneCount(r[laneKey],nm);
+  const was=prev?laneCount(prev[laneKey],nm):null;
+  const der=laneKey==="demands"?derivedRoll(r.team,nm):null;
+  const d=(v===null?0:v)-(was===null?0:was);
+  const fl=rollFloor(r.team,laneKey,nm);
+  return (was===null?`<span class="faint">first time</span>`
+      :`<span class="rc-d ${d>0?"up":d<0?"down":""}">${d>0?"+"+d:d===0?"±0":d}</span><span class="faint">was ${was}</span>`)
+    +(der!==null?`<span class="rc-der ${(v!==null&&der!==v)?"off":""}" title="Open tickets you track whose “their status” reads ${esc(nm)}">you track ${der}</span>`:"")
+    +(fl&&fl.flag?`<span class="rc-floor" title="A count can tell you the pile never empties. Whether it is the SAME items is exactly what it cannot know.">never below ${fl.min} in ${fl.n} calls</span>`:"");
+}
+function rollBalHtml(r,laneKey,prev){
+  const bal=rollBalance(r,prev,laneKey);
+  if(!prev)return `<span class="faint">No earlier call to compare with yet.</span>`;
+  if(!bal)return `<span class="faint">Ask for both numbers — it's the one check that catches a queue that isn't really moving.</span>`;
+  if(bal.gap===0)return `✓ Balances: ${bal.prevTotal} − ${bal.closed} closed + ${bal.added} new = ${bal.actual}`;
+  return `⚠ Doesn't balance: ${bal.prevTotal} − ${bal.closed} closed + ${bal.added} new = ${bal.expected}, but they read out ${bal.actual} (${bal.gap>0?"+":""}${bal.gap}).`;
+}
+function rollLaneHtml(r,laneKey,prev){
+  const lane=r[laneKey],names=rollNames(r,laneKey),isD=laneKey==="demands";
+  const unmatched=isD?derivedUnmatched(r.team,laneKey):0;
+  return `<div class="rc-lane">
+    <div class="rc-lh"><span class="rc-icon">${ROLL_LANES[laneKey].icon}</span><b>${ROLL_LANES[laneKey].label}</b>
+      <span class="rc-total" data-rctot="${laneKey}">${rollTotal(lane)}<small>total</small></span>
+      <span style="flex:1"></span>
+      <button class="ghost sm" data-rcvocab="${laneKey}" title="Add or remove the statuses they use">✎ statuses</button></div>
+    <div class="rc-grid">
+      ${names.map((nm,i)=>{const v=laneCount(lane,nm);
+        return `<div class="rc-cell">
+          <label>${esc(nm)}</label>
+          <input type="number" min="0" step="1" inputmode="numeric" value="${v===null?"":v}"
+            data-rcn="${laneKey}" data-rci="${i}" placeholder="—">
+          <div class="rc-sub" data-rcsub="${laneKey}" data-rci="${i}">${rollCellSubHtml(r,laneKey,nm,prev)}</div>
+        </div>`;}).join("")}
+    </div>
+    <div class="rc-flow">
+      <div class="field"><label>Closed since last call</label>
+        <input type="number" min="0" step="1" value="${esc(lane.closed)}" data-rcf="${laneKey}::closed" placeholder="not said"></div>
+      <div class="field"><label>New since last call</label>
+        <input type="number" min="0" step="1" value="${esc(lane.added)}" data-rcf="${laneKey}::added" placeholder="not said"></div>
+    </div>
+    <div class="rc-bal" data-rcbal="${laneKey}">${rollBalHtml(r,laneKey,prev)}</div>
+    ${isD&&unmatched?`<div class="rc-note">${unmatched} open ticket${unmatched===1?"":"s"} you track ${unmatched===1?"has a":"have a"}
+      “their status” that isn't in this list, so ${unmatched===1?"it isn't":"they aren't"} counted in the “you track” figures.</div>`:""}
+  </div>`;
+}
+function renderRollcallCapture(host,s){
+  const r=ensureRollcall(s);
+  const prev=lastRollcall(s.team,r.id);
+  host.innerHTML=`
+    <div class="capture-head">
+      <div style="flex:1;min-width:0">
+        <div class="dh-id"><span class="mono" style="color:var(--accent)">📊 ROLL-CALL</span>${teamPill(s.team)}
+          <span class="pill ${r.recorded?"delivered":"done"}" data-rcstate="1">${r.recorded?"recorded":"not recorded"}</span></div>
+        <h2>What they read out</h2>
+        <div class="faint" style="font-size:12px;margin-top:4px">Their figures as stated — not derived from your tickets. That's the point of keeping them.</div>
+      </div>
+      <button class="sm" id="rc-back">← Queue</button>
+    </div>
+    ${prev?`<div class="lastsaid"><div class="ls-h">Pre-filled from ${fmtDate(prev.date)} — overwrite what they actually say</div>${rollSummaryLine(prev)}</div>`
+      :`<div class="banner">First roll-call for ${esc(teamOf(s.team).name)}. From the next one you'll get per-status deltas, the flow reading and the balance check.</div>`}
+    ${rollLaneHtml(r,"demands",prev)}
+    ${rollLaneHtml(r,"incidents",prev)}
+    <div class="grid2" style="margin-top:14px">
+      <div class="field"><label>Where these came from</label>
+        <select id="rc-src">${Object.entries(ROLL_SOURCES).map(([k,v])=>`<option value="${k}" ${r.source===k?"selected":""}>${esc(v.label)}</option>`).join("")}</select></div>
+      <div class="field"><label>Date</label><input type="date" id="rc-date" value="${esc(r.date)}"></div>
+    </div>
+    <div class="field"><label>Anything said about the numbers</label>
+      <textarea id="rc-note" style="min-height:56px" placeholder="e.g. both blocked ones are waiting on the AD team">${esc(r.note)}</textarea></div>
+    <div class="row">
+      <button class="${r.recorded?"":"go"}" id="rc-save" style="flex:1">${r.recorded?"✓ Recorded — click to un-record":"✓ Record this roll-call"}</button>
+      <button class="ghost danger" id="rc-del" style="flex:0 0 auto" title="Discard this roll-call">🗑</button></div>
+    <p class="faint" style="font-size:11.5px;margin-top:12px">Typing any number records it automatically — the button is for the week nothing changed,
+      where confirming the pre-filled figures is what makes this call a data point instead of a copy of the last one.
+      <b>These are their numbers.</b> The trend in Insights measures what they claim, which is why the balance check is worth more than the totals.</p>`;
+
+  const q=x=>host.querySelector(x);
+  /* patch only the derived nodes — a full re-render on every number would steal
+     focus mid-tab, which in a live call is the difference between usable and not */
+  const refresh=()=>{
+    ["demands","incidents"].forEach(k=>{
+      const names=rollNames(r,k);
+      host.querySelectorAll(`[data-rcsub="${k}"]`).forEach(el=>{
+        el.innerHTML=rollCellSubHtml(r,k,names[+el.dataset.rci],prev);});
+      const tot=host.querySelector(`[data-rctot="${k}"]`);
+      if(tot)tot.innerHTML=rollTotal(r[k])+"<small>total</small>";
+      const bal=host.querySelector(`[data-rcbal="${k}"]`);
+      if(bal){bal.innerHTML=rollBalHtml(r,k,prev);
+        const b=rollBalance(r,prev,k);
+        bal.className="rc-bal"+(b?(b.gap===0?" ok":" off"):"");}
+    });
+    const st=q("[data-rcstate]");
+    if(st){st.textContent=r.recorded?"recorded":"not recorded";
+      st.className="pill "+(r.recorded?"delivered":"done");}
+    const sv=q("#rc-save");
+    sv.textContent=r.recorded?"✓ Recorded — click to un-record":"✓ Record this roll-call";
+    sv.className=r.recorded?"":"go";sv.style.flex="1";
+  };
+  const mark=()=>{r.recorded=true;touch(r);refresh();};
+  q("#rc-back").onclick=()=>syncSelect(null);
+  host.querySelectorAll("[data-rcn]").forEach(inp=>inp.onchange=()=>{
+    setLaneCount(r[inp.dataset.rcn],rollNames(r,inp.dataset.rcn)[+inp.dataset.rci],inp.value);mark();});
+  host.querySelectorAll("[data-rcf]").forEach(inp=>inp.onchange=()=>{
+    const parts=inp.dataset.rcf.split("::");
+    r[parts[0]][parts[1]]=optNum(inp.value);inp.value=r[parts[0]][parts[1]];mark();});
+  host.querySelectorAll("[data-rcvocab]").forEach(b=>b.onclick=()=>
+    openRollStatusModal(r.team,b.dataset.rcvocab,()=>renderSync()));
+  q("#rc-src").onchange=e=>{r.source=e.target.value;mark();};
+  q("#rc-date").onchange=e=>{r.date=e.target.value||todayStr();mark();};
+  q("#rc-note").onchange=e=>{r.note=e.target.value;mark();};
+  q("#rc-save").onclick=()=>{r.recorded=!r.recorded;touch(r);refresh();
+    toast(r.recorded?"Roll-call recorded ✓":"Un-recorded — it won't appear in the trend");};
+  q("#rc-del").onclick=()=>{
+    if(!confirm("Discard this roll-call? The numbers for this call are lost."))return;
+    state.rollcalls=state.rollcalls.filter(x=>x.id!==r.id);markDirty();syncSelect(null);};
+}
+function openRollStatusModal(team,laneKey,after){
+  const root=document.getElementById("modalRoot");
+  const draw=()=>{
+    const list=rollStatuses(team,laneKey);
+    root.innerHTML=`<div class="modal-bg"><div class="modal" style="width:440px">
+      <h2>${ROLL_LANES[laneKey].icon} ${esc(ROLL_LANES[laneKey].label)} statuses — ${esc(teamOf(team).name)}</h2>
+      <p class="faint" style="font-size:12px;margin-top:-8px">Use their words, exactly as they say them. The same status typed two ways
+        becomes two series and the trend stops meaning anything.</p>
+      <div class="chiprow" style="margin-bottom:10px">${list.length?list.map(x=>
+        `<span class="chip">${esc(x)} <button class="ghost sm" data-rmst="${esc(x)}" title="Remove from the list">✕</button></span>`).join("")
+        :`<span class="faint" style="font-size:12px">No statuses yet.</span>`}</div>
+      <div class="field"><label>Add a status</label><input id="rs-new" placeholder="e.g. Awaiting UAT" autocomplete="off"></div>
+      <p class="faint" style="font-size:11px;margin-top:-4px">Removing one only takes it off this list — numbers already recorded against it stay in the history.</p>
+      <div class="modal-foot"><button id="rs-x" class="ghost">Done</button><button id="rs-add" class="primary">Add</button></div></div></div>`;
+    const close=()=>{root.innerHTML="";if(after)after();};
+    root.querySelector("#rs-x").onclick=close;
+    const add=()=>{const v=root.querySelector("#rs-new").value.trim();
+      if(!v)return close();addRollStatus(team,laneKey,v);draw();};
+    root.querySelector("#rs-add").onclick=add;
+    root.querySelector("#rs-new").onkeydown=e=>{if(e.key==="Enter")add();if(e.key==="Escape")close();};
+    root.querySelectorAll("[data-rmst]").forEach(b=>b.onclick=()=>{
+      removeRollStatus(team,laneKey,b.dataset.rmst);draw();});
+    root.querySelector("#rs-new").focus();
+  };
+  draw();
+}
+
+/* ---------- incidents mentioned in a call ---------- */
+function newMention(team,syncId){
+  const m=normMention({team,syncId:syncId||"",mentionedOn:todayStr()});
+  state.mentions.unshift(m);markDirty();return m;
+}
+/* One promotion path, and only one: a note becomes performance-log evidence when the
+   HANDLING was the problem, not because it happened. */
+function promoteMentionToIncident(m){
+  const x=normIncident({date:m.mentionedOn,team:m.team,
+    title:m.title||"Incident raised in a call",
+    ticketIds:m.ticketId?[m.ticketId]:[],status:"open",severity:"medium",
+    narrative:[m.what?"What happened: "+m.what:"",m.action?"What they did: "+m.action:""].filter(Boolean).join("\n\n"),
+    evidence:[normEvidence({kind:"derived",on:m.mentionedOn,source:"Incident note",
+      text:"Raised in a call on "+fmtDate(m.mentionedOn)+(m.ref?" (their ref "+m.ref+")":"")+
+        "; never opened as a demand"+(m.status==="unexplained"?", and closed without an explanation.":".")})]});
+  state.incidents.unshift(x);m.incidentId=x.id;touch(m);
+  return x;
+}
+function mentionFormHtml(m){
+  const sim=similarMentions(m,m.id,4);
+  const inc=m.incidentId?state.incidents.find(x=>x.id===m.incidentId):null;
+  const tks=state.tickets.filter(t=>t.team===m.team).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const needs=mentionNeedsAnswer(m);
+  return `
+    <div class="grid3">
+      <div class="field"><label>What was it</label><input id="mn-title" value="${esc(m.title)}" placeholder="Payroll interface failed overnight"></div>
+      <div class="field"><label>System / area</label><input id="mn-area" value="${esc(m.area)}" list="dl-mnarea" placeholder="Portal, SSO, BTP…">
+        <datalist id="dl-mnarea">${distinct(state.mentions.map(x=>x.area)).map(a=>`<option value="${esc(a)}"></option>`).join("")}</datalist></div>
+      <div class="field"><label>Their reference</label><input id="mn-ref" value="${esc(m.ref)}" placeholder="INC0012345"></div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>Mentioned on</label><input type="date" id="mn-on" value="${esc(m.mentionedOn)}"></div>
+      <div class="field"><label>Where it stands</label><select id="mn-st">${Object.entries(MENTION_STATUS).map(([k,v])=>
+        `<option value="${k}" ${m.status===k?"selected":""}>${esc(v.label)}</option>`).join("")}</select></div>
+      <div class="field"><label>Closed on</label><input type="date" id="mn-cl" value="${esc(m.closedOn)}"></div>
+    </div>
+    ${needs?`<div class="disagree">🔔 <b>No close-out yet.</b> This keeps appearing in every ${esc(teamOf(m.team).name)} sync until you write down what happened —
+      or mark it <i>Closed, never explained</i>, which stops the chase and records that they never said.</div>`:""}
+    <div class="field"><label>What actually happened <span class="faint" style="text-transform:none">— the reason this record exists</span></label>
+      <textarea id="mn-what" style="min-height:86px" placeholder="Root cause as they explained it. If they never explained it, leave this empty and set the status accordingly.">${esc(m.what)}</textarea></div>
+    <div class="grid2">
+      <div class="field"><label>What they did about it</label><textarea id="mn-act" style="min-height:64px">${esc(m.action)}</textarea></div>
+      <div class="field"><label>What would stop it next time</label><textarea id="mn-prev" style="min-height:64px" placeholder="The learning. This is what you'll search for in six months.">${esc(m.prevent)}</textarea></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Related demand (optional)</label>
+        <select id="mn-tk"><option value="">— none —</option>${tks.map(t=>`<option value="${t.id}" ${m.ticketId===t.id?"selected":""}>${esc(ticketLabel(t)).slice(0,54)}</option>`).join("")}</select></div>
+      <div class="field"><label>Seen before</label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12.5px;letter-spacing:0;color:var(--muted);margin-top:6px">
+          <input type="checkbox" id="mn-rec" style="width:auto" ${m.recurring?"checked":""}> This keeps happening — surface it to the boss brief</label></div>
+    </div>
+    ${sim.length?`<div class="lookwrap"><div class="lk-h">⟲ Similar to ${sim.length} earlier note${sim.length===1?"":"s"}</div>
+      ${sim.map(x=>`<div class="lookrow" data-mnsim="${esc(x.m.id)}">
+        <div class="lr-top"><span class="lr-t">${esc(x.m.title||"(unnamed)")}</span>
+          <span class="seenbadge">${fmtDate(x.m.mentionedOn)}</span></div>
+        <div class="lr-why">${esc(x.shared.slice(0,5).join(", "))}${x.m.what?" — has a close-out":""}</div></div>`).join("")}
+      <p class="faint" style="font-size:11px;margin:8px 0 0">A stream of one-offs that keeps matching is a pattern. Tick “seen before” and it stops being noise.</p></div>`:""}
+    ${inc?`<div class="banner good">⚑ Promoted to the performance log — <b>${esc(inc.title)}</b>.
+      <button class="sm" id="mn-goinc" style="margin-left:auto">Open it</button></div>`
+      :`<div class="lookwrap"><div class="lk-h">⚑ Was the handling the problem?</div>
+        <p class="faint" style="font-size:12px;margin:0 0 9px">Operational incidents live here and stay out of the performance log on purpose — otherwise “N incidents this quarter”
+          stops meaning anything. Promote only when how they handled it is the story: a false “closed”, a missed callback, no explanation at all.</p>
+        <button class="primary sm" id="mn-promote">⚑ Promote to the performance log</button></div>`}
+    <div class="row" style="margin-top:6px"><button class="ghost danger" id="mn-del" style="flex:0 0 auto">🗑 Delete this note</button><span style="flex:1"></span></div>`;
+}
+function wireMentionForm(host,m,rerender){
+  const q=x=>host.querySelector(x);
+  const on=(sel,f,re)=>{const el=q(sel);if(el)el.onchange=e=>{f(e.target.value);touch(m);if(re)rerender();};};
+  on("#mn-title",v=>m.title=v.trim());
+  on("#mn-area",v=>m.area=v.trim());
+  on("#mn-ref",v=>m.ref=v.trim());
+  on("#mn-on",v=>m.mentionedOn=v||todayStr(),true);
+  on("#mn-cl",v=>m.closedOn=v);
+  on("#mn-tk",v=>m.ticketId=v);
+  on("#mn-st",v=>{m.status=v;
+    /* closing it is when the date is known, so fill it rather than making him type it */
+    if((v==="closed"||v==="unexplained")&&!m.closedOn)m.closedOn=todayStr();},true);
+  /* the close-out is what takes it off the chase list, so the list has to update
+     the moment it's written — not on the next navigation */
+  const what=q("#mn-what");
+  if(what)what.onchange=e=>{const had=mentionNeedsAnswer(m);m.what=e.target.value;touch(m);
+    if(had!==mentionNeedsAnswer(m))rerender();};
+  on("#mn-act",v=>m.action=v);
+  on("#mn-prev",v=>m.prevent=v);
+  const rec=q("#mn-rec");if(rec)rec.onchange=e=>{m.recurring=e.target.checked;touch(m);};
+  host.querySelectorAll("[data-mnsim]").forEach(el=>el.onclick=()=>{
+    activeMentionId=el.dataset.mnsim;knowledgeTab="mentions";view="knowledge";renderApp();});
+  const pr=q("#mn-promote");
+  if(pr)pr.onclick=()=>{const x=promoteMentionToIncident(m);
+    toast("Promoted — add the failure modes and evidence");
+    activeIncidentId=x.id;perfView="log";view="perf";renderApp();};
+  const gi=q("#mn-goinc");
+  if(gi)gi.onclick=()=>{activeIncidentId=m.incidentId;perfView="log";view="perf";renderApp();};
+  q("#mn-del").onclick=()=>{
+    if(!confirm("Delete this incident note?"))return;
+    state.mentions=state.mentions.filter(x=>x.id!==m.id);markDirty();rerender(true);};
+}
+function renderMentionCapture(host,s,m){
+  if(!m){syncSelect(null);return;}
+  host.innerHTML=`
+    <div class="capture-head">
+      <div style="flex:1;min-width:0">
+        <div class="dh-id"><span class="mono" style="color:var(--amber)">🔔 INCIDENT NOTE</span>${teamPill(m.team)}
+          <span class="pill ${MENTION_STATUS[m.status].cls}">${esc(MENTION_STATUS[m.status].label)}</span>
+          <span class="faint" style="font-weight:400">${mentionAge(m)}d old</span></div>
+        <h2>${esc(m.title||"(unnamed incident)")}</h2>
+        <div class="faint" style="font-size:12px;margin-top:4px">Never a ticket — but the answer is worth keeping.</div>
+      </div>
+      <button class="sm" id="mn-back">← Queue</button>
+    </div>
+    ${mentionFormHtml(m)}`;
+  host.querySelector("#mn-back").onclick=()=>syncSelect(null);
+  wireMentionForm(host,m,gone=>{if(gone)syncSelect(null);else renderSync();});
 }
 function nextInQueue(s,fromId){
   const cov=new Set(s.covered.filter(c=>c.done).map(c=>c.ticketId));
   const q=queueFor(s.team).filter(x=>!cov.has(x.t.id)&&x.t.id!==fromId);
-  syncFocusId=q.length?q[0].t.id:null;
-  renderSync();
+  syncSelect(q.length?"ticket":null,q.length?q[0].t.id:null);
 }
 function renderSyncNotes(host,s){
   const carried=carriedActions(s.team,s.id);
@@ -3461,7 +4052,7 @@ function renderSyncNotes(host,s){
   host.querySelector("#sn-adddec").onclick=()=>openDecisionModal({syncId:s.id});
   host.querySelector("#sn-del").onclick=()=>{
     if(!confirm("Delete this sync record? Updates already written onto tickets stay."))return;
-    state.syncs=state.syncs.filter(x=>x.id!==s.id);activeSyncId=null;syncFocusId=null;markDirty();renderSync();};
+    state.syncs=state.syncs.filter(x=>x.id!==s.id);activeSyncId=null;syncSelectReset();markDirty();renderSync();};
   const c=host.querySelector("#sn-close");if(c)c.onclick=()=>closeSync(s);
   const r=host.querySelector("#sn-reopen");if(r)r.onclick=()=>{s.closed=false;touch(s);renderSync();};
   host.querySelectorAll("[data-pby]").forEach(i=>i.onchange=e=>{
@@ -3520,10 +4111,17 @@ function closeSync(s){
      you discussed it, you just didn't close it out, so nothing typed is lost */
   const drafts=s.covered.filter(c=>!c.done&&c.draft&&c.draft.trim());
   if(drafts.length)msg+="\n"+drafts.length+" demand(s) have unsaved notes — they'll be saved to the tickets.";
+  /* an opened-but-never-touched roll-call is last week's numbers wearing this
+     week's date - discard it rather than let it look like a real record */
+  const rc=rollcallForSync(s.id);
+  if(rc&&!rc.recorded)msg+="\nThe roll-call wasn't recorded, so it will be discarded.";
+  const nOm=openMentions(s.team).length;
+  if(nOm)msg+="\n"+nOm+" mentioned incident(s) still have no close-out - they carry to the next sync.";
   if(!confirm(msg))return;
+  if(rc&&!rc.recorded)state.rollcalls=state.rollcalls.filter(x=>x.id!==rc.id);
   drafts.forEach(c=>{const t=ticketByRef(c.ticketId);
     if(t){t.updates.push(normUpdate({text:c.draft.trim(),syncId:s.id}));c.draft="";touch(t);}});
-  s.closed=true;touch(s);activeSyncId=null;syncFocusId=null;renderSync();
+  s.closed=true;touch(s);activeSyncId=null;syncSelectReset();renderSync();
   toast("Sync closed — record saved");
 }
 function renderSyncPicker(wrap){
@@ -4601,7 +5199,8 @@ function activeContact(){return state.contacts.find(c=>c.id===activeContactId);}
 function renderKnowledgeSidebar(){
   const side=document.getElementById("side");
   const f=renderKnowledgeSidebar;
-  const isPat=knowledgeTab==="patterns",isDec=knowledgeTab==="decisions",isRisk=knowledgeTab==="risks";
+  const isPat=knowledgeTab==="patterns",isDec=knowledgeTab==="decisions",isRisk=knowledgeTab==="risks",isMent=knowledgeTab==="mentions";
+  let ments=mentionsFor("");
   let rks=state.risks.slice().sort((a,b)=>(a.status==="closed"?1:0)-(b.status==="closed"?1:0)||sevRank(a)-sevRank(b)||(a.reviewOn||"9999")<(b.reviewOn||"9999")?-1:1);
   let decs=state.decisions.slice().sort((a,b)=>a.date<b.date?1:-1);
   let pats=state.patterns.slice().sort((a,b)=>b.ticketIds.length-a.ticketIds.length||a.title.localeCompare(b.title));
@@ -4610,7 +5209,8 @@ function renderKnowledgeSidebar(){
     pats=pats.filter(p=>(p.title+" "+p.symptom+" "+p.cause+" "+p.steps+" "+p.tags.join(" ")).toLowerCase().includes(q));
     cons=cons.filter(c=>(c.name+" "+c.stack+" "+c.org+" "+c.note).toLowerCase().includes(q));
     decs=decs.filter(x=>(x.text+" "+x.by).toLowerCase().includes(q));
-    rks=rks.filter(x=>(x.title+" "+x.detail+" "+x.owner+" "+x.mitigation).toLowerCase().includes(q));}
+    rks=rks.filter(x=>(x.title+" "+x.detail+" "+x.owner+" "+x.mitigation).toLowerCase().includes(q));
+    ments=ments.filter(x=>(mentionText(x)+" "+x.ref).toLowerCase().includes(q));}
   renderDecisionLedger._q=f._q||"";
   if(f._stack)cons=cons.filter(c=>c.stack===f._stack);
   const stacks=distinct(state.contacts.map(c=>c.stack));
@@ -4620,8 +5220,9 @@ function renderKnowledgeSidebar(){
         <button class="${knowledgeTab==="patterns"?"on":""}" data-kt="patterns">Patterns</button>
         <button class="${knowledgeTab==="contacts"?"on":""}" data-kt="contacts">Contacts</button>
         <button class="${knowledgeTab==="decisions"?"on":""}" data-kt="decisions">Decisions</button>
-        <button class="${knowledgeTab==="risks"?"on":""}" data-kt="risks">Risks</button></div>
-      <button class="primary" id="kNew" style="width:100%">＋ ${knowledgeTab==="patterns"?"New pattern":knowledgeTab==="contacts"?"New contact":knowledgeTab==="risks"?"New risk":"Log a decision"}</button>
+        <button class="${knowledgeTab==="risks"?"on":""}" data-kt="risks">Risks</button>
+        <button class="${knowledgeTab==="mentions"?"on":""}" data-kt="mentions">Incidents</button></div>
+      <button class="primary" id="kNew" style="width:100%">＋ ${knowledgeTab==="patterns"?"New pattern":knowledgeTab==="contacts"?"New contact":knowledgeTab==="risks"?"New risk":knowledgeTab==="mentions"?"Incident note":"Log a decision"}</button>
       <input id="kSearch" placeholder="Filter…" value="${esc(f._q||"")}" autocomplete="off">
       ${knowledgeTab==="contacts"&&stacks.length?`<div class="filters"><select id="kStack"><option value="">Any stack</option>
         ${stacks.map(s=>`<option value="${esc(s)}" ${f._stack===s?"selected":""}>${esc(s)}</option>`).join("")}</select></div>`:""}
@@ -4632,9 +5233,18 @@ function renderKnowledgeSidebar(){
       <div class="stat"><b>${state.contacts.length}</b>contacts</div>
       <div class="stat"><b>${state.decisions.length}</b>decisions</div>
       <div class="stat ov"><b>${liveRisks().length}</b>live risks</div>
+      <div class="stat ${state.mentions.filter(mentionNeedsAnswer).length?"bl":""}"><b>${state.mentions.length}</b>incidents</div>
     </div>
     <div class="listwrap">
-      ${isRisk?(rks.length?rks.map(r=>`<div class="rcard sev-${r.severity} st-${r.status} ${r.id===activeRiskId?"active":""}" data-rid="${r.id}">
+      ${isMent?(ments.length?ments.map(m=>`<div class="mcard ${m.id===activeMentionId?"active":""} ${mentionNeedsAnswer(m)?"needs":""}" data-mid="${m.id}">
+          <div class="p2t">${esc(m.title||"(unnamed incident)")}</div>
+          <div class="p2m"><span class="pill ${MENTION_STATUS[m.status].cls}">${esc(MENTION_STATUS[m.status].label)}</span>
+            ${m.area?`<span class="stackchip">${esc(m.area)}</span>`:""}
+            ${m.recurring?`<span class="seenbadge">recurring</span>`:""}
+            <span class="faint mono">${fmtDate(m.mentionedOn)}</span></div>
+        </div>`).join("")
+        :`<div class="empty">${f._q?"No incident notes match.":"Nothing logged yet.<br><br>The incidents they mention in a call and close before the next one. Not worth a ticket, but the answer is worth keeping — add them from the sync queue as they come up."}</div>`)
+      :isRisk?(rks.length?rks.map(r=>`<div class="rcard sev-${r.severity} st-${r.status} ${r.id===activeRiskId?"active":""}" data-rid="${r.id}">
           <div class="rt">${esc(r.title||"(untitled risk)")}</div>
           <div class="rm"><span class="pill ${RISK_SEV[r.severity].cls}">${RISK_SEV[r.severity].label}</span>
             <span>${esc(RISK_STATUS[r.status].label)}</span>
@@ -4663,7 +5273,8 @@ function renderKnowledgeSidebar(){
     </div>`;
   side.querySelectorAll("[data-kt]").forEach(b=>b.onclick=()=>{
     knowledgeTab=b.dataset.kt;f._q="";f._stack="";renderApp();});
-  side.querySelector("#kNew").onclick=()=>isPat?openPatternModal():isDec?openDecisionModal({}):isRisk?newRisk():openContactModal(null);
+  side.querySelector("#kNew").onclick=()=>isPat?openPatternModal():isDec?openDecisionModal({}):isRisk?newRisk()
+    :isMent?(()=>{activeMentionId=newMention(state.settings.teams[0].id,"").id;renderApp();})():openContactModal(null);
   const si=side.querySelector("#kSearch");
   si.oninput=e=>{clearTimeout(si._t);si._t=setTimeout(()=>{f._q=e.target.value;renderKnowledgeSidebar();
     const el=document.getElementById("kSearch");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}},200);};
@@ -4675,6 +5286,7 @@ function renderKnowledgeSidebar(){
     if(el){el.scrollIntoView({block:"center",behavior:"smooth"});
       el.style.borderColor="var(--accent)";setTimeout(()=>{el.style.borderColor="";},1200);}});
   side.querySelectorAll("[data-cid2]").forEach(c=>c.onclick=()=>{activeContactId=c.dataset.cid2;renderApp();});
+  side.querySelectorAll("[data-mid]").forEach(c=>c.onclick=()=>{activeMentionId=c.dataset.mid;renderApp();});
 }
 function openPatternModal(seedFrom){
   const root=document.getElementById("modalRoot");
@@ -4708,7 +5320,35 @@ function renderKnowledgeDetail(){
   if(knowledgeTab==="patterns")renderPatternDetail(det);
   else if(knowledgeTab==="decisions")renderDecisionLedger(det);
   else if(knowledgeTab==="risks")renderRiskDetail(det);
+  else if(knowledgeTab==="mentions")renderMentionDetail(det);
   else renderContactDetail(det);
+}
+/* The standalone view of an incident note. Same form as the sync pane — one place
+   the fields are defined, so the two can't drift. */
+function renderMentionDetail(det){
+  const m=activeMentionId?mentionById(activeMentionId):null;
+  if(!m){det.innerHTML=nopick(state.mentions.length?"Pick an incident note on the left."
+    :"No incident notes yet.<br><br>These are the incidents raised in a call that never became a ticket — mentioned one week, closed the next.<br><br>Add them from the sync queue while they're being talked about; the tool then keeps asking what happened until you've written it down.");return;}
+  const needs=mentionNeedsAnswer(m);
+  det.innerHTML=`
+    <div class="detail-head">
+      <div class="dh-top"><div style="flex:1;min-width:0">
+        <div class="dh-id"><span class="mono" style="color:var(--amber)">🔔 INCIDENT NOTE</span>${teamPill(m.team)}
+          <span class="pill ${MENTION_STATUS[m.status].cls}">${esc(MENTION_STATUS[m.status].label)}</span>
+          ${m.recurring?`<span class="seenbadge">recurring</span>`:""}
+          ${needs?`<span class="warnchip bad">no close-out</span>`:""}</div>
+        <h1>${esc(m.title||"(unnamed incident)")}</h1></div>
+        <button class="sm" id="mn-team" title="Move it to the other team">⇄ ${esc(teamOf(m.team).name)}</button></div>
+      <div class="dh-dates"><span>Mentioned <b>${fmtDate(m.mentionedOn)}</b></span>
+        <span>Closed <b>${m.closedOn?fmtDate(m.closedOn):"—"}</b></span>
+        <span>Age <b>${mentionAge(m)}d</b></span></div>
+      <div class="tabs"></div>
+    </div>
+    <div class="detail-body">${mentionFormHtml(m)}</div>`;
+  det.querySelector("#mn-team").onclick=()=>{
+    const ids=state.settings.teams.map(t=>t.id);
+    m.team=ids[(ids.indexOf(m.team)+1)%ids.length];touch(m);renderApp();};
+  wireMentionForm(det,m,gone=>{if(gone)activeMentionId=null;renderApp();});
 }
 function renderPatternDetail(det){
   const p=activePattern();
@@ -5336,11 +5976,39 @@ function insightsData(weeks){
     (im[m]=im[m]||{})[x.team]=(im[m][x.team]||0)+1;});
   const incMonths=Object.keys(im).sort().map(m=>{const row={label:monthLabel(m).slice(0,3)};
     teams.forEach(tm=>{row[tm.id]=im[m][tm.id]||0;});return row;});
+  /* 9 — the roll-call: level, flow, and the arithmetic that doesn't add up.
+     One block per team, because the vocabulary is per team and the series are only
+     comparable within one. Everything here is what they CLAIM — see the caveat the
+     card carries; it is not measured, and the tool never pretends otherwise. */
+  const roll=teams.map(tm=>{
+    const rs=rollRecorded(tm.id).slice(-12);
+    if(rs.length<2)return null;
+    const names=[...new Set(rs.flatMap(r=>r.demands.counts.map(c=>c.status)))];
+    const rows=rs.map(r=>{const row={label:fmtDate(r.date).slice(0,6),date:r.date,
+      s_total:rollTotal(r.demands),s_inc:rollTotal(r.incidents)};
+      names.forEach(nm=>{row["s_"+nm]=laneCount(r.demands,nm)||0;});return row;});
+    const cur=rs[rs.length-1],prev=rs[rs.length-2];
+    const bal=[];
+    for(let i=1;i<rs.length;i++){const b=rollBalance(rs[i],rs[i-1],"demands");
+      if(b&&b.gap!==0)bal.push({date:rs[i].date,expected:b.expected,actual:b.actual,gap:b.gap,closed:b.closed,added:b.added,prevTotal:b.prevTotal});}
+    const floors=names.map(nm=>({nm,fl:rollFloor(tm.id,"demands",nm)})).filter(x=>x.fl&&x.fl.flag);
+    return {team:tm,rs,rows,names,cur,prev,bal,floors,
+      deltas:rollDeltas(cur,prev,"demands").sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))};
+  }).filter(Boolean);
+  /* 10 — what the incident notes have taught, and what they never explained */
+  const mn=state.mentions;
+  const mnStats={total:mn.length,open:mn.filter(mentionNeedsAnswer).length,
+    unexplained:mn.filter(x=>x.status==="unexplained").length,
+    recurring:mn.filter(x=>x.recurring).length,
+    answered:mn.filter(x=>String(x.what||"").trim()).length};
+  const mnAreas=Object.entries(mn.reduce((a,x)=>{const k=(x.area||"").trim()||"(no area)";
+    a[k]=a[k]||{n:0,ans:0};a[k].n++;if(String(x.what||"").trim())a[k].ans++;return a;},{}))
+    .map(([label,v])=>({label,v:v.n,n:v.ans})).sort((a,b)=>b.v-a.v).slice(0,8);
   /* headline stat tiles */
   const open=state.tickets.filter(isOpen);
   const closed=state.tickets.filter(t=>cycleDays(t)!==null);
   const withP=state.tickets.filter(t=>t.promises.length);
-  return {S,throughput,ageing,delays,cycle,load,rel,wk,areas,incMonths,
+  return {S,throughput,ageing,delays,cycle,load,rel,wk,areas,incMonths,roll,mnStats,mnAreas,
     hasIncidents:state.incidents.length>0,
     kpi:{open:open.length,blocked:open.filter(t=>openHurdles(t).length).length,
       median:closed.length?medianOf(closed.map(cycleDays)):null,
@@ -5440,6 +6108,34 @@ function renderInsights(){
             :chCols(d.incMonths,d.S,{unit:" incidents"}))
           : null,"Needs incidents across at least two months."):""}
     </div>
+
+    ${d.roll.length?`<div class="sec-title" style="margin-top:24px"><h3>📊 The roll-call they read out</h3><div class="ln"></div>
+        <span class="faint" style="font-size:11px">their claim, not your count</span></div>
+      <p class="muted" style="font-size:12px;max-width:680px;line-height:1.65;margin:0 0 12px">
+        These figures are self-reported by the team being measured, so read them as a claim.
+        The value is in the three readings below the lines — where work is piling up, whether the arithmetic between calls holds,
+        and which status never empties.</p>
+      ${d.roll.map(rc=>rollInsightCardHtml(rc,T)).join("")}`:""}
+
+    ${d.mnStats.total?`<div class="sec-title" style="margin-top:24px"><h3>🔔 Incidents raised in calls</h3><div class="ln"></div>
+        <span class="faint" style="font-size:11px">never ticketed</span></div>
+      <div class="kpirow" style="margin-top:10px">
+        <div class="kpi"><b>${d.mnStats.total}</b><span>logged</span></div>
+        <div class="kpi"><b>${d.mnStats.answered}</b><span>you know the cause</span></div>
+        <div class="kpi ${d.mnStats.open?"warn":""}"><b>${d.mnStats.open}</b><span>awaiting a close-out</span></div>
+        <div class="kpi ${d.mnStats.unexplained?"bad":""}"><b>${d.mnStats.unexplained}</b><span>closed, never explained</span></div>
+        <div class="kpi"><b>${d.mnStats.recurring}</b><span>recurring</span></div>
+      </div>
+      <div class="chgrid" style="margin-top:14px">
+        ${card("Where they happen","Which area keeps producing incidents — and do you ever learn why?",
+          d.mnAreas.length
+            ? (T?chTable(["Area","Raised","With a cause"],d.mnAreas.map(r=>[r.label,r.v,r.n]))
+              :chBarsH(d.mnAreas,{unit:""}))
+            : null,"No incident notes yet.")}
+      </div>
+      <p class="faint" style="font-size:11.5px;margin-top:10px">The bar is how many were raised; the table's second column is how many you got an answer for.
+        A tall bar with few answers is the gap worth raising — not the incidents themselves, but that they close without explaining them.</p>`:""}
+
     <p class="faint" style="font-size:11.5px;margin-top:16px">
       Skill coverage lives in <b>People → ⊞ Skill matrix</b>, and the evidence behind the failure
       charts lives in <b>Performance → Patterns</b> — both answer different questions and have their own screens.</p>
@@ -5452,6 +6148,50 @@ function renderInsights(){
     const bars=c.querySelectorAll("svg .chbar rect");
     bars.forEach((r,i)=>{if(d.load[i])r.setAttribute("fill",teamChartColor(d.load[i].team));});
   });
+}
+/* One team's roll-call block: the lines, then the three readings that are worth
+   more than the lines. Flow leads, because "validation is filling while done isn't
+   moving" is the diagnosis; the raw level is the least interesting number here. */
+function rollInsightCardHtml(rc,asTable){
+  const series=rc.names.map(nm=>({key:"s_"+nm,label:nm}));
+  const all=[{key:"s_total",label:"Total open"}].concat(series,[{key:"s_inc",label:"Incidents"}]);
+  const rising=rc.deltas.filter(x=>x.d>0),falling=rc.deltas.filter(x=>x.d<0);
+  return `<div class="dashcard chcard">
+    <h3>${esc(rc.team.name)}</h3>
+    <p class="chq">${rc.rs.length} call${rc.rs.length===1?"":"s"} recorded · latest ${fmtDate(rc.cur.date)}</p>
+    ${asTable
+      ? chTable(["Call",...all.map(s=>s.label)],rc.rows.map(r=>[fmtDate(r.date),...all.map(s=>r[s.key]||0)]))
+      : chTrend(rc.rows,all,{solo:["s_total","s_inc"]})
+        +`<p class="chnote">The status rows share one scale so they can be compared. The total and the incident count are different quantities and carry their own.</p>`}
+    <div class="rollread">
+      <div class="rr">
+        <div class="rr-h">Flow since ${fmtDate(rc.prev.date)}</div>
+        ${rc.deltas.some(x=>x.d)
+          ? `<div class="rr-b">${rising.map(x=>`<span class="rr-up">+${x.d} ${esc(x.status.toLowerCase())}</span>`).join("")}
+              ${falling.map(x=>`<span class="rr-dn">${x.d} ${esc(x.status.toLowerCase())}</span>`).join("")}</div>
+            <div class="rr-n">${rising.length&&falling.length
+              ? "<b>"+esc(rising[0].status)+"</b> grew while others drained. If the same status keeps rising call after call while the ones after it don’t, that stage is the bottleneck."
+              : rising.length?"Nothing drained — everything that moved, moved in.":"The queue only shrank this week."}</div>`
+          : `<div class="rr-n">Every status is exactly where it was. Worth asking what actually happened in a week.</div>`}
+      </div>
+      <div class="rr">
+        <div class="rr-h">Does the arithmetic hold?</div>
+        ${rc.bal.length
+          ? `<div class="rr-b"><span class="rr-bad">${rc.bal.length} call${rc.bal.length===1?"":"s"} didn't balance</span></div>
+             ${rc.bal.slice(-3).map(b=>`<div class="rr-n"><b>${fmtDate(b.date)}</b> — ${b.prevTotal} − ${b.closed} closed + ${b.added} new = ${b.expected}, but they read out ${b.actual} (${b.gap>0?"+":""}${b.gap}).</div>`).join("")}`
+          : `<div class="rr-n">${rc.rs.some(r=>r.demands.closed!==""&&r.demands.added!=="")
+              ? "Every call where both numbers were given adds up."
+              : "Not checkable yet — it needs both “closed since” and “new since”. Ask for them; it's the one check that catches a queue that isn't really moving."}</div>`}
+      </div>
+      <div class="rr">
+        <div class="rr-h">What never empties</div>
+        ${rc.floors.length
+          ? rc.floors.map(x=>`<div class="rr-n"><b>${esc(x.nm)}</b> has not dropped below ${x.fl.min} in ${x.fl.n} calls (now ${x.fl.now}).</div>`).join("")
+            +`<div class="rr-n faint">A count can only tell you the pile never empties. Whether it is the <i>same</i> items is exactly what it can't know — for the demands you track, the ticket's own history answers that.</div>`
+          : `<div class="rr-n">Nothing has sat at a floor long enough to call it stuck.</div>`}
+      </div>
+    </div>
+  </div>`;
 }
 /* hover/focus tooltip — an SVG chart should be interactive, not a static picture */
 function wireChartTips(root){
@@ -5710,6 +6450,42 @@ function chStacked(rows,bands,opts){
         +`<text x="${o.w-CH.pad.r}" y="${y+rowH-6}" fill="var(--faint)" font-size="10" text-anchor="end">n=${total}</text>`;
     }).join("")}</svg>`;
 }
+/* Small multiples: one thin line per status, one panel per row, shared y-scale so
+   the panels stay comparable. A stacked area would hide the one thing that matters
+   here — which stage is filling up while the others drain. Single pen throughout:
+   every panel is labelled, so colour would carry no information and only risk
+   another palette that fails on a deuteranope. */
+function chTrend(rows,series,opts){
+  const o=Object.assign({w:560,rowH:31,labW:106,valW:76,color:"var(--chart-bar)"},opts||{});
+  const pad=8,h=pad*2+series.length*o.rowH+13;
+  /* Shared scale across the status panels, because comparing them is the whole
+     point. A TOTAL is a different quantity an order of magnitude larger, and letting
+     it into the shared scale flattens every status line onto the baseline - so those
+     keys get their own. Floor of 4 either way: a series that ran 0,1,0 must not draw
+     as a full-height mountain. */
+  const solo=new Set(o.solo||[]);
+  const shared=Math.max(4,...rows.flatMap(r=>series.filter(x=>!solo.has(x.key)).map(x=>+r[x.key]||0)));
+  const topFor=k=>solo.has(k)?Math.max(4,...rows.map(r=>+r[k]||0)):shared;
+  const plotL=o.labW,plotR=o.w-o.valW,plotW=plotR-plotL;
+  const x=i=>rows.length<2?plotL+plotW/2:plotL+(i/(rows.length-1))*plotW;
+  const body=series.map((s,si)=>{
+    const y0=pad+si*o.rowH,inner=o.rowH-13,mid=y0+o.rowH/2,top=topFor(s.key);
+    const y=v=>y0+3+inner-(v/top)*inner;
+    const pts=rows.map((r,i)=>({x:x(i),y:y(+r[s.key]||0),v:+r[s.key]||0,l:r.label}));
+    const last=pts[pts.length-1].v,prev=pts.length>1?pts[pts.length-2].v:null;
+    const d=prev===null?null:last-prev;
+    return `<text x="${plotL-9}" y="${mid+3}" fill="var(--muted)" font-size="10.5" text-anchor="end">${esc(String(s.label).slice(0,17))}</text>
+      <line x1="${plotL}" y1="${y(0).toFixed(1)}" x2="${plotR}" y2="${y(0).toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>
+      <polyline points="${pts.map(p=>p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ")}" fill="none" stroke="${o.color}" stroke-width="1.4" stroke-linejoin="round"/>
+      ${pts.map(p=>`<circle class="chbar" tabindex="0" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4" fill="${o.color}" data-tip="${esc(s.label+" · "+p.l+": "+p.v)}"/>`).join("")}
+      ${d===null||d===0?"":`<text x="${o.w-30}" y="${mid+3}" fill="${d>0?"var(--amber)":"var(--green)"}" font-size="10" text-anchor="end" style="font-variant-numeric:tabular-nums">${d>0?"+"+d:d}</text>`}
+      <text x="${o.w-4}" y="${mid+4}" fill="var(--txt)" font-size="12.5" text-anchor="end" style="font-variant-numeric:tabular-nums">${last}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${o.w} ${h}" width="100%" height="${h}" role="img">${body}
+    <text x="${plotL}" y="${h-2}" fill="var(--faint)" font-size="9">${esc(rows[0].label)}</text>
+    <text x="${plotR}" y="${h-2}" fill="var(--faint)" font-size="9" text-anchor="end">${esc(rows[rows.length-1].label)}</text>
+    <text x="${o.w-4}" y="${h-2}" fill="var(--faint)" font-size="9" text-anchor="end">now</text></svg>`;
+}
 function chLegend(items){
   return `<div class="chlegend">${items.map(i=>`<span><i style="background:${i.color}"></i>${esc(i.label)}</span>`).join("")}</div>`;
 }
@@ -5761,7 +6537,29 @@ function briefData(sinceDate){
     return {team:tm,q,r:quarterRollup(tm.id,q),sig:forecastSignal(tm.id),
       pendAppr:state.approvals.filter(a=>a.team===tm.id&&a.status==="pending").length};});
   const register=liveRisks().sort((a,b)=>sevRank(a)-sevRank(b));
-  return {since,epics,byTeam,decisions,taken,landing,risks,register,obs,vendorEffort,
+  /* the roll-call, stated as their claim. Only where two calls exist, because a
+     single snapshot with no movement is a number without a story. */
+  const rolls=state.settings.teams.map(tm=>{
+    const rs=rollRecorded(tm.id);
+    if(!rs.length)return null;
+    const cur=rs[rs.length-1],prev=rs.length>1?rs[rs.length-2]:null;
+    /* every call in the period whose arithmetic failed, not just the latest — the
+       brief covers a window, and a mismatch three weeks ago is still the thing to
+       raise if it has not been explained since */
+    const bad=[];
+    for(let i=1;i<rs.length;i++){
+      if(rs[i].date<since)continue;
+      const b2=rollBalance(rs[i],rs[i-1],"demands");
+      if(b2&&b2.gap!==0)bad.push(Object.assign({date:rs[i].date},b2));}
+    return {tm,cur,prev,bad,
+      deltas:rollDeltas(cur,prev,"demands").filter(x=>x.d).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d))};
+  }).filter(Boolean);
+  /* incident notes worth his boss hearing: the ones that keep coming back, and the
+     ones they closed without ever saying what happened. Routine ones stay out. */
+  const notes=state.mentions.filter(m=>m.recurring||m.status==="unexplained")
+    .sort((a,b2)=>a.mentionedOn<b2.mentionedOn?1:-1);
+  const notesUnexplained=state.mentions.filter(m=>m.status==="unexplained"&&m.mentionedOn>=since).length;
+  return {since,epics,byTeam,decisions,taken,landing,risks,register,obs,vendorEffort,rolls,notes,notesUnexplained,
     changed:state.tickets.filter(changedSince),
     closedAll:state.tickets.filter(t=>t.closedDate&&t.closedDate>=since)};
 }
@@ -5811,6 +6609,29 @@ function briefMarkdown(d,opts){
     L.push("## Landing soon (next 14 days)");L.push("");
     d.landing.forEach(x=>L.push("- "+fmtDate(x.eta)+" — "+(x.t.ticketId||"")+" "+x.t.title+
       (x.late?" — **already late**":x.slips>=2?" — has slipped "+x.slips+"×, treat with caution":x.slips===1?" — slipped once":" — held so far")));
+    L.push("");
+  }
+  if(opts.roll&&d.rolls.length){
+    L.push("## Their own numbers");L.push("");
+    L.push("_As read out by each team. Their figures, not a measurement._");L.push("");
+    d.rolls.forEach(x=>{
+      L.push("### "+x.tm.name+" - as at "+fmtDate(x.cur.date));
+      L.push("");
+      L.push("- "+(x.cur.demands.counts.map(c=>c.n+" "+c.status.toLowerCase()).join(", ")||"no demand figures")+
+        " (**"+rollTotal(x.cur.demands)+"** in total)");
+      if(rollTotal(x.cur.incidents))L.push("- Incidents: "+x.cur.incidents.counts.filter(c=>c.n).map(c=>c.n+" "+c.status.toLowerCase()).join(", "));
+      if(x.prev)L.push("- Since "+fmtDate(x.prev.date)+": "+(x.deltas.length?x.deltas.map(y=>(y.d>0?"+":"")+y.d+" "+y.status.toLowerCase()).join(", "):"no change in any status"));
+      x.bad.forEach(b3=>L.push("- **"+fmtDate(b3.date)+" did not reconcile:** "+b3.prevTotal+" - "+b3.closed+" closed + "+b3.added+
+        " new = "+b3.expected+", but "+b3.actual+" was read out."));
+      L.push("");
+    });
+  }
+  if(opts.notes&&d.notes.length){
+    L.push("## Incidents raised in calls");L.push("");
+    L.push("_Never opened as demands. Listed here only where they recur or were closed without an explanation._");L.push("");
+    d.notes.forEach(m=>L.push("- **"+(m.title||"(unnamed)")+"**"+(m.area?" ("+m.area+")":"")+" - "+fmtDate(m.mentionedOn)+
+      (m.recurring?" - recurring":"")+(m.status==="unexplained"?" - **closed without an explanation**":"")+
+      (m.what?"  "+String.fromCharCode(10)+"  "+m.what:"")));
     L.push("");
   }
   if(opts.teams&&d.byTeam.length){
@@ -5879,6 +6700,20 @@ function briefHtml(d,opts){
   if(opts.landing&&d.landing.length)
     H.push(`<h3>Landing soon (next 14 days)</h3><ul>${d.landing.map(x=>
       `<li><b>${fmtDate(x.eta)}</b> — ${esc(x.t.ticketId||"")} ${esc(x.t.title)} <i>${x.late?"— already late":x.slips>=2?"— slipped "+x.slips+"×, treat with caution":x.slips===1?"— slipped once":"— held so far"}</i></li>`).join("")}</ul>`);
+  if(opts.roll&&d.rolls.length){
+    H.push(`<h3>Their own numbers</h3><p class="nums">As read out by each team — their figures, not a measurement.</p>`);
+    d.rolls.forEach(x=>H.push(`<div class="bblock"><h4>${esc(x.tm.name)} <i>as at ${fmtDate(x.cur.date)}</i></h4>
+      <p class="nums">${esc(x.cur.demands.counts.map(c=>c.n+" "+c.status.toLowerCase()).join(" · ")||"no demand figures")} — <b>${rollTotal(x.cur.demands)}</b> in total${
+        rollTotal(x.cur.incidents)?" · "+rollTotal(x.cur.incidents)+" incidents":""}</p>
+      ${x.prev?`<p class="nums">Since ${fmtDate(x.prev.date)}: ${x.deltas.length?esc(x.deltas.map(y=>(y.d>0?"+":"")+y.d+" "+y.status.toLowerCase()).join(", ")):"no change in any status"}</p>`:""}
+      ${x.bad.map(b3=>`<p class="nums"><b>${fmtDate(b3.date)} did not reconcile:</b> ${b3.prevTotal} − ${b3.closed} closed + ${b3.added} new = ${b3.expected}, but ${b3.actual} was read out.</p>`).join("")}
+    </div>`));
+  }
+  if(opts.notes&&d.notes.length)
+    H.push(`<h3>Incidents raised in calls</h3><p class="nums">Never opened as demands. Listed only where they recur or were closed without an explanation.</p>
+      <ul>${d.notes.map(m=>`<li><b>${esc(m.title||"(unnamed)")}</b>${m.area?` <i>(${esc(m.area)})</i>`:""} — ${fmtDate(m.mentionedOn)}${
+        m.recurring?" <i>— recurring</i>":""}${m.status==="unexplained"?" <i>— closed without an explanation</i>":""}${
+        m.what?`<br>${esc(m.what)}`:""}</li>`).join("")}</ul>`);
   if(opts.teams&&d.byTeam.length){
     H.push(`<h3>By team</h3>`);
     d.byTeam.forEach(({tm,open,closed,boss})=>{
@@ -5903,7 +6738,7 @@ function briefHtml(d,opts){
 function openBossBrief(){
   const S=state.settings;
   let since=S.lastBriefOn||addDays(-7);
-  let opts={epics:true,effort:true,decisions:true,taken:true,landing:true,teams:true,risks:true,closed:true,obs:false};
+  let opts={epics:true,effort:true,decisions:true,taken:true,landing:true,teams:true,roll:true,notes:true,risks:true,closed:true,obs:false};
   const root=document.getElementById("modalRoot");
   const draw=()=>{
     const d=briefData(since);
@@ -5918,7 +6753,7 @@ function openBossBrief(){
         <div style="flex:1"></div>
       </div>
       <div class="chiprow" style="margin-bottom:12px">
-        ${[["epics","Programmes"],["effort","Vendor effort"],["decisions","Needs deciding"],["taken","Decisions taken"],["landing","Landing soon"],["teams","By team"],["risks","Risks"],["closed","Closed"],["obs","People notes"]]
+        ${[["epics","Programmes"],["effort","Vendor effort"],["decisions","Needs deciding"],["taken","Decisions taken"],["landing","Landing soon"],["roll","Their numbers"],["notes","Call incidents"],["teams","By team"],["risks","Risks"],["closed","Closed"],["obs","People notes"]]
           .map(([k,l])=>`<span class="chip ${opts[k]?"on":""}" data-opt="${k}" style="${opts[k]?"border-color:var(--accent);color:var(--txt)":"opacity:.55"}">${opts[k]?"✓":"○"} ${l}</span>`).join("")}
       </div>
       ${opts.obs?`<div class="banner" style="margin-bottom:12px">🔓 <b>People notes are included.</b> ${d.obs.length} unlocked observation${d.obs.length===1?"":"s"} will appear${lockedOut?` · ${lockedOut} stay${lockedOut===1?"s":""} locked out`:""}.</div>`
@@ -6166,7 +7001,7 @@ async function openSnapshots(){
       if(s.enc){const pw=await promptPassword("Snapshot is encrypted — password");if(pw===null)return;
         state=migrate(await decryptEnvelope(JSON.parse(s.data),pw));masterPassword=pw;}
       else state=migrate(JSON.parse(s.data));
-      activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;
+      activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;activeMentionId=null;syncSelectReset();
       dirty=true;markDirty();root.innerHTML="";renderApp();toast("Restored snapshot "+s.date);
     }catch(e){toast("Couldn't restore: "+e.message,true);}
   });
@@ -6250,7 +7085,7 @@ async function unlockStartup(){
 function emptyState(){
   return migrate({version:1,settings:{teams:JSON.parse(JSON.stringify(DEF_TEAMS)),tags:[...DEF_TAGS],sources:[...DEF_SOURCES],
     encryption:false,autosave:true,staleDays:7,syncDays:{portal:[2,4],pnc:[]}},
-    tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],capacity:[],efforts:[],forecasts:[],approvals:[],risks:[],incidents:[]});
+    tickets:[],people:[],contacts:[],syncs:[],epics:[],patterns:[],decisions:[],agenda:[],meetings:[],capacity:[],efforts:[],forecasts:[],approvals:[],risks:[],incidents:[],rollcalls:[],mentions:[]});
 }
 /* Example data mirrors the workflow this app was built around, so the moving
    parts (queue reasons, slippage, hurdles, resolution) are visible on day one. */
@@ -6489,6 +7324,40 @@ function seedDemo(){
       raisedOn:"2026-05-20",vendorResponse:"Said the figure included analysis time; no breakdown provided.",
       evidence:[{id:uid(),kind:"observed",on:"2026-05-18",source:"Monthly effort report",
          text:"25h claimed. The three closest comparable changes that quarter were 4h, 5h and 6h."}]})];
+  /* five weeks of Portal roll-calls. Deliberately shaped so each reading has
+     something to show: validation fills while in-progress drains (the bottleneck),
+     blocked never drops below 2 (the pile that never empties), and the call on the
+     4th week doesn't reconcile — they claimed 3 closed and 1 new, but the total
+     only fell by 1. */
+  const rcDates=[addDays(-28),addDays(-21),addDays(-14),addDays(-7),addDays(-1)];
+  const rcSeries=[
+    {p:3,v:4,b:2,w:1,closed:"",added:"",   inc:2,note:"First set of numbers I've asked them for."},
+    {p:4,v:5,b:2,w:1,closed:"2",added:"4", inc:2,note:""},
+    {p:3,v:6,b:3,w:1,closed:"2",added:"3", inc:3,note:"Validation is filling up faster than it drains."},
+    {p:2,v:8,b:2,w:1,closed:"3",added:"1", inc:2,note:"Asked twice for the closed/new split before they gave it."},
+    {p:2,v:7,b:2,w:2,closed:"2",added:"2", inc:3,note:"Both blocked ones are still the AD team."}];
+  state.rollcalls=rcSeries.map((x,i)=>normRollcall({team:"portal",date:rcDates[i],recorded:true,source:"call",
+    note:x.note,
+    demands:{closed:x.closed,added:x.added,
+      counts:[{status:"In progress",n:x.p},{status:"In validation",n:x.v},
+        {status:"Blocked",n:x.b},{status:"Waiting on us",n:x.w}]},
+    incidents:{closed:"",added:"",counts:[{status:"Open",n:x.inc}]}}));
+  /* three incident notes: one answered (the learning), one still owed an answer so
+     it keeps surfacing in the sync, one they closed and never explained */
+  state.mentions=[
+    normMention({team:"portal",title:"Portal login slow for about an hour on Monday morning",
+      area:"SSO",ref:"INC0044120",mentionedOn:addDays(-14),status:"closed",closedOn:addDays(-7),
+      what:"SAML token cache filled after the weekend patch; the node stopped issuing tokens until it was recycled.",
+      action:"Recycled the node and raised the cache limit.",
+      prevent:"Recycle the SSO nodes as part of the weekend patch checklist rather than waiting for the Monday complaints."}),
+    normMention({team:"portal",title:"Payroll interface failed overnight, reran in the morning",
+      area:"Interfaces",ref:"INC0044318",mentionedOn:addDays(-6),status:"open",
+      /* no close-out yet — this is the one the tool keeps asking about */
+      what:"",action:""}),
+    normMention({team:"portal",title:"Launchpad slow for the HR role for part of the afternoon",
+      area:"Fiori",ref:"",mentionedOn:addDays(-20),status:"unexplained",closedOn:addDays(-13),
+      what:"",action:"",
+      prevent:"Ask for a cause at the time. By the following week they had closed it and nobody could say what it was."})];
   state.approvals=[
     normApproval({team:"portal",kind:"prod",ticketId:t1.id,title:"Move the launchpad tile fix to Production",requestedOn:addDays(-3),status:"approved",decidedOn:addDays(-2),note:"CAB approved"}),
     normApproval({team:"portal",kind:"prod",ticketId:t2.id,title:"Move the payroll launchpad fix to Production",requestedOn:addDays(-1),status:"pending"}),
