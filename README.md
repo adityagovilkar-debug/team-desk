@@ -517,6 +517,55 @@ restored when you come back. A demand is covered only when you click **✓ Mark 
 Ctrl+Enter), and you can **↩ Reopen** one. Any notes typed but never marked covered are still
 committed to their ticket when you close the sync, so nothing is lost.
 
+## Quarterly vendor scorecard
+
+**Effort → 📋 Quarterly scorecard** (also in the capacity header and the ⋯ menu). One team's
+quarter on one page, for the contract or governance call, with every headline figure set against
+the previous quarter so the conversation is about the trend: hours used against the contract,
+demands delivered, share of ETAs met, incidents logged, and days lost.
+
+Below the headline figures: hours by demand and next quarter's forecast; delivery (raised, delivered,
+open, median days to close); **commitments** — every ETA that fell due in the quarter, judged one
+at a time; the performance log (counts, most frequent failure modes, titles); the roll-call
+(their reported total at the start and end of the quarter, and which calls didn't add up);
+incidents raised in calls; open commitments from calls, split into owed by them and owed by me;
+and approvals. Sections switch off individually, and the export has the same four outputs as
+the Boss Brief.
+
+How an ETA is judged (`etaOutcomes`): **met** if the work closed on or before that date;
+**broken** if the date was pushed later, or passed with the work still open, or the work was
+delivered late with no new date ever logged; **superseded** — not counted either way — if it was
+replaced by an earlier or identical date. A date still in the future only counts once the work is
+done. This is why the rate can differ from the ticket-level slip count: it scores each commitment,
+not each ticket.
+
+It deliberately carries **counts and titles** from the performance log but never the narratives or
+your inferences — those stay in the evidence pack — and never anything from people's
+observations. Open commitments are as of today, not the quarter, and the heading says so.
+
+## Epic steering summary
+
+**📄 Steering summary** on every epic. One epic in depth for its steering call; the Boss Brief
+covers all epics in a few lines each. In order: the health you set (and a warning when the tickets
+read worse) and your headline sentence; the figures; **what needs a decision** first; **what changed
+since** — delivered, gates passed, steps finished, new tickets, ETAs moved either way, blockers
+raised and cleared; blockers and cross-team dependencies; what lands in the next 30 days (and
+what's already late); risks; decisions; open actions from the epic's meetings; and every ticket by
+team.
+
+"What changed since" defaults to the last time you exported a summary for that epic
+(`epic.summaryOn`, set on copy / download / print), else the last epic-review meeting, else a
+month back — so each month's summary starts where the last one ended.
+
+Both documents share one shell (`openDocModal`) and paper styles that stay the same in every theme.
+
+## Header on narrower windows
+
+With nine tabs, the header outgrew windows under about 1100px and pushed **Save and the ⋯ menu
+off-screen** — a bug from before the review pass, found while testing these documents. The file
+buttons now never shrink; the search box gives way first (Ctrl+K still reaches it), then the tabs
+tighten and Open/Save drop to icons. Checked at 1366, 1100, 987 and 900px in all three themes.
+
 ## Data safety
 
 A review pass found several ways the app could destroy or misreport data. Each was reproduced

@@ -591,6 +591,31 @@
     aside{width:300px;flex:0 0 300px}
     .queue{width:340px;flex:0 0 340px}
   }
+  /* The header's right end — Save, theme, the ⋯ menu — must never leave the screen.
+     With nine tabs the header outgrew windows under ~1100px and pushed Save and the
+     menu out of reach. Now the tab bar gives way first: tighter tabs, then the logo
+     text goes, and as a last resort the tabs scroll sideways. The file buttons never
+     shrink. */
+  .filebar{flex:0 0 auto}
+  /* search gives way before any tab does: a tab hidden behind a scroll is worse than
+     a narrow search box, and Ctrl+K still reaches it */
+  .nav{flex:0 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
+  .nav::-webkit-scrollbar{display:none}   /* sub-pixel rounding drew a bar under fitting tabs */
+  .hsearch{flex:0 1000 290px;min-width:34px}
+  .navbtn{flex:0 0 auto;white-space:nowrap}
+  @media (max-width:1240px){
+    .navbtn{padding:5px 9px}
+    :root[data-theme="instrument"] .navbtn{padding:5px 7px;letter-spacing:.1em}
+    header .logo span:not(.dot){display:none}
+    #fileLabel{display:none}
+    header{gap:8px}
+    .filebar .lbl{display:none}
+  }
+  @media (max-width:940px){
+    .navbtn{padding:5px 6px;font-size:12px}
+    :root[data-theme="instrument"] .navbtn{padding:5px 5px;letter-spacing:.06em}
+    .savestate{min-width:0}
+  }
   @media (max-width:980px){
     header{gap:9px;padding:9px 11px}
     header .logo span:not(.dot){display:none}
@@ -781,6 +806,24 @@
   .briefdoc .hpill.h-amber{color:#92400e;background:#fffbeb;border-color:#fde68a}
   .briefdoc .hpill.h-red{color:#991b1b;background:#fef2f2;border-color:#fecaca}
   .briefdoc .hpill.h-unknown{color:#475569;background:#f1f5f9;border-color:#cbd5e1}
+  /* figure tiles and tables for the scorecard and steering summary — paper colours,
+     fixed, like the rest of the document styles */
+  .briefdoc .kpis{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+  .briefdoc .kp{flex:1 1 118px;border:1px solid #e2e8f0;border-radius:6px;padding:9px 11px;background:#f8fafc;min-width:0}
+  .briefdoc .kp b{display:block;font-size:20px;color:#0b3d6e;font-variant-numeric:tabular-nums;line-height:1.1}
+  .briefdoc .kp span{display:block;font-size:11px;color:#475569;margin-top:3px;line-height:1.35}
+  .briefdoc .kp em{display:block;font-style:normal;font-size:10.5px;margin-top:5px;color:#64748b}
+  .briefdoc .kp em.good{color:#166534;font-weight:600} .briefdoc .kp em.bad{color:#9a3412;font-weight:600}
+  .briefdoc table.dt{border-collapse:collapse;width:100%;font-size:12.5px;margin:6px 0 4px}
+  .briefdoc table.dt th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:#475569;
+    border-bottom:1px solid #cbd5e1;padding:5px 6px;font-weight:700}
+  .briefdoc table.dt td{border-bottom:1px solid #e2e8f0;padding:5px 6px;vertical-align:top;line-height:1.45}
+  /* a document looks the same whichever theme printed it — the instrument theme sets
+     every table cell in mono, which is right for the app and wrong on paper */
+  :root[data-theme="instrument"] .briefdoc table.dt td{font-family:inherit}
+  .briefdoc table.dt .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* not .empty — that name is the app's centred empty-state panel */
+  .briefdoc .dnone{font-size:12.5px;color:#64748b;font-style:italic;margin:4px 0;text-align:left;padding:0}
 
   /* ============================================================
      INSTRUMENT WHITE — structure. The palette above only recolours; this is
@@ -1043,10 +1086,12 @@
 
   #printArea{display:none}
   @media print{
-    #app,#modalRoot,#toast{display:none!important}
+    #app,#modalRoot,#toast,.peerwarn,.chtip{display:none!important}
     #printArea{display:block!important;position:static;color:#000;padding:0}
     .briefdoc .bblock{background:#fff;break-inside:avoid}
     .briefdoc h3{break-after:avoid}
+    .briefdoc .kpis{break-inside:avoid}.briefdoc .kp{background:#fff}
+    .briefdoc table.dt tr{break-inside:avoid}
   }
 </style>
 </head>
@@ -1075,8 +1120,8 @@
     <div class="filebar">
       <span class="savestate" id="saveState"></span>
       <button id="btnReconnect" class="hide" title="Re-link the file remembered from last time">🔌 Reconnect</button>
-      <button id="btnOpen" title="Open a .json data file">📂 Open</button>
-      <button id="btnSave" class="primary" title="Save to file (Ctrl+S)">💾 Save</button>
+      <button id="btnOpen" title="Open a .json data file">📂 <span class="lbl">Open</span></button>
+      <button id="btnSave" class="primary" title="Save to file (Ctrl+S)">💾 <span class="lbl">Save</span></button>
       <button id="btnTheme" class="ghost" title="Toggle light / dark theme">☀</button>
       <button id="btnMenu" class="ghost" title="More">⋯</button>
     </div>
@@ -1596,6 +1641,8 @@ function normEpic(e){return {id:e.id||uid(),name:e.name||"",code:e.code||"",desc
   /* the one sentence he'd say out loud if his boss asked right now */
   headline:{text:(e.headline&&e.headline.text)||"",on:(e.headline&&e.headline.on)||""},
   notes:e.notes||"",closed:!!e.closed,
+  /* when a steering summary was last exported — the next one's "what changed" starts here */
+  summaryOn:e.summaryOn||"",
   createdAt:e.createdAt||Date.now(),updatedAt:e.updatedAt||Date.now()};}
 function normContact(c){return {id:c.id||uid(),name:c.name||"",stack:c.stack||"",org:c.org||"",contact:c.contact||"",
   note:c.note||"",createdAt:c.createdAt||Date.now(),updatedAt:c.updatedAt||Date.now()};}
@@ -5292,6 +5339,268 @@ function openEvidencePack(team,since){
   draw();
 }
 
+/* ===================== GENERATED DOCUMENTS (shared shell) =====================
+   Live preview on paper, Copy Markdown, download .md, Print / PDF — the same four
+   things the Boss Brief offers, so every document behaves the same way. `build`
+   recomputes the data on every redraw, so a control change is always reflected. */
+function openDocModal(o){
+  const root=document.getElementById("modalRoot");
+  const draw=()=>{
+    const d=o.build();
+    root.innerHTML=`<div class="modal-bg"><div class="modal" style="width:880px">
+      <h2>${o.title}</h2>
+      <div class="row" style="align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px">${o.controls()}</div>
+      <div class="chiprow" style="margin-bottom:12px">${o.chips.map(([k,l])=>`<span class="chip ${o.opts[k]?"on":""}" data-dxopt="${k}"
+        style="${o.opts[k]?"border-color:var(--accent);color:var(--txt)":"opacity:.55"}">${o.opts[k]?"✓":"○"} ${esc(l)}</span>`).join("")}</div>
+      ${o.note?`<p class="faint" style="font-size:11.5px;margin:-4px 0 10px;line-height:1.55">${o.note}</p>`:""}
+      <div class="specpaper"><div class="briefdoc">${o.html(d,o.opts)}</div></div>
+      <div class="modal-foot">
+        <button id="dx-x" class="ghost">Close</button>
+        <button id="dx-md">📋 Copy Markdown</button>
+        <button id="dx-dl">⬇ .md</button>
+        <button id="dx-print" class="primary">🖨 Print / PDF</button></div></div></div>`;
+    o.wire(root,draw);
+    root.querySelectorAll("[data-dxopt]").forEach(c=>c.onclick=()=>{o.opts[c.dataset.dxopt]=!o.opts[c.dataset.dxopt];draw();});
+    root.querySelector("#dx-x").onclick=()=>{root.innerHTML="";};
+    const exported=()=>{if(o.onExport)o.onExport();};
+    root.querySelector("#dx-md").onclick=()=>{
+      navigator.clipboard.writeText(o.md(d,o.opts)).then(()=>toast("Markdown copied")).catch(()=>toast("Copy blocked — use ⬇ .md",true));exported();};
+    root.querySelector("#dx-dl").onclick=()=>{
+      const b=new Blob([o.md(d,o.opts)],{type:"text/markdown"});
+      const a=document.createElement("a");a.href=URL.createObjectURL(b);
+      a.download=o.filename();a.click();URL.revokeObjectURL(a.href);exported();toast("Downloaded");};
+    root.querySelector("#dx-print").onclick=()=>{
+      const pa=document.getElementById("printArea");pa.className="briefdoc";pa.innerHTML=o.html(d,o.opts);
+      exported();setTimeout(()=>window.print(),60);};
+  };
+  draw();
+}
+/* first and last day of a quarter, local — never via toISOString */
+function quarterRange(q){const ms=quarterMonths(q),[y,m]=ms[2].split("-").map(Number);
+  return {start:ms[0]+"-01",end:dstr(new Date(y,m,0))};}
+function inRange(d,r){return !!d&&d>=r.start&&d<=r.end;}
+function raisedOn(t){return t.raisedDate||dstr(new Date(t.createdAt||Date.now()));}
+/* Every ETA that fell due in a window, judged one at a time:
+     met        — closed on or before that date
+     broken     — pushed to a later date, or the date passed with the work open, or it
+                  was delivered after the date without a new one ever being logged
+     superseded — replaced by an earlier or identical date, which is not a failure
+   A date still in the future is only judged if the work is already done. */
+function etaOutcomes(tickets,r){
+  const today=todayStr(),out=[];
+  tickets.forEach(t=>{const ps=promisesInOrder(t);
+    ps.forEach((p,i)=>{
+      if(!p.eta||!inRange(p.eta,r))return;
+      const next=ps[i+1];let res,how="";
+      if(next&&next.eta){if(next.eta>p.eta){res="broken";how="pushed back to "+fmtDate(next.eta);}else res="superseded";}
+      else if(isClosed(t)&&t.closedDate<=p.eta)res="met";
+      else if(p.eta<today){res="broken";how=isClosed(t)?"delivered late, on "+fmtDate(t.closedDate):"date passed, still open";}
+      else return;
+      out.push({t,p,res,how});});});
+  return out.sort((a,b)=>a.p.eta<b.p.eta?-1:1);
+}
+
+/* ===================== QUARTERLY VENDOR SCORECARD =====================
+   The page for the quarterly contract / governance call. Every number here is
+   already recorded — hours, ETAs, the performance log, the roll-call, incident notes,
+   open actions — but spread over five screens. This is one team's quarter on one
+   page, set against the quarter before, so the conversation is about the trend.
+   Deliberately NOT included: incident narratives and his inferences (those live in
+   the evidence pack), and anything from people's observations. */
+function scoreData(team,q){
+  const r=quarterRange(q),today=todayStr(),asOf=r.end<today?r.end:today;
+  const tks=state.tickets.filter(t=>t.team===team);
+  const closed=tks.filter(t=>isClosed(t)&&inRange(t.closedDate,r));
+  const cyc=closed.map(cycleDays).filter(x=>x!==null);
+  const etas=etaOutcomes(tks,r);
+  const met=etas.filter(x=>x.res==="met"),broken=etas.filter(x=>x.res==="broken");
+  const inc=state.incidents.filter(x=>x.team===team&&inRange(x.date,r)).sort((a,b)=>a.date<b.date?-1:1);
+  const modes={};inc.forEach(x=>x.kinds.forEach(k=>{modes[k]=(modes[k]||0)+1;}));
+  /* the balance check needs the call BEFORE each one, which may sit in the previous
+     quarter — so walk the whole recorded list, judging only calls inside this one */
+  const rcAll=rollRecorded(team),rcIn=[],rcBad=[];let rcCheck=0;
+  rcAll.forEach((x,i)=>{if(!inRange(x.date,r))return;rcIn.push(x);if(!i)return;
+    const b=rollBalance(x,rcAll[i-1],"demands");if(!b)return;rcCheck++;
+    if(b.gap!==0)rcBad.push(Object.assign({date:x.date},b));});
+  const notes=state.mentions.filter(m=>m.team===team&&inRange(m.mentionedOn,r));
+  const acts=openActionsAll().filter(x=>x.owner.team===team);
+  const isMine=a=>/^(me|myself|i)$/i.test(String(a.owner||"").trim());
+  return {team:teamOf(team),q,r,asOf,vendor:isVendorTeam(team),
+    hours:quarterRollup(team,q),byDemand:effortByDemand(team,q),
+    nextFc:forecastFor(team,shiftQuarter(q,1)),nextCap:capacityFor(team,shiftQuarter(q,1)),
+    delivery:{closed,raised:tks.filter(t=>inRange(raisedOn(t),r)),
+      openAtEnd:tks.filter(t=>raisedOn(t)<=asOf&&!(isClosed(t)&&t.closedDate<=asOf)),
+      median:cyc.length?medianOf(cyc):null},
+    etas:{list:etas,met,broken,due:met.length+broken.length,
+      rate:(met.length+broken.length)?Math.round(met.length/(met.length+broken.length)*100):null},
+    conduct:{list:inc,days:inc.reduce((a,x)=>a+num(x.costDays),0),burned:inc.reduce((a,x)=>a+num(x.etasBurned),0),
+      escalated:inc.filter(x=>x.escalated).length,customer:inc.filter(x=>x.customerVisible).length,
+      modes:Object.entries(modes).sort((a,b)=>b[1]-a[1])},
+    roll:{list:rcIn,bad:rcBad,checkable:rcCheck},
+    notes:{list:notes,explained:notes.filter(m=>String(m.what||"").trim()).length,
+      unexplained:notes.filter(m=>m.status==="unexplained"),waiting:notes.filter(mentionNeedsAnswer),
+      recurring:notes.filter(m=>m.recurring)},
+    approvals:state.approvals.filter(a=>a.team===team&&inRange(a.requestedOn,r)),
+    actions:{theirs:acts.filter(x=>!isMine(x.action)),mine:acts.filter(x=>isMine(x.action))}};
+}
+/* the headline row, each figure against the previous quarter. `better` says which
+   direction is good news, so the change can be read at a glance — hours have no
+   better direction, they are simply what was used. */
+function scoreKpis(D){
+  const c=D.cur,p=D.prev,pq=quarterLabel(p.q).split(" ")[0];
+  const k=(l,v,cv,pv,better,unit)=>{
+    let d="",cls="";
+    if(cv!=null&&pv!=null){const x=cv-pv;
+      d=x===0?"same as "+pq:(x>0?"▲ ":"▼ ")+Math.abs(x)+(unit||"")+" vs "+pq;
+      if(x&&better)cls=(x>0)===(better==="up")?"good":"bad";}
+    else if(pv==null&&cv!=null)d="nothing to compare in "+pq;
+    return {l,v,d,cls};};
+  const out=[];
+  if(c.vendor)out.push(k(c.hours.contracted!=null?"hours used of "+c.hours.contracted+"h contracted":"hours used (no contract set)",
+    c.hours.total+"h",c.hours.total,p.hours.total,null,"h"));
+  out.push(k("demands delivered",String(c.delivery.closed.length),c.delivery.closed.length,p.delivery.closed.length,"up"));
+  out.push(k(c.etas.due?"ETAs met ("+c.etas.met.length+" of "+c.etas.due+")":"ETAs met — none fell due",
+    c.etas.rate===null?"—":c.etas.rate+"%",c.etas.rate,p.etas.rate,"up"," pts"));
+  out.push(k("incidents logged",String(c.conduct.list.length),c.conduct.list.length,p.conduct.list.length,"down"));
+  out.push(k("days lost to failures",String(c.conduct.days),c.conduct.days,p.conduct.days,"down","d"));
+  return out;
+}
+function scoreHtml(D,o){
+  const d=D.cur,H=[];
+  const empty=t=>`<p class="dnone">${esc(t)}</p>`;
+  H.push(`<h1>Quarterly scorecard — ${esc(d.team.name)}</h1>
+    <div class="meta">${d.team.vendorName?esc(d.team.vendorName)+" · ":""}${quarterLabel(d.q)}, ${fmtDate(d.r.start)} – ${fmtDate(d.r.end)}${
+      d.asOf<d.r.end?" · <b>quarter in progress</b>, figures to "+fmtDate(d.asOf):""} · compiled ${fmtDate(todayStr())}</div>`);
+  H.push(`<div class="kpis">${scoreKpis(D).map(x=>`<div class="kp"><b>${esc(x.v)}</b><span>${esc(x.l)}</span>${x.d?`<em class="${x.cls}">${esc(x.d)}</em>`:""}</div>`).join("")}</div>`);
+  if(o.hours){H.push(`<h3>Hours against contract</h3>`);
+    if(!d.vendor)H.push(empty("Not an outsourced team — no hours are tracked for it."));
+    else{const h=d.hours;
+      H.push(`<p class="nums">${h.contracted!=null?`<b>${h.contracted}h</b> contracted · `:"No contract recorded for this quarter · "}<b>${h.approved}h</b> approved · <b>${h.pending}h</b> awaiting approval${
+        h.contracted!=null?` · ${h.total>h.contracted?`<b>${h.total-h.contracted}h over contract</b>`:`${h.contracted-h.total}h unused`}`:""}</p>`);
+      if(d.nextFc)H.push(`<p class="nums">Their forecast for ${quarterLabel(shiftQuarter(d.q,1))}: <b>${d.nextFc.hours}h</b>${d.nextCap!=null?` against ${d.nextCap}h contracted`:""}.</p>`);
+      H.push(d.byDemand.length?`<table class="dt"><thead><tr><th>Demand</th><th class="n">Hours</th><th class="n">Approved</th><th class="n">Pending</th></tr></thead><tbody>${
+        d.byDemand.slice(0,10).map(x=>{const t=x.ticketId?ticketByRef(x.ticketId):null;
+          return `<tr><td>${t?`<b>${esc(t.ticketId||"—")}</b> ${esc(t.title)}`:"<i>not tied to a demand</i>"}</td><td class="n">${x.hours}h</td><td class="n">${x.approved}h</td><td class="n">${x.pending}h</td></tr>`;}).join("")}</tbody></table>${
+        d.byDemand.length>10?`<p class="nums">+ ${d.byDemand.length-10} smaller lines.</p>`:""}`:empty("No hours logged this quarter."));}}
+  if(o.delivery){const v=d.delivery;H.push(`<h3>Delivery</h3>
+    <p class="nums"><b>${v.raised.length}</b> raised · <b>${v.closed.length}</b> delivered · <b>${v.openAtEnd.length}</b> open at ${fmtDate(d.asOf)}${
+      v.median!==null?` · median <b>${v.median} days</b> from raised to closed`:""}</p>`);
+    H.push(v.closed.length?`<ul>${v.closed.map(t=>`<li><b>${esc(t.ticketId||"—")}</b> ${esc(t.title)} <i>— closed ${fmtDate(t.closedDate)}${cycleDays(t)!==null?", "+cycleDays(t)+" days":""}</i></li>`).join("")}</ul>`:empty("Nothing delivered this quarter."));}
+  if(o.etas){const e=d.etas;H.push(`<h3>Commitments</h3>`);
+    H.push(e.due?`<p class="nums">Of <b>${e.due}</b> ETA${e.due===1?"":"s"} that fell due, <b>${e.met.length}</b> ${e.met.length===1?"was":"were"} met and <b>${e.broken.length}</b> broken.</p>`:empty("No committed dates fell due this quarter."));
+    if(e.broken.length)H.push(`<ul>${e.broken.map(x=>`<li><b>${esc(x.t.ticketId||"—")}</b> ${esc(x.t.title)} — due ${fmtDate(x.p.eta)} <i>(given ${fmtDate(x.p.givenOn)}; ${esc(x.how)})</i></li>`).join("")}</ul>`);}
+  if(o.conduct){const c=d.conduct;H.push(`<h3>Performance log</h3>`);
+    if(!c.list.length)H.push(empty("No incidents logged this quarter."));
+    else{H.push(`<p class="nums"><b>${c.list.length}</b> incident${c.list.length===1?"":"s"} · <b>${c.days}</b> days lost · <b>${c.burned}</b> ETAs burned · <b>${c.escalated}</b> needed escalation · <b>${c.customer}</b> reached the end user</p>`);
+      if(c.modes.length)H.push(`<p class="nums">Most frequent: ${c.modes.slice(0,5).map(([k2,n])=>esc(FAIL_KINDS[k2].label)+" ×"+n).join(" · ")}</p>`);
+      H.push(`<ul>${c.list.map(x=>`<li>${fmtDate(x.date)} — ${esc(x.title||"(untitled)")}${x.kinds.length?` <i>(${esc(x.kinds.map(k2=>FAIL_KINDS[k2].label).join(", "))})</i>`:""}</li>`).join("")}</ul>
+        <p class="nums"><i>Narratives and evidence are in the separate evidence pack.</i></p>`);}}
+  if(o.roll){const rc=d.roll;H.push(`<h3>Their roll-call figures</h3>`);
+    if(!rc.list.length)H.push(empty("No roll-calls recorded this quarter."));
+    else{const f=rc.list[0],l=rc.list[rc.list.length-1];
+      H.push(`<p class="nums"><b>${rc.list.length}</b> recorded · their total went from <b>${rollTotal(f.demands)}</b> (${fmtDate(f.date)}) to <b>${rollTotal(l.demands)}</b> (${fmtDate(l.date)}) · <b>${rc.checkable}</b> could be checked, <b>${rc.bad.length}</b> didn't add up</p>`);
+      if(rc.bad.length)H.push(`<ul>${rc.bad.map(b=>`<li>${fmtDate(b.date)} — ${b.prevTotal} − ${b.closed} closed + ${b.added} new = ${b.expected}, but they read out ${b.actual}</li>`).join("")}</ul>`);
+      if(!rc.checkable)H.push(`<p class="nums"><i>None could be checked — that needs both "closed since" and "new since" on the call.</i></p>`);}}
+  if(o.notes){const n=d.notes;H.push(`<h3>Incidents raised in calls</h3>`);
+    if(!n.list.length)H.push(empty("None mentioned this quarter."));
+    else{H.push(`<p class="nums"><b>${n.list.length}</b> mentioned · <b>${n.explained}</b> with a cause on record · <b>${n.unexplained.length}</b> closed without an explanation · <b>${n.waiting.length}</b> still awaiting one · <b>${n.recurring.length}</b> recurring</p>`);
+      const show=[...new Set(n.unexplained.concat(n.recurring))];
+      if(show.length)H.push(`<ul>${show.map(m=>`<li>${fmtDate(m.mentionedOn)} — ${esc(m.title||"(unnamed)")}${m.area?` <i>(${esc(m.area)})</i>`:""}${m.status==="unexplained"?" <i>— never explained</i>":""}${m.recurring?" <i>— recurring</i>":""}</li>`).join("")}</ul>`);}}
+  if(o.actions){const a=d.actions;H.push(`<h3>Open commitments from calls — as at ${fmtDate(todayStr())}</h3>`);
+    const row=x=>{const late=x.action.due&&x.action.due<todayStr();
+      return `<li>${esc(x.action.text||"(untitled)")} <i>— ${esc(x.action.owner||"unassigned")}${x.action.due?`, due ${fmtDate(x.action.due)}${late?" (overdue)":""}`:""}; from ${esc(x.owner.title||"a call")}, ${fmtDate(x.owner.date)}</i></li>`;};
+    if(!a.theirs.length&&!a.mine.length)H.push(empty("Nothing outstanding."));
+    if(a.theirs.length)H.push(`<p class="nums"><b>Owed by them</b></p><ul>${a.theirs.map(row).join("")}</ul>`);
+    if(a.mine.length)H.push(`<p class="nums"><b>Owed by me</b></p><ul>${a.mine.map(row).join("")}</ul>`);}
+  if(o.approvals){H.push(`<h3>Approvals</h3>`);
+    H.push(d.approvals.length?`<ul>${d.approvals.map(a=>{const t=a.ticketId?ticketByRef(a.ticketId):null;
+      return `<li>${fmtDate(a.requestedOn)} — ${esc(APPROVAL_KINDS[a.kind].label)}: ${esc(a.title||(t?t.title:"(untitled)"))} <i>— ${a.status==="approved"?"approved "+fmtDate(a.decidedOn):esc(a.status)}</i></li>`;}).join("")}</ul>`:empty("No approval requests this quarter."));}
+  return H.join("");
+}
+function scoreMarkdown(D,o){
+  const d=D.cur,L=[],bl=()=>L.push("");
+  L.push("# Quarterly scorecard — "+d.team.name);bl();
+  L.push("_"+(d.team.vendorName?d.team.vendorName+" · ":"")+quarterLabel(d.q)+", "+fmtDate(d.r.start)+" – "+fmtDate(d.r.end)+
+    (d.asOf<d.r.end?" · quarter in progress, figures to "+fmtDate(d.asOf):"")+" · compiled "+fmtDate(todayStr())+"_");bl();
+  scoreKpis(D).forEach(x=>L.push("- **"+x.v+"** "+x.l+(x.d?" _("+x.d+")_":"")));bl();
+  if(o.hours){L.push("## Hours against contract");bl();
+    if(!d.vendor)L.push("_Not an outsourced team — no hours are tracked for it._");
+    else{const h=d.hours;
+      L.push((h.contracted!=null?h.contracted+"h contracted · ":"No contract recorded · ")+h.approved+"h approved · "+h.pending+"h awaiting approval"+
+        (h.contracted!=null?" · "+(h.total>h.contracted?(h.total-h.contracted)+"h over contract":(h.contracted-h.total)+"h unused"):""));
+      if(d.nextFc)L.push("","Their forecast for "+quarterLabel(shiftQuarter(d.q,1))+": "+d.nextFc.hours+"h"+(d.nextCap!=null?" against "+d.nextCap+"h contracted":"")+".");
+      if(d.byDemand.length){bl();L.push("| Demand | Hours | Approved | Pending |","|---|--:|--:|--:|");
+        d.byDemand.slice(0,10).forEach(x=>{const t=x.ticketId?ticketByRef(x.ticketId):null;
+          L.push("| "+(t?(t.ticketId||"—")+" "+t.title:"not tied to a demand").replace(/\|/g,"/")+" | "+x.hours+"h | "+x.approved+"h | "+x.pending+"h |");});}}
+    bl();}
+  if(o.delivery){const v=d.delivery;L.push("## Delivery");bl();
+    L.push(v.raised.length+" raised · "+v.closed.length+" delivered · "+v.openAtEnd.length+" open at "+fmtDate(d.asOf)+
+      (v.median!==null?" · median "+v.median+" days from raised to closed":""));bl();
+    v.closed.forEach(t=>L.push("- **"+(t.ticketId||"—")+"** "+t.title+" — closed "+fmtDate(t.closedDate)));
+    if(v.closed.length)bl();}
+  if(o.etas){const e=d.etas;L.push("## Commitments");bl();
+    L.push(e.due?"Of "+e.due+" ETA"+(e.due===1?"":"s")+" that fell due, "+e.met.length+" met and "+e.broken.length+" broken.":"_No committed dates fell due this quarter._");bl();
+    e.broken.forEach(x=>L.push("- **"+(x.t.ticketId||"—")+"** "+x.t.title+" — due "+fmtDate(x.p.eta)+" (given "+fmtDate(x.p.givenOn)+"; "+x.how+")"));
+    if(e.broken.length)bl();}
+  if(o.conduct){const c=d.conduct;L.push("## Performance log");bl();
+    if(!c.list.length)L.push("_No incidents logged this quarter._");
+    else{L.push(c.list.length+" incidents · "+c.days+" days lost · "+c.burned+" ETAs burned · "+c.escalated+" needed escalation · "+c.customer+" reached the end user");
+      if(c.modes.length)L.push("","Most frequent: "+c.modes.slice(0,5).map(([k2,n])=>FAIL_KINDS[k2].label+" ×"+n).join(" · "));
+      bl();c.list.forEach(x=>L.push("- "+fmtDate(x.date)+" — "+(x.title||"(untitled)")+(x.kinds.length?" ("+x.kinds.map(k2=>FAIL_KINDS[k2].label).join(", ")+")":"")));
+      bl();L.push("_Narratives and evidence are in the separate evidence pack._");}
+    bl();}
+  if(o.roll){const rc=d.roll;L.push("## Their roll-call figures");bl();
+    if(!rc.list.length)L.push("_No roll-calls recorded this quarter._");
+    else{const f=rc.list[0],l=rc.list[rc.list.length-1];
+      L.push(rc.list.length+" recorded · their total went from "+rollTotal(f.demands)+" ("+fmtDate(f.date)+") to "+rollTotal(l.demands)+" ("+fmtDate(l.date)+") · "+
+        rc.checkable+" could be checked, "+rc.bad.length+" didn't add up");
+      rc.bad.forEach(b=>L.push("- "+fmtDate(b.date)+" — "+b.prevTotal+" - "+b.closed+" closed + "+b.added+" new = "+b.expected+", but they read out "+b.actual));}
+    bl();}
+  if(o.notes){const n=d.notes;L.push("## Incidents raised in calls");bl();
+    if(!n.list.length)L.push("_None mentioned this quarter._");
+    else{L.push(n.list.length+" mentioned · "+n.explained+" with a cause on record · "+n.unexplained.length+" closed without an explanation · "+
+        n.waiting.length+" still awaiting one · "+n.recurring.length+" recurring");
+      [...new Set(n.unexplained.concat(n.recurring))].forEach(m=>L.push("- "+fmtDate(m.mentionedOn)+" — "+(m.title||"(unnamed)")+
+        (m.status==="unexplained"?" — never explained":"")+(m.recurring?" — recurring":"")));}
+    bl();}
+  if(o.actions){const a=d.actions;L.push("## Open commitments from calls — as at "+fmtDate(todayStr()));bl();
+    const row=x=>"- "+(x.action.text||"(untitled)")+" — "+(x.action.owner||"unassigned")+
+      (x.action.due?", due "+fmtDate(x.action.due)+(x.action.due<todayStr()?" (overdue)":""):"")+"; from "+(x.owner.title||"a call")+", "+fmtDate(x.owner.date);
+    if(!a.theirs.length&&!a.mine.length)L.push("_Nothing outstanding._");
+    if(a.theirs.length){L.push("**Owed by them**");bl();a.theirs.forEach(x=>L.push(row(x)));bl();}
+    if(a.mine.length){L.push("**Owed by me**");bl();a.mine.forEach(x=>L.push(row(x)));}
+    bl();}
+  if(o.approvals){L.push("## Approvals");bl();
+    if(!d.approvals.length)L.push("_No approval requests this quarter._");
+    d.approvals.forEach(a=>{const t=a.ticketId?ticketByRef(a.ticketId):null;
+      L.push("- "+fmtDate(a.requestedOn)+" — "+APPROVAL_KINDS[a.kind].label+": "+(a.title||(t?t.title:"(untitled)"))+" — "+(a.status==="approved"?"approved "+fmtDate(a.decidedOn):a.status));});
+    bl();}
+  return L.join("\n");
+}
+function openScorecard(team,q){
+  team=team||(vendorTeams()[0]||state.settings.teams[0]).id;
+  q=q||curQuarter();
+  const opts={hours:true,delivery:true,etas:true,conduct:true,roll:true,notes:true,actions:true,approvals:true};
+  openDocModal({
+    title:"📋 Quarterly scorecard",opts,
+    chips:[["hours","Hours"],["delivery","Delivery"],["etas","Commitments"],["conduct","Performance log"],
+      ["roll","Roll-call"],["notes","Call incidents"],["actions","Open commitments"],["approvals","Approvals"]],
+    note:"For the quarterly contract or governance call. Every figure is set against the previous quarter. "+
+      "It carries counts and titles from the performance log but never the narratives or your inferences — those stay in the evidence pack. "+
+      "Switch sections off before sharing it with the vendor if you'd rather.",
+    build:()=>({cur:scoreData(team,q),prev:scoreData(team,shiftQuarter(q,-1))}),
+    controls:()=>`<div class="field" style="margin:0;flex:0 0 200px"><label>Team</label>
+        <select id="sc-team">${state.settings.teams.map(t=>`<option value="${esc(t.id)}" ${t.id===team?"selected":""}>${esc(t.name)}${t.outsourced?"":" (in-house)"}</option>`).join("")}</select></div>
+      <div class="field" style="margin:0;flex:0 0 auto"><label>Quarter</label>
+        <div class="qnav" style="margin:0;justify-content:flex-start"><button class="sm" id="sc-prev">◀</button><b>${quarterLabel(q)}</b><button class="sm" id="sc-next" ${q>=curQuarter()?"disabled":""}>▶</button></div></div>`,
+    wire:(root,draw)=>{
+      root.querySelector("#sc-team").onchange=e=>{team=e.target.value;draw();};
+      root.querySelector("#sc-prev").onclick=()=>{q=shiftQuarter(q,-1);draw();};
+      root.querySelector("#sc-next").onclick=()=>{if(q<curQuarter()){q=shiftQuarter(q,1);draw();}};},
+    html:scoreHtml,md:scoreMarkdown,
+    filename:()=>"scorecard-"+teamOf(team).name.toLowerCase().replace(/[^a-z0-9]+/g,"-")+"-"+q+".md"});
+}
+
 /* ===================== RISK REGISTER ===================== */
 function activeRisk(){return state.risks.find(r=>r.id===activeRiskId);}
 function newRisk(pre){
@@ -5773,6 +6082,7 @@ function renderEpicDetail(){
           ${s.teams.map(t=>teamPill(t)).join(" ")}
           ${e.closed?`<span class="pill done">Closed</span>`:""}</div>
         <h1 id="epName" style="cursor:text">${esc(e.name)}</h1></div>
+        <button class="sm" id="epSum" title="One page on this epic for its steering call">📄 Steering summary</button>
         <button class="ghost" id="epDel" title="Delete epic">🗑</button></div>
       <div class="dh-dates">
         <span>Owner <b>${esc(e.owner||"—")}</b></span>
@@ -5872,6 +6182,7 @@ function renderEpicDetail(){
   q("#ep-target").onchange=ev=>{e.targetDate=ev.target.value;touch(e);renderApp();};
   q("#ep-closed").onchange=ev=>{e.closed=ev.target.checked;touch(e);renderApp();};
   q("#ep-link").onclick=()=>openEpicLinkModal(e);
+  q("#epSum").onclick=()=>openEpicSummary(e);
   q("#epDel").onclick=()=>{
     if(!confirm("Delete the epic “"+e.name+"”?\n\nIts tickets stay — they're just unlinked."))return;
     state.epics=state.epics.filter(x=>x.id!==e.id);purgeDeadLinks(state);
@@ -5905,6 +6216,169 @@ function openEpicLinkModal(e){
   draw();
 }
 
+/* ===================== EPIC STEERING SUMMARY =====================
+   One epic on one page, for the steering call about it (LUCA's is monthly). The Boss
+   Brief covers every epic in a few lines each; a steering group needs the one epic in
+   depth: the asks first, then what moved since they last heard, what's in the way,
+   what lands next, the risks and the decisions on record. */
+function epicSummaryData(e,since){
+  const s=epicSignals(e),T=s.ts,today=todayStr(),tset=new Set(T.map(t=>t.id));
+  const flat=(f)=>T.flatMap(f);
+  const changes={
+    closed:T.filter(t=>isClosed(t)&&t.closedDate>=since),
+    added:T.filter(t=>raisedOn(t)>=since),
+    etaMoves:flat(t=>{const ps=promisesInOrder(t);
+      return ps.map((p,i)=>({t,p,prev:ps[i-1]})).filter(x=>x.prev&&x.p.givenOn>=since&&x.p.eta&&x.prev.eta&&x.p.eta!==x.prev.eta);}),
+    gates:flat(t=>t.gates?t.gates.steps.filter(g=>g.done&&g.doneOn>=since).map(g=>({t,g})):[]),
+    subtasks:flat(t=>t.subtasks.filter(x=>x.done&&x.doneOn>=since).map(x=>({t,x}))),
+    raised:flat(t=>t.hurdles.filter(h=>h.raisedOn>=since).map(h=>({t,h}))),
+    cleared:flat(t=>t.hurdles.filter(h=>h.resolvedOn&&h.resolvedOn>=since).map(h=>({t,h})))};
+  changes.any=Object.values(changes).some(a=>a.length);
+  const blockers=s.open.flatMap(t=>openHurdles(t).map(h=>({t,h}))).sort((a,b)=>a.h.raisedOn<b.h.raisedOn?-1:1);
+  const horizon=addDays(30);
+  const upcoming=s.open.map(t=>{const lp=latestPromise(t),eta=(lp&&lp.eta)||t.dueDate;
+      return eta?{t,eta,late:eta<today,slips:slipCount(t),fromEta:!!(lp&&lp.eta)}:null;})
+    .filter(x=>x&&x.eta<=horizon).sort((a,b)=>a.eta<b.eta?-1:1);
+  const decisions=state.decisions.filter(x=>x.epicId===e.id||(x.ticketId&&tset.has(x.ticketId)))
+    .sort((a,b)=>a.date<b.date?1:-1);
+  const actions=meetingsForEpic(e.id).flatMap(m=>m.actions.filter(a=>!a.done).map(a=>({m,a})));
+  const byTeam={};T.forEach(t=>{(byTeam[t.team]=byTeam[t.team]||[]).push(t);});
+  Object.values(byTeam).forEach(l=>l.sort((a,b)=>(isOpen(b)?1:0)-(isOpen(a)?1:0)||(a.ticketId||"").localeCompare(b.ticketId||"")));
+  return {e,s,since,today,changes,blockers,asks:blockers.filter(x=>x.h.kind==="decision"),
+    deps:s.open.flatMap(t=>openBlockersOf(t).map(b=>({t,b,cross:b.team!==t.team}))),
+    upcoming,risks:risksForEpic(e.id).filter(r=>r.status!=="closed").sort((a,b)=>sevRank(a)-sevRank(b)),
+    decisions,decisionsSince:decisions.filter(x=>x.date>=since),actions,byTeam,
+    dis:healthDisagrees(e),stale:headlineStale(e),
+    toTarget:e.targetDate?daysUntil(e.targetDate):null};
+}
+/* where "what changed" starts by default: the last exported summary, else the last
+   epic-review meeting, else a month back */
+function epicSummarySince(e){
+  if(e.summaryOn)return e.summaryOn;
+  const m=meetingsForEpic(e.id).map(x=>x.date).sort().pop();
+  return m||addDays(-30);
+}
+function sinceLabel(d){return d==="1970-01-01"?"the beginning":fmtDate(d);}
+function blockerLine(x){return (x.t.ticketId||"—")+" — "+(x.h.text||HURDLE_KINDS[x.h.kind].label)+
+  " ("+(x.h.owner||"unowned")+", "+Math.max(0,-daysUntil(x.h.raisedOn))+" days)";}
+function upcomingNote(x){return x.late?"already late"+(x.slips?", after being pushed back "+x.slips+"×":""):x.slips>=2?"pushed back "+x.slips+"×, treat with caution":x.slips===1?"pushed back once":x.fromEta?"held so far":"due date";}
+function ticketEta(t){const lp=latestPromise(t);return (lp&&lp.eta)||t.dueDate||"";}
+function epicSummaryHtml(d,o){
+  const e=d.e,s=d.s,H=[],c=d.changes;
+  const empty=t=>`<p class="dnone">${esc(t)}</p>`;
+  const tk=t=>`<b>${esc(t.ticketId||"—")}</b> ${esc(t.title||"")}`;
+  H.push(`<h1>Steering summary — ${esc(e.name)}</h1>
+    <div class="meta">${e.code?esc(e.code)+" · ":""}${e.owner?"owner "+esc(e.owner)+" · ":""}${e.targetDate?`target ${fmtDate(e.targetDate)} (${
+      d.toTarget<0?Math.abs(d.toTarget)+" days past":d.toTarget===0?"today":"in "+d.toTarget+" days"})`:"no target date"} · as at ${fmtDate(d.today)} · changes since ${sinceLabel(d.since)}</div>`);
+  H.push(`<h4><span class="hpill h-${e.health}">${EPIC_HEALTH[e.health].label}</span>${
+    d.dis?` <span class="warn" style="margin:0">The tickets read <b>${EPIC_HEALTH[d.dis].label}</b></span>`:""}</h4>`);
+  if(e.headline.text)H.push(`<blockquote>${esc(e.headline.text)}<div class="asat">— as at ${e.headline.on?fmtDate(e.headline.on):"undated"}${d.stale?" · more than "+HEADLINE_STALE_DAYS+" days old":""}</div></blockquote>`);
+  const done=s.done,open=s.open.length;
+  H.push(`<div class="kpis">${[[s.ts.length,"tickets"],[done,"done"],[open,"open"],[s.blocked.length,"blocked"],[s.missed.length,"past their ETA"],[s.overdue.length,"past due date"]]
+    .map(([v,l])=>`<div class="kp"><b>${v}</b><span>${l}</span></div>`).join("")}</div>`);
+  if(o.asks){H.push(`<h3>Needs a decision</h3>`);
+    H.push(d.asks.length?`<ul>${d.asks.map(x=>`<li>${esc(blockerLine(x))}</li>`).join("")}</ul>`:empty("Nothing is waiting on a decision."));}
+  if(o.changes){H.push(`<h3>Since ${sinceLabel(d.since)}</h3>`);
+    if(!c.any)H.push(empty("No recorded change on this epic since then."));
+    else{const li=[];
+      c.closed.forEach(t=>li.push(`<li>✓ Delivered ${tk(t)} <i>— ${fmtDate(t.closedDate)}</i></li>`));
+      c.gates.forEach(x=>li.push(`<li>Passed “${esc(x.g.text)}” on ${tk(x.t)} <i>— ${fmtDate(x.g.doneOn)}</i></li>`));
+      c.subtasks.forEach(x=>li.push(`<li>Finished “${esc(x.x.title)}” on ${tk(x.t)} <i>— ${fmtDate(x.x.doneOn)}</i></li>`));
+      c.added.forEach(t=>li.push(`<li>New: ${tk(t)} <i>— ${esc(teamOf(t.team).name)}</i></li>`));
+      c.etaMoves.forEach(x=>li.push(`<li>ETA ${x.p.eta>x.prev.eta?"pushed back":"brought forward"} on ${tk(x.t)}: ${fmtDate(x.prev.eta)} → <b>${fmtDate(x.p.eta)}</b></li>`));
+      c.cleared.forEach(x=>li.push(`<li>Cleared: ${esc(HURDLE_KINDS[x.h.kind].label)} on ${tk(x.t)}${x.h.resolution?` <i>— ${esc(x.h.resolution)}</i>`:""}</li>`));
+      c.raised.forEach(x=>li.push(`<li>New blocker: ${esc(x.h.text||HURDLE_KINDS[x.h.kind].label)} on ${tk(x.t)}</li>`));
+      H.push(`<ul>${li.join("")}</ul>`);}}
+  if(o.blockers){H.push(`<h3>Blockers &amp; dependencies</h3>`);
+    const nb=d.blockers.filter(x=>x.h.kind!=="decision");
+    if(!nb.length&&!d.deps.length)H.push(empty("Nothing is blocked."));
+    if(nb.length)H.push(`<ul>${nb.map(x=>`<li>${esc(blockerLine(x))}</li>`).join("")}</ul>`);
+    if(d.deps.length)H.push(`<ul>${d.deps.map(x=>`<li>${tk(x.t)} is waiting on <b>${esc(x.b.ticketId||"—")}</b>${x.cross?` <i>(${esc(teamOf(x.b.team).name)} — cross-team)</i>`:""}${ticketEta(x.b)?` <i>— its ETA ${fmtDate(ticketEta(x.b))}</i>`:""}</li>`).join("")}</ul>`);}
+  if(o.upcoming){H.push(`<h3>Coming up — next 30 days</h3>`);
+    H.push(d.upcoming.length?`<ul>${d.upcoming.map(x=>`<li><b>${fmtDate(x.eta)}</b> — ${tk(x.t)} <i>— ${esc(upcomingNote(x))}</i></li>`).join("")}</ul>`:empty("Nothing has a date in the next 30 days."));}
+  if(o.risks){H.push(`<h3>Risks</h3>`);
+    H.push(d.risks.length?`<ul>${d.risks.map(r=>`<li><b>${RISK_SEV[r.severity].label}</b> — ${esc(r.title)} <i>(${esc(RISK_STATUS[r.status].label)}${r.owner?", "+esc(r.owner):""})</i>${r.mitigation?`<br><i>Mitigation: ${esc(r.mitigation)}</i>`:""}</li>`).join("")}</ul>`:empty("No open risks recorded against this epic."));}
+  if(o.decisions){H.push(`<h3>Decisions</h3>`);
+    const list=d.decisionsSince.length?d.decisionsSince:d.decisions.slice(0,5);
+    H.push(list.length?`${d.decisionsSince.length?"":`<p class="nums"><i>None since ${sinceLabel(d.since)} — the most recent on record:</i></p>`}<ul>${list.map(x=>`<li><b>${fmtDate(x.date)}</b> — ${esc(x.text)}${x.by?` <i>(${esc(x.by)})</i>`:""}</li>`).join("")}</ul>`:empty("No decisions recorded for this epic."));}
+  if(o.actions){H.push(`<h3>Open actions from epic meetings</h3>`);
+    H.push(d.actions.length?`<ul>${d.actions.map(x=>`<li>${esc(x.a.text||"(untitled)")} <i>— ${esc(x.a.owner||"unassigned")}${x.a.due?", due "+fmtDate(x.a.due)+(x.a.due<d.today?" (overdue)":""):""}; ${esc(x.m.title||"meeting")}, ${fmtDate(x.m.date)}</i></li>`).join("")}</ul>`:empty("Nothing outstanding."));}
+  if(o.tickets){H.push(`<h3>All tickets</h3>`);
+    if(!s.ts.length)H.push(empty("No tickets linked to this epic."));
+    Object.entries(d.byTeam).forEach(([tm,list])=>{
+      H.push(`<p class="nums"><b>${esc(teamOf(tm).name)}</b></p><table class="dt" style="table-layout:fixed"><colgroup><col style="width:38%"><col style="width:12%"><col style="width:12%"><col style="width:18%"><col style="width:20%"></colgroup><thead><tr><th>Ticket</th><th>Status</th><th>Who</th><th class="n">ETA</th><th>Note</th></tr></thead><tbody>${
+        list.map(t=>{const sp=subProg(t),gn=gateNext(t),eta=ticketEta(t);
+          const note=[slipCount(t)?"pushed back "+slipCount(t)+"×":"",openHurdles(t).length?"blocked":"",
+            sp&&isOpen(t)?sp.done+"/"+sp.total+" steps"+(subNext(t)?" — next: "+subNext(t).title:""):"",
+            gn&&isOpen(t)?"next gate: "+gn.text:""].filter(Boolean).join(" · ");
+          return `<tr><td>${tk(t)}</td><td>${esc(MY_STATUS[t.myStatus].label)}</td><td>${esc(t.assignees.map(personName).join(", ")||"—")}</td>
+            <td class="n">${isOpen(t)&&eta?fmtDate(eta):isClosed(t)?"closed "+fmtDate(t.closedDate):"—"}</td><td>${esc(note)}</td></tr>`;}).join("")}</tbody></table>`);});}
+  return H.join("");
+}
+function epicSummaryMarkdown(d,o){
+  const e=d.e,s=d.s,c=d.changes,L=[],bl=()=>L.push("");
+  const tk=t=>"**"+(t.ticketId||"—")+"** "+(t.title||"");
+  L.push("# Steering summary — "+e.name);bl();
+  L.push("_"+(e.code?e.code+" · ":"")+(e.owner?"owner "+e.owner+" · ":"")+(e.targetDate?"target "+fmtDate(e.targetDate)+" ("+
+    (d.toTarget<0?Math.abs(d.toTarget)+" days past":d.toTarget===0?"today":"in "+d.toTarget+" days")+")":"no target date")+
+    " · as at "+fmtDate(d.today)+" · changes since "+sinceLabel(d.since)+"_");bl();
+  L.push("**Health: "+EPIC_HEALTH[e.health].label+"**"+(d.dis?" — the tickets read **"+EPIC_HEALTH[d.dis].label+"**":""));bl();
+  if(e.headline.text){L.push("> "+e.headline.text);L.push("> _— as at "+(e.headline.on?fmtDate(e.headline.on):"undated")+(d.stale?" · more than "+HEADLINE_STALE_DAYS+" days old":"")+"_");bl();}
+  L.push(s.ts.length+" tickets · "+s.done+" done · "+s.open.length+" open · "+s.blocked.length+" blocked · "+s.missed.length+" past their ETA · "+s.overdue.length+" past due date");bl();
+  const sec=(title,items,none)=>{L.push("## "+title);bl();if(items.length){items.forEach(x=>L.push("- "+x));}else L.push("_"+none+"_");bl();};
+  if(o.asks)sec("Needs a decision",d.asks.map(blockerLine),"Nothing is waiting on a decision.");
+  if(o.changes){const li=[];
+    c.closed.forEach(t=>li.push("Delivered "+tk(t)+" — "+fmtDate(t.closedDate)));
+    c.gates.forEach(x=>li.push("Passed \""+x.g.text+"\" on "+tk(x.t)+" — "+fmtDate(x.g.doneOn)));
+    c.subtasks.forEach(x=>li.push("Finished \""+x.x.title+"\" on "+tk(x.t)+" — "+fmtDate(x.x.doneOn)));
+    c.added.forEach(t=>li.push("New: "+tk(t)+" — "+teamOf(t.team).name));
+    c.etaMoves.forEach(x=>li.push("ETA "+(x.p.eta>x.prev.eta?"pushed back":"brought forward")+" on "+tk(x.t)+": "+fmtDate(x.prev.eta)+" → **"+fmtDate(x.p.eta)+"**"));
+    c.cleared.forEach(x=>li.push("Cleared: "+HURDLE_KINDS[x.h.kind].label+" on "+tk(x.t)+(x.h.resolution?" — "+x.h.resolution:"")));
+    c.raised.forEach(x=>li.push("New blocker: "+(x.h.text||HURDLE_KINDS[x.h.kind].label)+" on "+tk(x.t)));
+    sec("Since "+sinceLabel(d.since),li,"No recorded change on this epic since then.");}
+  if(o.blockers)sec("Blockers & dependencies",
+    d.blockers.filter(x=>x.h.kind!=="decision").map(blockerLine).concat(d.deps.map(x=>tk(x.t)+" is waiting on **"+(x.b.ticketId||"—")+"**"+
+      (x.cross?" ("+teamOf(x.b.team).name+" — cross-team)":"")+(ticketEta(x.b)?" — its ETA "+fmtDate(ticketEta(x.b)):""))),"Nothing is blocked.");
+  if(o.upcoming)sec("Coming up — next 30 days",d.upcoming.map(x=>"**"+fmtDate(x.eta)+"** — "+tk(x.t)+" — "+upcomingNote(x)),"Nothing has a date in the next 30 days.");
+  if(o.risks)sec("Risks",d.risks.map(r=>"**"+RISK_SEV[r.severity].label+"** — "+r.title+" ("+RISK_STATUS[r.status].label+(r.owner?", "+r.owner:"")+")"+
+    (r.mitigation?"  \n  _Mitigation: "+r.mitigation+"_":"")),"No open risks recorded against this epic.");
+  if(o.decisions){const list=d.decisionsSince.length?d.decisionsSince:d.decisions.slice(0,5);
+    sec("Decisions"+(d.decisionsSince.length||!list.length?"":" (none since "+sinceLabel(d.since)+" — most recent on record)"),
+      list.map(x=>"**"+fmtDate(x.date)+"** — "+x.text+(x.by?" _("+x.by+")_":"")),"No decisions recorded for this epic.");}
+  if(o.actions)sec("Open actions from epic meetings",d.actions.map(x=>(x.a.text||"(untitled)")+" — "+(x.a.owner||"unassigned")+
+    (x.a.due?", due "+fmtDate(x.a.due)+(x.a.due<d.today?" (overdue)":""):"")+"; "+(x.m.title||"meeting")+", "+fmtDate(x.m.date)),"Nothing outstanding.");
+  if(o.tickets){L.push("## All tickets");bl();
+    Object.entries(d.byTeam).forEach(([tm,list])=>{L.push("**"+teamOf(tm).name+"**");bl();
+      L.push("| Ticket | Status | Who | ETA |","|---|---|---|--:|");
+      list.forEach(t=>{const eta=ticketEta(t);
+        L.push("| "+((t.ticketId||"—")+" "+(t.title||"")).replace(/\|/g,"/")+" | "+MY_STATUS[t.myStatus].label+" | "+(t.assignees.map(personName).join(", ")||"—")+
+          " | "+(isOpen(t)&&eta?fmtDate(eta):isClosed(t)?"closed "+fmtDate(t.closedDate):"—")+" |");});
+      bl();});}
+  return L.join("\n");
+}
+function openEpicSummary(e){
+  let since=epicSummarySince(e);
+  const opts={asks:true,changes:true,blockers:true,upcoming:true,risks:true,decisions:true,actions:true,tickets:true};
+  openDocModal({
+    title:"📄 Steering summary",opts,
+    chips:[["asks","Needs a decision"],["changes","What changed"],["blockers","Blockers"],["upcoming","Coming up"],
+      ["risks","Risks"],["decisions","Decisions"],["actions","Open actions"],["tickets","All tickets"]],
+    note:"One epic in depth for its steering call. People notes are never included. "+
+      (e.summaryOn?"“What changed” starts from your last exported summary ("+fmtDate(e.summaryOn)+").":"Exporting it records today's date, so the next one covers what changed since."),
+    build:()=>epicSummaryData(e,since),
+    controls:()=>`<div class="field" style="margin:0;flex:0 0 170px"><label>What changed since</label><input type="date" id="es-since" value="${esc(since)}"></div>
+      <div style="display:flex;gap:6px;align-items:flex-end;padding-bottom:1px;flex-wrap:wrap">
+        ${e.summaryOn?`<button class="sm" data-esper="last">Last summary</button>`:""}
+        <button class="sm" data-esper="14">14d</button><button class="sm" data-esper="30">30d</button><button class="sm" data-esper="all">All</button></div>`,
+    wire:(root,draw)=>{
+      root.querySelector("#es-since").onchange=ev=>{since=ev.target.value||addDays(-30);draw();};
+      root.querySelectorAll("[data-esper]").forEach(b=>b.onclick=()=>{const v=b.dataset.esper;
+        since=v==="last"?e.summaryOn:v==="all"?"1970-01-01":addDays(-(+v));draw();});},
+    html:epicSummaryHtml,md:epicSummaryMarkdown,
+    onExport:()=>{if(e.summaryOn!==todayStr()){e.summaryOn=todayStr();touch(e);}},
+    filename:()=>"steering-"+(e.code||e.name).toLowerCase().replace(/[^a-z0-9]+/g,"-")+"-"+todayStr()+".md"});
+}
+
 /* ===================== EFFORT / CAPACITY (vendor teams) ===================== */
 function renderEffort(){
   const vts=vendorTeams();
@@ -5920,6 +6394,7 @@ function renderEffort(){
       <div class="segmented">
         <button class="${effortTab==="capacity"?"on":""}" data-eft="capacity">⏱ Hours</button>
         <button class="${effortTab==="approvals"?"on":""}" data-eft="approvals">✅ Approvals</button></div>
+      <button id="ef-score" style="width:100%">📋 Quarterly scorecard</button>
       ${effortTab==="capacity"
         ?`<button class="primary" id="ef-loghours" style="width:100%">＋ Log hours</button>
           <button id="ef-setcap" style="width:100%">📄 Contract &amp; forecast</button>`
@@ -5938,6 +6413,7 @@ function renderEffort(){
   const lh=side.querySelector("#ef-loghours");if(lh)lh.onclick=()=>openEffortModal(effortTeam,effortQuarter);
   const scb=side.querySelector("#ef-setcap");if(scb)scb.onclick=()=>openContractModal(effortTeam,effortQuarter);
   const na=side.querySelector("#ef-newappr");if(na)na.onclick=()=>openApprovalModal(effortTeam,"");
+  side.querySelector("#ef-score").onclick=()=>openScorecard(effortTeam,effortQuarter);
   if(effortTab==="capacity")renderEffortCapacity(det,effortTeam,effortQuarter);
   else renderEffortApprovals(det,effortTeam);
 }
@@ -5946,7 +6422,7 @@ function renderEffortCapacity(det,team,q){
   const barMax=Math.max(r.contracted||0,r.total,1),over=r.contracted!=null&&r.total>r.contracted;
   det.innerHTML=`<div class="dash">
     <div class="dash-head"><h1>${esc(teamOf(team).name)} — ${quarterLabel(q)}</h1>
-      <span style="flex:1"></span><button class="sm primary" id="efc-brief">👔 Boss brief</button></div>
+      <span style="flex:1"></span><button class="sm" id="efc-score">📋 Scorecard</button><button class="sm primary" id="efc-brief">👔 Boss brief</button></div>
     ${sig?`<div class="fcflag ${sig.dir}">${sig.dir==="up"?"📈":sig.dir==="down"?"📉":"✓"}
       <span>Next quarter (${quarterLabel(sig.nq)}): forecast <b>${sig.fc}h</b> vs contracted <b>${sig.cap}h</b> —
       ${sig.dir==="up"?`<b>negotiate ~${Math.abs(sig.pct)}% more hours.</b>`:sig.dir==="down"?`you could <b>reduce ~${Math.abs(sig.pct)}%.</b>`:"about right — hold steady."}</span></div>`:""}
@@ -5990,6 +6466,7 @@ function renderEffortCapacity(det,team,q){
             <button class="ghost sm nact" data-efdel="${e.id}">✕</button></div>`;}).join("")}</div>`;}).join("")||`<p class="faint" style="font-size:12px">Nothing logged this quarter.</p>`}
   </div>`;
   det.querySelector("#efc-brief").onclick=openBossBrief;
+  det.querySelector("#efc-score").onclick=()=>openScorecard(team,q);
   det.querySelector("#efc-add").onclick=()=>openEffortModal(team,q);
   det.querySelectorAll("[data-efappr]").forEach(b=>b.onclick=()=>{const e=state.efforts.find(x=>x.id===b.dataset.efappr);
     e.approved=!e.approved;e.approvedOn=e.approved?todayStr():"";markDirty();renderApp();});
@@ -7124,6 +7601,7 @@ function openMenu(){
       <button id="mn-enc">${state.settings.encryption?"🔓 Change / remove master password":"🔒 Set master password"}</button>
       <button id="mn-snap">🕘 Restore a snapshot</button>
       <button id="mn-brief">👔 Boss brief</button>
+      <button id="mn-score">📋 Quarterly scorecard</button>
       <button id="mn-dl">⬇ Download a copy</button>
       <button id="mn-forget">Forget remembered file</button>
     </div>
@@ -7168,6 +7646,7 @@ function openMenu(){
   root.querySelector("#mn-enc").onclick=()=>{close();setMasterPassword();};
   root.querySelector("#mn-snap").onclick=()=>{close();openSnapshots();};
   root.querySelector("#mn-brief").onclick=()=>{close();openBossBrief();};
+  root.querySelector("#mn-score").onclick=()=>{close();openScorecard();};
   root.querySelector("#mn-dl").onclick=()=>{close();exportDownload();};
   root.querySelector("#mn-forget").onclick=async()=>{await forgetHandle();close();toast("Forgot the remembered file");};
   root.querySelector("#mn-close").onclick=()=>{close();renderApp();};
