@@ -517,6 +517,85 @@ restored when you come back. A demand is covered only when you click **✓ Mark 
 Ctrl+Enter), and you can **↩ Reopen** one. Any notes typed but never marked covered are still
 committed to their ticket when you close the sync, so nothing is lost.
 
+## Data safety
+
+A review pass found several ways the app could destroy or misreport data. Each was reproduced
+in the browser before it was fixed, and re-tested after.
+
+**Opening the wrong file.** The "is this a Team Desk file?" check ran *after* `migrate()`, which
+fills in every missing array — so any JSON passed. A Demand Desk file (or a `package.json`) opened
+as an empty Team Desk, became the save target, and the next auto-save wrote Team Desk data over
+it. The check now runs on the raw file (`looksLikeTeamDesk`: `tickets` and `people` arrays), and
+an encrypted file whose envelope names another app is refused before decryption.
+
+**Cancelling the startup unlock.** Cancelling left the app usable with an empty *placeholder*
+state standing in for the encrypted data. Adding one ticket replaced the encrypted backup with a
+plaintext one-ticket backup, and with a remembered file, auto-save wrote that over the real data
+file 30 seconds later. The startup lock is now a veil over an inert app — the only ways out are
+the right password or deliberately opening a different file — and nothing can be persisted while
+it's up (`safeToPersist`, `saveGuardOk`, and every keyboard shortcut check for it).
+
+**The idle lock** now makes the app underneath `inert` rather than just covering it: a covered
+page still let Tab reach the controls behind the veil, and shortcuts still fired.
+
+**Writes.** There is now one write path (`writeFile`):
+- **Queued** — a manual save and an auto-save can't run two write streams against the file at once.
+- **Edits during a write stay unsaved.** `dirty` used to be cleared after every write, so an edit
+  landing mid-write was marked saved without ever reaching the disk (`editSeq`).
+- **The file is checked before it's written.** Its size and modified time are recorded after each
+  save; if they've changed since (another tab, OneDrive from another machine, a restored copy),
+  auto-save pauses, the save status turns red, and you choose: load the file's version (yours is
+  snapshotted first) or keep yours and overwrite. The same check runs when a remembered file is
+  reconnected at startup.
+- **An empty app never overwrites a full file.** If the local backup is missing or unreadable, a
+  reconnected file is *loaded* rather than becoming the target of the next near-empty save. An
+  unreadable backup is set aside instead of being overwritten.
+
+**Half-typed text.** A field only reports a change when it loses focus, so text typed and never
+tabbed out of was lost on close — and not even counted as unsaved, so the browser didn't warn.
+Closing the tab, the idle lock, and Ctrl+S now commit the focused field first (Ctrl+S puts you
+back where you were typing).
+
+**Two copies open.** A banner appears in both when Team Desk is open in two tabs or windows,
+since whichever saves last wins. It uses BroadcastChannel plus a localStorage heartbeat (file://
+pages don't reliably get BroadcastChannel) and clears within a minute of one closing.
+
+**Smaller ones.** *Download a copy* no longer marks the connected file as saved. Ctrl+S with a
+remembered file reconnects to it instead of opening Save As. Restoring a snapshot taken before
+encryption was switched on no longer switches it off, and the current data is snapshotted before
+any restore or conflict load. The master-password dialog has explicit Change / Remove / Cancel
+buttons (Cancel used to mean *remove encryption*). Esc closes dialogs, asking first if you've
+typed something. The tab title shows ● while there are unsaved changes.
+
+### Correctness fixes from the same pass
+
+- **Reopened tickets stayed "closed".** Setting a Done ticket back to open kept its `closedDate`,
+  so it appeared in the Boss Brief's *Closed this period*, counted in throughput, and had a cycle
+  time. Reopening now clears it, and every closed-ticket figure checks `isClosed()` (done *and*
+  dated), which also covers files saved before the fix.
+- **Slip counting.** Every ETA revision counted as a slip, including dates brought *forward* or
+  re-confirmed unchanged. A slip is now a date pushed later. Separately, a single ETA that had
+  already passed with the work still open counted as "first ETA held" — `brokenETAs()` now counts
+  it, and the reliability chart and *first ETA met* KPI use it. The ledger is ordered by when each
+  date was given, so a back-filled older ETA no longer becomes "latest".
+- **Deletes left dangling links** — a pattern kept counting a deleted sighting, a meeting kept a
+  removed person — until the next reload. One `purgeDeadLinks()` now runs on load and after every
+  delete, and also covers links `migrate` used to miss (assignees, observation → ticket).
+- **Deleting a meeting deleted its decisions.** Decisions now stay in the log with the link
+  cleared, which is what the decision log is for.
+- **Stale sync panes.** Opening a call from Today, search, a person or an epic could reuse the
+  roll-call pane left open on a *different* call, creating a roll-call draft there. Every way into
+  a call now goes through `openCall()`.
+- Skill rating: clicking a score wiped the skill name, date and note already typed.
+- Pattern *First/Last seen* came from a list sorted by close date, so an open recurrence read as
+  the first sighting.
+- Status mismatch: "Incomplete" and "Not done" read as "they say it's done".
+- An epic headline with text but no date was treated as fresh forever.
+- Dates: the throughput axis was month-first (09/21); roll-call labels ended in a dash; the live
+  sync banner, search results and the decision ledger showed ISO dates.
+- Labels cut *after* escaping could show a broken entity (`P&am…`) — `clip()` cuts first.
+- *hrs to approve* counted lines, not hours. Incident notes were missing from global search.
+
 ## Dates
 
 Everything displays **day-first: `DD-MM-YYYY`**.

@@ -159,6 +159,12 @@
   .savestate{font-size:11px;color:var(--faint);min-width:74px;text-align:right}
   .savestate.dirty{color:var(--amber)}
   .savestate.saved{color:var(--green)}
+  .savestate.conflict{color:var(--red);font-weight:700;cursor:pointer;text-decoration:underline dotted}
+  /* two copies open at once — pinned under the header, above everything but a lock */
+  .peerwarn{position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:90;max-width:calc(100vw - 32px);
+    background:var(--panel);border:1px solid var(--red);color:var(--txt);border-radius:8px;padding:8px 14px;
+    font-size:12.5px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .peerwarn b{color:var(--red)}
 
   main{display:flex;flex:1;min-height:0}
   aside{width:340px;flex:0 0 340px;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -564,7 +570,7 @@
   .ccard.active{border-color:var(--accent);background:var(--panel2)}
   .stackchip{font-size:10.5px;font-weight:700;color:var(--teal);border:1px solid var(--tint-teal-bd);background:var(--chip);border-radius:4px;padding:1px 7px}
 
-  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:9px 16px;font-size:13px;z-index:80;box-shadow:0 8px 30px rgba(0,0,0,.4);opacity:0;transition:.25s;pointer-events:none}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:9px 16px;font-size:13px;z-index:220;box-shadow:0 8px 30px rgba(0,0,0,.4);opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1;bottom:26px}
   .toast.err{border-color:var(--red);color:var(--err-ink)}
 
@@ -1345,20 +1351,92 @@ let hadContent=false;
 function contentCount(){return state.tickets.length+state.people.length+state.syncs.length+state.contacts.length+state.epics.length+state.patterns.length+state.decisions.length+state.agenda.length+state.meetings.length+state.efforts.length+state.approvals.length+state.risks.length+state.incidents.length+state.rollcalls.length+state.mentions.length;}
 function isValidState(s){return s&&typeof s==="object"&&Array.isArray(s.tickets)&&Array.isArray(s.people)&&Array.isArray(s.contacts)&&Array.isArray(s.syncs)&&Array.isArray(s.epics)&&Array.isArray(s.patterns)&&Array.isArray(s.decisions)&&Array.isArray(s.agenda)&&Array.isArray(s.meetings)&&Array.isArray(s.capacity)&&Array.isArray(s.efforts)&&Array.isArray(s.forecasts)&&Array.isArray(s.approvals)&&Array.isArray(s.risks)&&Array.isArray(s.incidents)&&Array.isArray(s.rollcalls)&&Array.isArray(s.mentions);}
 function noteContent(){if(isValidState(state)&&contentCount()>0)hadContent=true;}
-function safeToPersist(){return isValidState(state)&&!(hadContent&&contentCount()===0);}
-function markDirty(){noteContent();dirty=true;renderSaveState();backupLocal();scheduleAutoSave();}
+/* While the startup lock is up, `state` is an empty PLACEHOLDER and the real data
+   sits encrypted in pendingEncrypted. Nothing may be persisted from it: cancelling
+   the unlock and adding one ticket used to overwrite the encrypted backup with a
+   plaintext one-ticket state — and auto-save then wrote that over the data file. */
+function safeToPersist(){return !pendingEncrypted&&isValidState(state)&&!(hadContent&&contentCount()===0);}
+/* editSeq counts edits. A write only clears `dirty` if the count didn't move while
+   it was in flight — otherwise an edit made mid-write was marked saved without ever
+   reaching the disk, and the next auto-save had nothing to do. */
+let editSeq=0;
+function markDirty(){noteContent();editSeq++;dirty=true;renderSaveState();backupLocal();scheduleAutoSave();}
 function touch(o){o.updatedAt=Date.now();markDirty();}
 function renderSaveState(){const el=document.getElementById("saveState");if(!el)return;
   const lock=state.settings.encryption?" 🔒":"";
+  document.title=(dirty?"● ":"")+"Team Desk";
+  if(diskConflict){el.textContent="⚠ File changed on disk";el.className="savestate conflict";
+    el.title="Auto-save is paused so nothing gets overwritten — click to decide";return;}
+  el.title="";
   if(dirty){el.textContent=(fileHandle?"● Unsaved":"● Not saved")+lock;el.className="savestate dirty";}
   else{el.textContent=(fileHandle?(lastSaveAuto?"✓ Auto-saved":"✓ Saved"):"")+lock;el.className="savestate saved";}}
 function scheduleAutoSave(){clearTimeout(autoSaveTimer);if(!state.settings.autosave||!supportsFS)return;autoSaveTimer=setTimeout(autoSaveNow,30000);}
 async function autoSaveNow(){
-  if(!state.settings.autosave||!fileHandle||!dirty)return;
-  if(!isValidState(state)||(hadContent&&contentCount()===0))return; /* silent guard — never auto-write a suspicious state */
-  try{const w=await fileHandle.createWritable();await w.write(await serializeData());await w.close();
-    dirty=false;lastSaveAuto=true;renderSaveState();maybeSnapshot();}
+  if(!state.settings.autosave||!fileHandle||!dirty||diskConflict)return;
+  if(!safeToPersist())return; /* silent guard — never auto-write a suspicious state */
+  try{if(await writeFile()){lastSaveAuto=true;renderSaveState();maybeSnapshot();}}
   catch(e){/* permission revoked etc — stay dirty; manual Save surfaces the error */}
+  if(dirty)scheduleAutoSave();   /* an edit landed mid-write — go round again */
+}
+
+/* ---------- the one path that writes the data file ----------
+   Queued, so a manual save and an auto-save can never run two createWritable
+   streams against the same file at once. Before writing it checks the file is
+   still the one we last wrote: another tab, another machine through OneDrive, or a
+   restored copy would otherwise be silently overwritten by whatever is in memory. */
+let savePromise=Promise.resolve(), fileSig=null, diskConflict=false;
+async function currentSig(){const f=await fileHandle.getFile();return {name:fileHandle.name,lm:f.lastModified,size:f.size};}
+async function recordFileSig(){
+  try{fileSig=await currentSig();if(useIdb)idbSet("filesig",fileSig).catch(()=>{});}catch(e){}
+}
+async function diskChanged(){
+  if(!fileHandle||!fileSig)return false;
+  try{const s=await currentSig();return s.lm!==fileSig.lm||s.size!==fileSig.size;}catch(e){return false;}
+}
+function writeFile(opts){
+  const force=!!(opts&&opts.force);
+  const run=async()=>{
+    if(!fileHandle)return false;
+    if(!force&&await diskChanged()){flagConflict();return false;}
+    const seq=editSeq;
+    const w=await fileHandle.createWritable();await w.write(await serializeData());await w.close();
+    await recordFileSig();
+    if(editSeq===seq)dirty=false;
+    diskConflict=false;
+    return true;
+  };
+  const p=savePromise.then(run,run);
+  savePromise=p.catch(()=>{});
+  return p;
+}
+function flagConflict(){
+  if(diskConflict)return;
+  diskConflict=true;clearTimeout(autoSaveTimer);renderSaveState();openConflictModal();
+}
+function openConflictModal(){
+  const root=document.getElementById("modalRoot");
+  root.innerHTML=`<div class="modal-bg"><div class="modal" style="width:500px"><h2>⚠ Your data file changed on disk</h2>
+    <p style="font-size:13px;line-height:1.6;margin-top:-4px">${esc(fileHandle?fileHandle.name:"The file")} is not the version Team Desk last saved —
+      most likely Team Desk is open in another tab, the file was edited on another machine, or an older copy was restored over it.</p>
+    <p class="faint" style="font-size:12px;line-height:1.6">Auto-save is paused so neither version is lost until you choose.</p>
+    <div class="modal-foot" style="flex-wrap:wrap;gap:8px">
+      <button id="cf-later" class="ghost">Decide later</button>
+      <button id="cf-mine">Keep mine — overwrite the file</button>
+      <button id="cf-load" class="primary">Load the file's version</button></div>
+    <p class="faint" style="font-size:11px;margin:10px 0 0">Loading keeps what's on screen now as a snapshot first (⋯ → Restore a snapshot), so it's recoverable either way.</p>
+    </div></div>`;
+  const close=()=>root.innerHTML="";
+  root.querySelector("#cf-later").onclick=close;
+  root.querySelector("#cf-mine").onclick=async()=>{close();
+    try{if(await writeFile({force:true})){lastSaveAuto=false;renderSaveState();toast("Saved your version over the file");}}
+    catch(e){toast("Save failed: "+e.message,true);}};
+  root.querySelector("#cf-load").onclick=async()=>{close();
+    try{await snapshotNow();
+      const f=await fileHandle.getFile();
+      if(!await loadFromText(await f.text(),fileHandle.name))return;
+      await recordFileSig();diskConflict=false;dirty=false;
+      resetSelection();backupLocal();renderApp();toast("Loaded the file's version — yours is in the snapshots");}
+    catch(e){toast("Couldn't load it: "+e.message,true);}};
 }
 
 /* ---------- IndexedDB layer (optional; falls back to localStorage) ---------- */
@@ -1391,7 +1469,16 @@ async function loadBackup(){
   if(useIdb){try{const v=await idbGet("backup");if(v!=null)raw=v;}catch(e){}}
   if(raw==null){try{raw=localStorage.getItem(LS_KEY);}catch(e){}}
   if(raw==null)return false;
-  try{const p=JSON.parse(raw);if(p&&p._encrypted){pendingEncrypted=p;return "encrypted";}state=migrate(p);return true;}catch(e){return false;}
+  try{const p=JSON.parse(raw);if(p&&p._encrypted){pendingEncrypted=p;return "encrypted";}
+    if(!looksLikeTeamDesk(p))throw new Error("not Team Desk data");
+    state=migrate(p);return true;}
+  catch(e){
+    /* Don't let the next edit overwrite it — an unreadable backup may still be
+       recoverable by hand, and it is the only copy if there was never a file. */
+    if(useIdb)idbSet("backup-unreadable",raw).catch(()=>{});
+    try{localStorage.setItem(LS_KEY+".unreadable",raw);}catch(e2){}
+    setTimeout(()=>toast("The local backup couldn't be read — it was set aside. Open your data file or restore a snapshot.",true),600);
+    return false;}
 }
 async function getSnapshots(){
   if(useIdb){try{const v=await idbGet("snapshots");if(v!=null)return JSON.parse(v);}catch(e){}}
@@ -1405,6 +1492,18 @@ async function maybeSnapshot(){try{
   while(arr.length>14)arr.shift();
   setSnapshots(arr);
 }catch(e){}}
+/* An extra snapshot taken right before anything replaces what's on screen (loading
+   the disk's version over a conflict, restoring an older snapshot). Kept in the same
+   list, marked, so the daily ones aren't pushed out by a busy day of these. */
+async function snapshotNow(){try{
+  if(!safeToPersist()||contentCount()===0)return;
+  const arr=await getSnapshots();
+  arr.push({date:todayStr(),ts:Date.now(),enc:isEncrypted(),data:await serializeData(),kind:"before-replace"});
+  const extra=arr.filter(s=>s.kind==="before-replace");
+  if(extra.length>6)arr.splice(arr.indexOf(extra[0]),1);
+  while(arr.length>20)arr.shift();
+  setSnapshots(arr);
+}catch(e){}}
 
 /* ---------- persistent file handle ---------- */
 function rememberHandle(){if(useIdb&&fileHandle){savedHandle=fileHandle;idbSet("handle",fileHandle).catch(()=>{});}updateReconnectUI();}
@@ -1413,15 +1512,34 @@ async function restoreHandle(){
   try{savedHandle=await idbGet("handle");}catch(e){savedHandle=null;}
   if(!savedHandle)return;
   let perm="prompt";try{if(savedHandle.queryPermission)perm=await savedHandle.queryPermission({mode:"readwrite"});}catch(e){}
-  if(perm==="granted"){fileHandle=savedHandle;setFileLabel(savedHandle.name);}
+  if(perm==="granted")await adoptHandle(savedHandle);
   updateReconnectUI();renderSaveState();
 }
-async function reconnectFile(){
+/* Make a remembered handle the connected file. Two checks before anything writes to
+   it: did the file change since this browser last saved it (then it's a conflict,
+   not a save target), and is there actually data on screen — a missing or unreadable
+   local backup used to start the app empty, and the first edit then auto-saved that
+   near-empty state over the real file. */
+async function adoptHandle(h){
+  fileHandle=h;setFileLabel(h.name);
+  let s=null;try{s=useIdb?await idbGet("filesig"):null;}catch(e){}
+  fileSig=(s&&s.name===h.name)?s:null;
+  if(contentCount()===0&&!pendingEncrypted){
+    try{const f=await h.getFile();
+      if(await loadFromText(await f.text(),h.name)){await recordFileSig();dirty=false;backupLocal();renderApp();
+        toast("Loaded "+h.name);return;}}
+    catch(e){}
+  }
+  if(!fileSig)await recordFileSig();
+  else if(await diskChanged())flagConflict();
+}
+async function reconnectFile(quiet){
   if(!savedHandle)return;
   try{
     let perm="prompt";if(savedHandle.queryPermission)perm=await savedHandle.queryPermission({mode:"readwrite"});
     if(perm!=="granted"&&savedHandle.requestPermission)perm=await savedHandle.requestPermission({mode:"readwrite"});
-    if(perm==="granted"){fileHandle=savedHandle;setFileLabel(savedHandle.name);updateReconnectUI();renderSaveState();if(dirty)scheduleAutoSave();toast("Reconnected → "+savedHandle.name);}
+    if(perm==="granted"){await adoptHandle(savedHandle);updateReconnectUI();renderSaveState();
+      if(dirty&&!diskConflict)scheduleAutoSave();if(!quiet)toast("Reconnected → "+savedHandle.name);}
     else toast("Permission not granted — use 📂 Open instead",true);
   }catch(e){toast("Couldn't reconnect: "+e.message,true);}
 }
@@ -1645,7 +1763,16 @@ function migrate(d){
   d.incidents=(d.incidents||[]).map(normIncident);
   d.rollcalls=(d.rollcalls||[]).map(normRollcall);
   d.mentions=(d.mentions||[]).map(normMention);
-  /* drop links that point at something deleted, in both directions */
+  purgeDeadLinks(d);
+  return d;
+}
+/* Every cross-record link, cleaned in one place — run by migrate on load AND after
+   any delete. Deletes used to clean only their most obvious links, so a pattern kept
+   counting a deleted sighting, a meeting kept a removed person, until the next reload.
+   Records are never dropped for a dead link (a decision outlives what it pointed at);
+   only the link is cleared. The one exception is an untouched roll-call draft whose
+   sync is gone or closed: it can never be edited again and was never a data point. */
+function purgeDeadLinks(d){
   const eids=new Set(d.epics.map(e=>e.id));
   d.tickets.forEach(t=>{if(t.epicId&&!eids.has(t.epicId))t.epicId="";});
   const tids=new Set(d.tickets.map(t=>t.id)),cids=new Set(d.contacts.map(c=>c.id));
@@ -1669,57 +1796,97 @@ function migrate(d){
   /* a roll-call and an incident note both outlive the call that produced them —
      keep the record, clear the dead link */
   const sids=new Set(d.syncs.map(x=>x.id)),iids=new Set(d.incidents.map(x=>x.id));
+  const openSids=new Set(d.syncs.filter(x=>!x.closed).map(x=>x.id));
+  d.rollcalls=d.rollcalls.filter(r=>r.recorded||(r.syncId&&openSids.has(r.syncId)));
   d.rollcalls.forEach(r=>{if(r.syncId&&!sids.has(r.syncId))r.syncId="";});
   d.mentions.forEach(m=>{if(m.syncId&&!sids.has(m.syncId))m.syncId="";
     if(m.ticketId&&!tids.has(m.ticketId))m.ticketId="";
     if(m.incidentId&&!iids.has(m.incidentId))m.incidentId="";});
-  return d;
+  /* a removed person comes off every ticket they were on; an observation keeps its
+     text but loses a link to a ticket that no longer exists */
+  d.tickets.forEach(t=>{t.assignees=t.assignees.filter(x=>pids.has(x));});
+  d.people.forEach(p=>p.observations.forEach(o=>{if(o.ticketId&&!tids.has(o.ticketId))o.ticketId="";}));
+  d.syncs.forEach(s=>{s.covered=s.covered.filter(c=>tids.has(c.ticketId));});
+  d.decisions.forEach(x=>{if(x.syncId&&!sids.has(x.syncId))x.syncId="";});
 }
 
 /* ---------- file open / save ---------- */
+/* Accept only a Team Desk file, judged on the RAW parse. The old check ran after
+   migrate() — which fills in every missing array — so ANY JSON passed: a Demand Desk
+   file, even a package.json, opened as an empty Team Desk and became the save
+   target, and the next auto-save wrote Team Desk data over it. Every Team Desk file
+   since Phase 1 carries both of these arrays. */
+function looksLikeTeamDesk(p){return !!p&&typeof p==="object"&&!Array.isArray(p)&&Array.isArray(p.tickets)&&Array.isArray(p.people);}
 async function loadFromText(txt,name){
-  let parsed;try{parsed=JSON.parse(txt);}catch(e){toast("Not valid JSON",true);return false;}
+  let parsed;try{parsed=JSON.parse(txt);}catch(e){toast("Not valid JSON — nothing was changed",true);return false;}
   if(parsed&&parsed._encrypted){
+    /* the envelope names its app; decrypting another tool's file with a shared
+       password must not turn it into an empty Team Desk */
+    if(parsed.app&&parsed.app!=="team-desk"){toast("That's an encrypted "+parsed.app+" file, not Team Desk data — nothing was changed",true);return false;}
     while(true){const pw=await promptPassword("🔒 "+(name||"File")+" is encrypted — enter its password");
       if(pw===null)return false;
-      try{state=migrate(await decryptEnvelope(parsed,pw));masterPassword=pw;break;}
-      catch(e){toast("Wrong password — try again",true);}}
+      let raw;try{raw=await decryptEnvelope(parsed,pw);}catch(e){toast("Wrong password — try again",true);continue;}
+      if(!looksLikeTeamDesk(raw)){toast("That file isn't Team Desk data — nothing was changed",true);return false;}
+      state=migrate(raw);masterPassword=pw;break;}
   }else{
-    if(!isValidState(migrate(JSON.parse(JSON.stringify(parsed))))){toast("That file isn't a Team Desk data file",true);return false;}
+    if(!looksLikeTeamDesk(parsed)){toast("That isn't a Team Desk data file — nothing was changed",true);return false;}
     state=migrate(parsed);masterPassword=null;
   }
+  /* whatever was locked is superseded by the file he chose to open */
+  pendingEncrypted=null;hadContent=false;noteContent();
   return true;
+}
+function resetSelection(){
+  activeId=activeSyncId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=activeMentionId=null;
+  syncSelectReset();
 }
 async function openFile(){if(!supportsFS)return importViaInput();
   try{const[h]=await window.showOpenFilePicker({types:[{description:"Team Desk data",accept:{"application/json":[".json"]}}]});
+    /* opening replaces what is on screen — keep unsaved edits recoverable */
+    if(dirty)await snapshotNow();
     const f=await h.getFile();if(!await loadFromText(await f.text(),h.name))return;
-    fileHandle=h;dirty=false;setFileLabel(h.name);rememberHandle();activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;activeMentionId=null;syncSelectReset();backupLocal();renderApp();toast("Opened "+h.name);
+    fileHandle=h;await recordFileSig();diskConflict=false;dirty=false;setFileLabel(h.name);rememberHandle();resetSelection();
+    closeStartupLock();backupLocal();renderApp();toast("Opened "+h.name);
   }catch(e){if(e.name!=="AbortError")toast("Couldn't open: "+e.message,true);}}
 function saveGuardOk(action){
+  if(pendingEncrypted){toast("Unlock Team Desk first — nothing was saved.",true);return false;}
   if(!isValidState(state)){toast("Save blocked — data looks corrupted; your file was NOT overwritten.",true);return false;}
   if(hadContent&&contentCount()===0){return confirm("⚠ You're about to "+action+" an EMPTY dataset — every ticket, person, epic and sync record is currently empty.\n\nThis is unusual and may be a mistake. Continue anyway?");}
   return true;
 }
-async function saveFile(){if(!supportsFS)return exportDownload();
+async function saveFile(){
+  const was=flushEdits();
+  try{await saveFileInner();}finally{refocus(was);}
+}
+async function saveFileInner(){
+  if(!supportsFS)return exportDownload();
   if(!saveGuardOk("save"))return;
-  try{if(!fileHandle){fileHandle=await window.showSaveFilePicker({suggestedName:"team-desk-data.json",types:[{description:"Team Desk data",accept:{"application/json":[".json"]}}]});}
-    const w=await fileHandle.createWritable();await w.write(await serializeData());await w.close();
-    dirty=false;lastSaveAuto=false;setFileLabel(fileHandle.name);rememberHandle();renderSaveState();maybeSnapshot();toast("Saved → "+fileHandle.name+(isEncrypted()?" 🔒":""));
+  try{
+    /* Ctrl+S with a remembered file reconnects to it — it used to open Save As,
+       which invites saving a second copy somewhere else by accident */
+    if(!fileHandle&&savedHandle)await reconnectFile(true);
+    if(diskConflict){openConflictModal();return;}
+    if(!fileHandle){fileHandle=await window.showSaveFilePicker({suggestedName:"team-desk-data.json",types:[{description:"Team Desk data",accept:{"application/json":[".json"]}}]});fileSig=null;}
+    if(!await writeFile())return;
+    lastSaveAuto=false;setFileLabel(fileHandle.name);rememberHandle();renderSaveState();maybeSnapshot();toast("Saved → "+fileHandle.name+(isEncrypted()?" 🔒":""));
   }catch(e){if(e.name!=="AbortError")toast("Save failed: "+e.message,true);}}
 function setFileLabel(n){const el=document.getElementById("fileLabel");if(el)el.textContent=n?("— "+n):"";}
 async function exportDownload(){if(!saveGuardOk("download"))return;
   const b=new Blob([await serializeData()],{type:"application/json"});const a=document.createElement("a");
   a.href=URL.createObjectURL(b);a.download="team-desk-data.json";a.click();URL.revokeObjectURL(a.href);
-  dirty=false;renderSaveState();maybeSnapshot();toast("Downloaded data file"+(isEncrypted()?" 🔒":""));}
+  /* a downloaded COPY is not a save when there's a connected file — clearing dirty
+     here used to leave the real file stale and silence the close warning */
+  if(!supportsFS){dirty=false;renderSaveState();}
+  maybeSnapshot();toast("Downloaded a copy"+(isEncrypted()?" 🔒":""));}
 function importViaInput(){const i=document.createElement("input");i.type="file";i.accept=".json,application/json";
   i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();
-    r.onload=async()=>{try{if(!await loadFromText(r.result,f.name))return;dirty=false;activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;activeMentionId=null;syncSelectReset();backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
+    r.onload=async()=>{try{if(dirty)await snapshotNow();if(!await loadFromText(r.result,f.name))return;dirty=false;resetSelection();closeStartupLock();backupLocal();renderApp();toast("Imported "+f.name);}catch(e){toast("Bad file: "+e.message,true);}};
     r.readAsText(f);};i.click();}
 
 function promptPassword(title,confirmIt){
   return new Promise(resolve=>{
     const root=document.getElementById("modalRoot");
-    root.innerHTML=`<div class="modal-bg"><div class="modal" style="width:400px"><h2>${esc(title)}</h2>
+    root.innerHTML=`<div class="modal-bg" style="z-index:210"><div class="modal" style="width:400px"><h2>${esc(title)}</h2>
       <div class="field"><label>Password</label><input type="password" id="pw1" autocomplete="off"></div>
       ${confirmIt?`<div class="field"><label>Confirm password</label><input type="password" id="pw2" autocomplete="off"></div>`:""}
       <div id="pw-err" style="color:var(--red);font-size:12px;min-height:14px"></div>
@@ -1740,6 +1907,9 @@ function promptPassword(title,confirmIt){
 
 /* ---------- small helpers ---------- */
 function esc(s){return(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+/* cut to length BEFORE escaping. Slicing escaped text could split an entity, so a
+   "P&C IT" label cut at the wrong place rendered as a visible "&am". */
+function clip(s,n){s=String(s==null?"":s);return esc(s.length>n?s.slice(0,n-1)+"…":s);}
 const URL_RE=/(https?:\/\/[^\s<>"')\]]+)/g;
 function linkify(raw){return String(raw||"").split(URL_RE).map((p,i)=>i%2?`<a href="${esc(p)}" target="_blank" rel="noopener">${esc(p)}</a>`:esc(p)).join("");}
 function linkChips(text){const m=String(text||"").match(URL_RE);if(!m)return"";const u=[...new Set(m)];
@@ -1768,14 +1938,32 @@ function ticketLabel(t){return (t.ticketId?t.ticketId+" · ":"")+(t.title||"(unt
 function isOpen(t){return OPEN_STATUSES.includes(t.myStatus);}
 function openHurdles(t){return t.hurdles.filter(h=>!h.resolvedOn);}
 function lastUpdateTs(t){return t.updates.length?Math.max(...t.updates.map(u=>u.ts)):(t.createdAt||0);}
-function latestPromise(t){return t.promises.length?t.promises[t.promises.length-1]:null;}
-function slipCount(t){return Math.max(0,t.promises.length-1);}
+/* The ledger in the order the dates were GIVEN. Insertion order breaks the moment an
+   older ETA is back-filled ("they also promised the 10th, back in June"), and then
+   "latest" and the slip count both read the wrong entry. Sort is stable, so
+   same-day entries keep the order they were logged in. */
+function promisesInOrder(t){return t.promises.slice().sort((a,b)=>a.givenOn<b.givenOn?-1:a.givenOn>b.givenOn?1:0);}
+function latestPromise(t){const ps=promisesInOrder(t);return ps.length?ps[ps.length-1]:null;}
+/* A slip is an ETA pushed LATER than the one before it. Pulling a date in, or
+   re-confirming the same date, is not a slip — counting every revision overstated
+   the ledger, and the performance log hands that number to his boss. */
+function slipCount(t){const ps=promisesInOrder(t);let n=0;
+  for(let i=1;i<ps.length;i++){const a=ps[i-1].eta,b=ps[i].eta;if(a&&b&&b>a)n++;}
+  return n;}
 function promiseMissed(t){const p=latestPromise(t);if(!p||!p.eta||t.myStatus==="done")return false;return daysUntil(p.eta)<0;}
+/* committed dates that have failed: every slip, plus the current one if it has
+   already passed with the work still open — a miss nobody has re-logged yet, which
+   otherwise counted as "first ETA held" */
+function brokenETAs(t){return slipCount(t)+(promiseMissed(t)?1:0);}
+/* Closed means done AND dated. A reopened ticket used to keep its closedDate, so it
+   stayed in the brief's "Closed this period", in throughput, and had a cycle time. */
+function isClosed(t){return t.myStatus==="done"&&!!t.closedDate;}
 /* ONE path for status changes, so statusChangedOn (which feeds the no-movement
    signal) can never be skipped by one of the several places status is set */
 function setStatus(t,v){
   if(v===t.myStatus)return;
   if(v==="done"&&!t.closedDate)t.closedDate=todayStr();
+  if(t.myStatus==="done"&&v!=="done")t.closedDate="";   /* reopened — no longer closed */
   if(v!=="new"&&!t.startedDate)t.startedDate=todayStr();
   t.myStatus=v;t.statusChangedOn=todayStr();
 }
@@ -1876,11 +2064,13 @@ function derivedEvidence(inc){
   const out=[];
   inc.ticketIds.map(ticketByRef).filter(Boolean).forEach(t=>{
     const id=t.ticketId||"demand";
-    if(t.promises.length)out.push({kind:"derived",on:t.promises[t.promises.length-1].givenOn,
+    const ps=promisesInOrder(t);
+    if(ps.length)out.push({kind:"derived",on:ps[ps.length-1].givenOn,
       source:id+" · commitment ledger",
-      text:t.promises.length+" ETA"+(t.promises.length===1?"":"s")+" given — "+
-        t.promises.map(p=>fmtDate(p.eta)+" (told "+fmtDate(p.givenOn)+")").join(" → ")+
-        (slipCount(t)?"; "+slipCount(t)+" missed":"")});
+      text:ps.length+" ETA"+(ps.length===1?"":"s")+" given — "+
+        ps.map(p=>fmtDate(p.eta)+" (told "+fmtDate(p.givenOn)+")").join(" → ")+
+        (slipCount(t)?"; pushed back "+slipCount(t)+" time"+(slipCount(t)===1?"":"s"):"")+
+        (promiseMissed(t)?"; the current date has passed with the work still open":"")});
     const es=state.efforts.filter(e=>e.ticketId===t.id);
     if(es.length)out.push({kind:"derived",on:"",source:id+" · effort log",
       text:sumHours(es)+"h logged across "+[...new Set(es.map(e=>monthLabel(e.month)))].join(", ")+
@@ -1890,8 +2080,8 @@ function derivedEvidence(inc){
       const days=Math.max(0,Math.round((new Date(end+"T00:00:00")-new Date(h.raisedOn+"T00:00:00"))/86400000));
       out.push({kind:"derived",on:h.raisedOn,source:id+" · hurdle",
         text:HURDLE_KINDS[h.kind].label+" hurdle open "+days+" days"+(h.owner?", owned by "+h.owner:"")+(h.text?" — "+h.text:"")});});
-    if(t.raisedDate)out.push({kind:"derived",on:t.closedDate||t.raisedDate,source:id+" · dates",
-      text:"Raised "+fmtDate(t.raisedDate)+(t.closedDate?", closed "+fmtDate(t.closedDate)+
+    if(t.raisedDate)out.push({kind:"derived",on:isClosed(t)?t.closedDate:t.raisedDate,source:id+" · dates",
+      text:"Raised "+fmtDate(t.raisedDate)+(isClosed(t)?", closed "+fmtDate(t.closedDate)+
         (cycleDays(t)!=null?" — "+cycleDays(t)+" days end to end":""):", still open")});
   });
   return out;
@@ -1917,22 +2107,24 @@ function detectPerf(){
           const key="perf:effort:"+t.id+":"+h;
           if(!dis.has(key))out.push({key,kind:"effort-inflation",ticketId:t.id,
             title:"Implausible effort on "+(t.ticketId||"a demand"),
-            detail:h+"h claimed. "+peers.length+" comparable "+t.team+" demands sharing its tags averaged "+med+"h.",
+            detail:h+"h claimed. "+peers.length+" comparable "+teamOf(t.team).name+" demands sharing its tags have a median of "+med+"h.",
             why:h+"h vs a peer median of "+med+"h"});
         }
       }
     }
     /* 2 — repeated broken commitments on one demand */
-    if(slipCount(t)>=2){
+    if(brokenETAs(t)>=2){
       const key="perf:eta:"+t.id+":"+t.promises.length;
       if(!dis.has(key))out.push({key,kind:"missed-eta",ticketId:t.id,
         title:"Repeated missed ETAs on "+(t.ticketId||"a demand"),
-        detail:t.promises.length+" ETAs given: "+t.promises.map(p=>fmtDate(p.eta)).join(" → ")+". "+slipCount(t)+" were missed.",
-        why:slipCount(t)+" broken commitments"});
+        detail:[t.promises.length+" ETAs given: "+promisesInOrder(t).map(p=>fmtDate(p.eta)).join(" → ")+".",
+          slipCount(t)?"Pushed back "+slipCount(t)+" time"+(slipCount(t)===1?"":"s")+".":"",
+          promiseMissed(t)?"The current date has already passed.":""].filter(Boolean).join(" "),
+        why:brokenETAs(t)+" broken commitments"});
     }
     /* 3 — sat for weeks, then closed within days of the final commitment: the
        capacity was there all along, it just needed escalating */
-    if(t.closedDate&&t.raisedDate&&slipCount(t)>=1){
+    if(isClosed(t)&&t.raisedDate&&slipCount(t)>=1){
       const age=cycleDays(t);
       const lp=latestPromise(t);
       if(age!=null&&age>=21&&lp&&lp.givenOn){
@@ -2136,7 +2328,7 @@ function activeEpic(){return state.epics.find(e=>e.id===activeEpicId);}
 function epicById(id){return state.epics.find(e=>e.id===id);}
 function ticketsForEpic(id){return state.tickets.filter(t=>t.epicId===id);}
 function headlineStale(e){
-  if(!e.headline.text)return true;
+  if(!e.headline.text||!e.headline.on)return true;
   return -daysUntil(e.headline.on)>HEADLINE_STALE_DAYS;
 }
 /* what the tickets imply, so a green headline over three blocked tickets gets challenged */
@@ -2188,8 +2380,8 @@ function suggestObservations(){
         const key="slip:"+t.id+":"+pid+":"+t.promises.length;if(dis.has(key))return;
         const p=personById(pid);if(!p)return;
         out.push({key,personId:pid,kind:"concern",ticketId:t.id,
-          text:`${t.ticketId||"Ticket"} ETA moved ${slipCount(t)} times: `+t.promises.map(x=>x.eta).join(" → "),
-          why:`${slipCount(t)} ETA changes`});
+          text:`${t.ticketId||"Ticket"} ETA pushed back ${slipCount(t)} times: `+promisesInOrder(t).map(x=>fmtDate(x.eta)).join(" → "),
+          why:`pushed back ${slipCount(t)} times`});
       });
     }
     /* a closed ticket that beat its estimate — worth noticing the good too */
@@ -2332,7 +2524,7 @@ function renderToday(){
   /* points parked for upcoming syncs — prep, so it rides near the top */
   const agAll=state.agenda.filter(a=>!a.done);
   cards.push(dashCard("📋 To raise in upcoming syncs",agAll.map(a=>({
-    main:a.text,sub:teamOf(a.team).name,go:()=>{view="sync";activeSyncId=null;syncFocusId=null;renderApp();}})),""));
+    main:a.text,sub:teamOf(a.team).name,go:()=>openCall(null,null)})),""));
   /* vendor: approvals awaiting your email sign-off */
   cards.push(dashCard("✅ Approvals awaiting your sign-off",pendingApprovals().map(a=>{const t=a.ticketId?ticketByRef(a.ticketId):null;
     return {main:(APPROVAL_KINDS[a.kind].icon+" ")+(a.title||(t?ticketLabel(t):"(untitled)")),sub:teamOf(a.team).name+" · "+fmtDate(a.requestedOn),
@@ -2417,8 +2609,7 @@ function renderToday(){
   /* action items owed */
   cards.push(dashCard("⚑ Open action points",openActionsAll().map(x=>({
     main:x.action.text||"(untitled)",sub:(x.action.owner||"—")+(x.action.due?" · "+fmtDate(x.action.due):""),
-    go:()=>{if(x.kind==="meeting"){activeMeetingId=x.owner.id;activeSyncId=null;}else{activeSyncId=x.owner.id;activeMeetingId=null;}
-      syncFocusId=null;view="sync";renderApp();}})),""));
+    go:()=>openCall(x.kind,x.owner.id)})),""));
   /* due soon */
   const due=open.filter(t=>t.dueDate&&daysUntil(t.dueDate)<=7).sort((a,b)=>a.dueDate<b.dueDate?-1:1);
   cards.push(dashCard("📅 Due within a week",due.map(t=>({
@@ -2470,7 +2661,7 @@ function renderToday(){
       <span>🔓 <b>Not encrypted.</b> This file holds named colleagues, skill ratings and commitment history — worth protecting on a work laptop.</span>
       <button class="primary sm" id="bnEnc">Set master password</button></div>`}
     ${live.length?`<div class="banner blue">
-      <span>🎙 <b>Sync in progress</b> — ${esc(live[0].title||teamOf(live[0].team).name)} (${esc(live[0].date)})</span>
+      <span>🎙 <b>Sync in progress</b> — ${esc(live[0].title||teamOf(live[0].team).name)} (${fmtDate(live[0].date)})</span>
       <button class="primary sm" id="bnResume">Resume</button></div>`:""}
     ${ncBits.map(b=>`<div class="nextcall">
         <div class="nc-main"><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px">Next ${esc(b.team.name)} sync</div>
@@ -2482,7 +2673,7 @@ function renderToday(){
   </div>`;
   shown.forEach(c=>c.wire());
   const be=det.querySelector("#bnEnc");if(be)be.onclick=setMasterPassword;
-  const br=det.querySelector("#bnResume");if(br)br.onclick=()=>{activeSyncId=live[0].id;view="sync";renderApp();};
+  const br=det.querySelector("#bnResume");if(br)br.onclick=()=>openCall("sync",live[0].id);
   det.querySelectorAll("[data-prep]").forEach(b=>b.onclick=()=>startSync(b.dataset.prep));
 }
 let _dashSeq=0;
@@ -2736,9 +2927,7 @@ function renderTicketDetail(){
   det.querySelector("#tkDel").onclick=()=>{
     if(!confirm("Delete "+(t.ticketId||"this ticket")+" and everything on it?"))return;
     state.tickets=state.tickets.filter(x=>x.id!==t.id);
-    state.tickets.forEach(x=>{x.blockedBy=x.blockedBy.filter(b=>b!==t.id);});
-    state.syncs.forEach(s=>{s.covered=s.covered.filter(c=>c.ticketId!==t.id);});
-    state.agenda.forEach(a=>{if(a.ticketId===t.id)a.ticketId="";});
+    purgeDeadLinks(state);
     activeId=null;markDirty();renderApp();toast("Deleted");};
   det.querySelector("#tkDup").onclick=()=>duplicateTicket(t);
   const body=det.querySelector("#tkBody");
@@ -2837,8 +3026,8 @@ function tabWork(body,t){
         <span style="margin-left:auto"></span>
         <button class="sm" id="w-addp">＋ Log an ETA</button></div>
       ${t.promises.length?`
-        ${t.promises.length>1?`<div class="slipline" style="margin-bottom:8px">${t.promises.map((p,i)=>`${i?'<span class="arw">→</span>':""}<span>${p.eta?fmtDate(p.eta):"?"}</span>`).join("")}</div>`:""}
-        ${t.promises.map((p,i)=>`<div class="promise ${i===t.promises.length-1?"latest":""} ${p.eta&&daysUntil(p.eta)<0&&t.myStatus!=="done"?"missed":""}" data-pid="${p.id}">
+        ${t.promises.length>1?`<div class="slipline" style="margin-bottom:8px">${promisesInOrder(t).map((p,i)=>`${i?'<span class="arw">→</span>':""}<span>${p.eta?fmtDate(p.eta):"?"}</span>`).join("")}</div>`:""}
+        ${promisesInOrder(t).map((p,i)=>`<div class="promise ${i===t.promises.length-1?"latest":""} ${p.eta&&daysUntil(p.eta)<0&&t.myStatus!=="done"?"missed":""}" data-pid="${p.id}">
           <span class="pe">${p.eta?fmtDate(p.eta):"—"}</span>
           <span class="pg">told ${fmtDate(p.givenOn)}</span>
           <span class="pn" data-pnote="${p.id}" style="cursor:text">${esc(p.note||"—")}</span>
@@ -2989,7 +3178,9 @@ function tabWork(body,t){
 function statusDisagrees(t){
   const th=t.theirStatus.toLowerCase();
   if(!th)return false;
-  const theyDone=/(done|closed|resolved|complete)/.test(th);
+  /* whole words only, and not negated — "Incomplete" contains "complete" and
+     "Not done" contains "done", and both used to read as "they say it's done" */
+  const theyDone=/\b(done|closed|resolved|completed?|delivered)\b/.test(th)&&!/\bnot\b/.test(th);
   const theyProg=/(progress|develop|working|wip)/.test(th);
   if(theyDone&&t.myStatus!=="done")return true;
   if(theyProg&&(t.myStatus==="blocked"||t.myStatus==="new"))return true;
@@ -3308,6 +3499,12 @@ function similarMentions(q,excludeId,limit){
    two states to five, and a handler that forgets to clear one of the others leaves
    two panes claiming the screen — so nothing sets these directly any more. */
 function syncSelectReset(){syncFocusId=null;syncEpicId=null;syncPane="";syncMentionId=null;}
+/* Every way INTO a call goes through here. A pane left open on one call (the
+   roll-call, an incident note) used to render against the next call opened — and the
+   roll-call pane creates a draft on whatever sync it is pointed at. */
+function openCall(kind,id){syncSelectReset();
+  activeSyncId=kind==="sync"?id:null;activeMeetingId=kind==="meeting"?id:null;
+  view="sync";renderApp();}
 function syncSelect(kind,id){
   syncSelectReset();
   if(kind==="ticket")syncFocusId=id;
@@ -3373,7 +3570,7 @@ function openAgendaModal(prefTeam,prefTicketId){
     <p class="faint" style="font-size:12px;margin-top:-8px">Park something to bring up in the next sync for a team — it shows at the top of that team's queue when you start the call. Add it any time, e.g. the morning before an afternoon sync.</p>
     <div class="field"><label>What to raise</label><textarea id="ag-t" style="min-height:64px" placeholder="e.g. Boss asked: does anyone in Portal recall the old X migration project?">${esc(prefTicketId?"":"")}</textarea></div>
     <div class="row"><div class="field"><label>Which team's sync</label><select id="ag-team">${state.settings.teams.map(tm=>`<option value="${esc(tm.id)}" ${tm.id===(prefTeam||"portal")?"selected":""}>${esc(tm.name)}</option>`).join("")}</select></div>
-      <div class="field"><label>About a ticket? (optional)</label><select id="ag-tk"><option value="">— none —</option>${tks.map(t=>`<option value="${t.id}" ${prefTicketId===t.id?"selected":""}>${esc(ticketLabel(t)).slice(0,50)}</option>`).join("")}</select></div></div>
+      <div class="field"><label>About a ticket? (optional)</label><select id="ag-tk"><option value="">— none —</option>${tks.map(t=>`<option value="${t.id}" ${prefTicketId===t.id?"selected":""}>${clip(ticketLabel(t),50)}</option>`).join("")}</select></div></div>
     <div class="modal-foot"><button id="ag-x" class="ghost">Cancel</button><button id="ag-ok" class="primary">Add to agenda</button></div></div></div>`;
   const close=()=>root.innerHTML="";
   root.querySelector("#ag-x").onclick=close;
@@ -3388,7 +3585,7 @@ function openAgendaModal(prefTeam,prefTicketId){
 }
 function startSync(team){
   const existing=state.syncs.find(s=>!s.closed&&s.team===team);
-  if(existing){activeSyncId=existing.id;view="sync";renderApp();return;}
+  if(existing){openCall("sync",existing.id);return;}
   const s=normSync({team,date:todayStr(),title:teamOf(team).name+" sync — "+fmtDate(todayStr())});
   state.syncs.unshift(s);activeSyncId=s.id;syncSelectReset();markDirty();
   view="sync";renderApp();
@@ -3454,7 +3651,7 @@ function renderSync(){
         ${carried.length?`<div class="qsec">Still open (${carried.length}) — carried into every sync until closed</div>
           ${carried.map(c=>{const age=carriedAge(c),late=c.action.due&&daysUntil(c.action.due)<0;
             return `<div class="qrow carried" data-carry="${c.action.id}">
-            <div class="qtop"><span class="tpbadge" style="color:var(--muted);border-color:var(--line2)">${esc(carriedLabel(c)).slice(0,30)}</span>
+            <div class="qtop"><span class="tpbadge" style="color:var(--muted);border-color:var(--line2)">${clip(carriedLabel(c),30)}</span>
               <span style="margin-left:auto"></span>
               <button class="sm" data-cardone="${esc(c.owner.id)}:${esc(c.action.id)}" title="Close this out">✓</button></div>
             <div class="qtitle" style="white-space:normal">${esc(c.action.text)}</div>
@@ -3936,7 +4133,7 @@ function mentionFormHtml(m){
     </div>
     <div class="grid2">
       <div class="field"><label>Related demand (optional)</label>
-        <select id="mn-tk"><option value="">— none —</option>${tks.map(t=>`<option value="${t.id}" ${m.ticketId===t.id?"selected":""}>${esc(ticketLabel(t)).slice(0,54)}</option>`).join("")}</select></div>
+        <select id="mn-tk"><option value="">— none —</option>${tks.map(t=>`<option value="${t.id}" ${m.ticketId===t.id?"selected":""}>${clip(ticketLabel(t),54)}</option>`).join("")}</select></div>
       <div class="field"><label>Seen before</label>
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12.5px;letter-spacing:0;color:var(--muted);margin-top:6px">
           <input type="checkbox" id="mn-rec" style="width:auto" ${m.recurring?"checked":""}> This keeps happening — surface it to the boss brief</label></div>
@@ -4052,7 +4249,8 @@ function renderSyncNotes(host,s){
   host.querySelector("#sn-adddec").onclick=()=>openDecisionModal({syncId:s.id});
   host.querySelector("#sn-del").onclick=()=>{
     if(!confirm("Delete this sync record? Updates already written onto tickets stay."))return;
-    state.syncs=state.syncs.filter(x=>x.id!==s.id);activeSyncId=null;syncSelectReset();markDirty();renderSync();};
+    state.syncs=state.syncs.filter(x=>x.id!==s.id);purgeDeadLinks(state);
+    activeSyncId=null;syncSelectReset();markDirty();renderSync();};
   const c=host.querySelector("#sn-close");if(c)c.onclick=()=>closeSync(s);
   const r=host.querySelector("#sn-reopen");if(r)r.onclick=()=>{s.closed=false;touch(s);renderSync();};
   host.querySelectorAll("[data-pby]").forEach(i=>i.onchange=e=>{
@@ -4157,9 +4355,9 @@ function renderSyncPicker(wrap){
   </div>`;
   wrap.querySelectorAll("[data-start]").forEach(b=>b.onclick=()=>startSync(b.dataset.start));
   wrap.querySelectorAll("[data-agadd]").forEach(b=>b.onclick=()=>openAgendaModal(b.dataset.agadd));
-  wrap.querySelectorAll("[data-open]").forEach(d=>d.onclick=()=>{activeSyncId=d.dataset.open;activeMeetingId=null;syncFocusId=null;renderSync();});
+  wrap.querySelectorAll("[data-open]").forEach(d=>d.onclick=()=>openCall("sync",d.dataset.open));
   const nm=wrap.querySelector("#sp-newmeeting");if(nm)nm.onclick=()=>openMeetingModal();
-  wrap.querySelectorAll("[data-openmt]").forEach(d=>d.onclick=()=>{activeMeetingId=d.dataset.openmt;activeSyncId=null;renderSync();});
+  wrap.querySelectorAll("[data-openmt]").forEach(d=>d.onclick=()=>openCall("meeting",d.dataset.openmt));
 }
 /* ---------- general meetings (non-sync calls), hosted in the Sync workspace ---------- */
 function openMeetingModal(pre){
@@ -4180,7 +4378,7 @@ function openMeetingModal(pre){
       title:root.querySelector("#mm-title").value.trim(),team:root.querySelector("#mm-team").value,
       epicId:root.querySelector("#mm-epic").value,personIds:pre.personIds||[]});
     state.meetings.unshift(m);markDirty();close();
-    activeMeetingId=m.id;activeSyncId=null;syncFocusId=null;view="sync";renderApp();};
+    openCall("meeting",m.id);};
   root.querySelector("#mm-title").focus();
 }
 function renderMeetingDetail(wrap){
@@ -4215,7 +4413,7 @@ function renderMeetingDetail(wrap){
     <div class="field"><label>Demands discussed</label>
       <div class="chiprow">
         ${m.ticketIds.map(id=>{const t=ticketByRef(id);return `<span class="chip" data-mtdel="${esc(id)}">${esc(t?(t.ticketId||"ticket"):"?")} <span class="x">✕</span></span>`;}).join("")}
-        <select id="mt-tadd" style="width:auto;padding:3px 9px"><option value="">+ link a demand</option>${state.tickets.filter(t=>!m.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${esc(ticketLabel(t)).slice(0,50)}</option>`).join("")}</select></div></div>
+        <select id="mt-tadd" style="width:auto;padding:3px 9px"><option value="">+ link a demand</option>${state.tickets.filter(t=>!m.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${clip(ticketLabel(t),50)}</option>`).join("")}</select></div></div>
 
     <div class="sec-title"><h3>Points raised</h3><div class="ln"></div><button class="sm" id="mt-addpt">＋ Point</button></div>
     ${m.points.length?m.points.map(p=>`<div class="point">
@@ -4235,9 +4433,9 @@ function renderMeetingDetail(wrap){
   </div>`;
   const q=s=>wrap.querySelector(s);
   q("#mt-back").onclick=()=>{activeMeetingId=null;renderSync();};
-  q("#mt-del").onclick=()=>{if(!confirm("Delete this meeting? Its actions and any decisions on it go too."))return;
-    state.decisions=state.decisions.filter(x=>x.meetingId!==m.id);
-    state.meetings=state.meetings.filter(x=>x.id!==m.id);activeMeetingId=null;markDirty();renderSync();};
+  q("#mt-del").onclick=()=>{if(!confirm("Delete this meeting and its action points?\n\nDecisions made in it stay in the decision log — a decision outlives the call it was made in."))return;
+    state.meetings=state.meetings.filter(x=>x.id!==m.id);purgeDeadLinks(state);
+    activeMeetingId=null;markDirty();renderSync();};
   q("#mt-title").onclick=e=>editInline(e.target,m.title,v=>{m.title=v;touch(m);renderSync();});
   q("#mt-kind").onchange=e=>{m.kind=e.target.value;touch(m);renderSync();};
   q("#mt-date").onchange=e=>{m.date=e.target.value;touch(m);renderSync();};
@@ -4471,11 +4669,11 @@ function renderPeopleDetail(){
   det.querySelector("#pnDel").onclick=()=>{
     const n=ticketsForPerson(p.id).length;
     if(!confirm("Remove "+p.name+" from the roster?"+(n?"\n\nThey're on "+n+" ticket(s) — they'll be unassigned from those.":"")))return;
-    state.tickets.forEach(t=>{t.assignees=t.assignees.filter(x=>x!==p.id);});
-    state.people=state.people.filter(x=>x.id!==p.id);activePersonId=null;markDirty();renderApp();};
+    state.people=state.people.filter(x=>x.id!==p.id);purgeDeadLinks(state);
+    activePersonId=null;markDirty();renderApp();};
   det.querySelectorAll("[data-goto]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.goto));
   det.querySelector("#pn-meet").onclick=()=>openMeetingModal({kind:"oneonone",team:p.team,personIds:[p.id],title:"1:1 with "+p.name});
-  det.querySelectorAll("[data-pnmt]").forEach(d=>d.onclick=()=>{activeMeetingId=d.dataset.pnmt;activeSyncId=null;view="sync";renderApp();});
+  det.querySelectorAll("[data-pnmt]").forEach(d=>d.onclick=()=>openCall("meeting",d.dataset.pnmt));
   /* talking points */
   const tpn=det.querySelector("#tp-new");
   tpn.onkeydown=e=>{if(e.key!=="Enter")return;e.preventDefault();
@@ -4529,7 +4727,7 @@ function openRateModal(p,preset){
         <input id="rt-skill" value="${esc(preset||"")}" list="dl-skills" placeholder="Fiori" ${existing?"disabled":""} autocomplete="off">
         <datalist id="dl-skills">${allSkillNames().concat(state.settings.tags).filter((v,i,a)=>a.indexOf(v)===i).map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
         <p class="faint" style="font-size:11px;margin:5px 0 0">Shared with the tag vocabulary, so ticket evidence lines up automatically.</p></div>
-      <div class="field"><label>Rating — ${picked}/10</label>
+      <div class="field"><label id="rt-lab">Rating — ${picked}/10</label>
         <div class="ratebar" id="rt-bar">${[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<button data-n="${n}" class="${n===picked?"on":""}">${n}</button>`).join("")}</div></div>
       ${cur?`<p class="faint" style="font-size:11.5px;margin:-6px 0 12px">Currently ${cur.rating}/10, rated ${fmtDate(cur.on)}. The old value is kept as history.</p>`:""}
       <div class="row"><div class="field"><label>Rated on</label><input type="date" id="rt-on" value="${todayStr()}"></div>
@@ -4538,7 +4736,11 @@ function openRateModal(p,preset){
           <option value="reported" ${existing&&existing.confidence==="reported"?"selected":""}>Told / secondhand</option></select></div></div>
       <div class="field"><label>Note (optional)</label><input id="rt-note" placeholder="e.g. after the LUCA onboarding"></div>
       <div class="modal-foot"><button id="rt-x" class="ghost">Cancel</button><button id="rt-ok" class="primary">Save rating</button></div></div></div>`;
-    root.querySelectorAll("#rt-bar button").forEach(b=>b.onclick=()=>{picked=+b.dataset.n;draw();});
+    /* update the bar in place — redrawing the dialog wiped the skill name, date and
+       note typed before the score was picked */
+    root.querySelectorAll("#rt-bar button").forEach(b=>b.onclick=()=>{picked=+b.dataset.n;
+      root.querySelectorAll("#rt-bar button").forEach(x=>x.classList.toggle("on",+x.dataset.n===picked));
+      root.querySelector("#rt-lab").textContent="Rating — "+picked+"/10";});
     root.querySelector("#rt-x").onclick=()=>root.innerHTML="";
     root.querySelector("#rt-ok").onclick=()=>{
       const name=canonTag(existing?existing.skill:root.querySelector("#rt-skill").value);
@@ -4644,7 +4846,7 @@ function openDecisionModal(pre){
     <div class="row"><div class="field"><label>Decided by</label><input id="dm-by" placeholder="Me / Thomas / steering call"></div>
       <div class="field"><label>Date</label><input type="date" id="dm-date" value="${todayStr()}"></div></div>
     <div class="row"><div class="field"><label>Ticket (optional)</label><select id="dm-tk"><option value="">—</option>
-        ${tks.map(t=>`<option value="${t.id}" ${pre.ticketId===t.id?"selected":""}>${esc(ticketLabel(t)).slice(0,60)}</option>`).join("")}</select></div>
+        ${tks.map(t=>`<option value="${t.id}" ${pre.ticketId===t.id?"selected":""}>${clip(ticketLabel(t),60)}</option>`).join("")}</select></div>
       <div class="field"><label>Epic (optional)</label><select id="dm-ep"><option value="">—</option>
         ${state.epics.map(e=>`<option value="${e.id}" ${pre.epicId===e.id?"selected":""}>${esc(e.name)}</option>`).join("")}</select></div></div>
     <div class="modal-foot"><button id="dm-x" class="ghost">Cancel</button><button id="dm-ok" class="primary">Log it</button></div></div></div>`;
@@ -4685,7 +4887,7 @@ function renderDecisionLedger(det){
             <div class="chiprow" style="margin-top:5px">
               ${tk?`<span class="chip" data-dcgo="${esc(tk.id)}" style="font-size:11px;padding:2px 8px">${esc(tk.ticketId||"ticket")}</span>`:""}
               ${ep?`<span class="chip" data-dcep="${esc(ep.id)}" style="font-size:11px;padding:2px 8px">◆ ${esc(ep.name)}</span>`:""}
-              ${sy?`<span class="faint" style="font-size:10.5px;padding-top:3px">from ${esc(sy.title||sy.date)}</span>`:""}
+              ${sy?`<span class="faint" style="font-size:10.5px;padding-top:3px">from ${sy.title?esc(sy.title):fmtDate(sy.date)}</span>`:""}
             </div></div>
           <input class="dc-by" value="${esc(x.by)}" placeholder="by whom" data-dcby="${x.id}">
           <button class="ghost sm nact" data-dcdel="${x.id}">✕</button></div>`;}).join("")
@@ -4855,7 +5057,7 @@ function renderIncidentDetail(det){
       <div class="chiprow" style="margin-bottom:6px">
         ${tks.map(t=>`<span class="chip" data-itdel="${esc(t.id)}">${esc(t.ticketId||"demand")} <span class="x">✕</span></span>`).join("")}
         <select id="in-tadd" style="width:auto;padding:3px 9px"><option value="">+ link a demand</option>
-          ${state.tickets.filter(t=>!x.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${esc(ticketLabel(t)).slice(0,52)}</option>`).join("")}</select></div>
+          ${state.tickets.filter(t=>!x.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${clip(ticketLabel(t),52)}</option>`).join("")}</select></div>
       <p class="faint" style="font-size:11px">Linking a demand cites its ETA history, logged hours and hurdles automatically, below.</p>
 
       <div class="sec-title" style="margin-top:20px"><h3>Sequence of events</h3><div class="ln"></div>
@@ -4893,7 +5095,8 @@ function renderIncidentDetail(det){
   q("#in-back").onclick=()=>{activeIncidentId=null;renderApp();};
   q("#in-title").onclick=e=>editInline(e.target,x.title,v=>{x.title=v;touch(x);renderApp();});
   q("#in-del").onclick=()=>{if(!confirm("Delete this incident and its evidence?"))return;
-    state.incidents=state.incidents.filter(y=>y.id!==x.id);activeIncidentId=null;markDirty();renderApp();};
+    state.incidents=state.incidents.filter(y=>y.id!==x.id);purgeDeadLinks(state);
+    activeIncidentId=null;markDirty();renderApp();};
   q("#in-date").onchange=e=>{x.date=e.target.value;touch(x);renderApp();};
   q("#in-team").onchange=e=>{x.team=e.target.value;touch(x);renderApp();};
   q("#in-sev").onchange=e=>{x.severity=e.target.value;touch(x);renderApp();};
@@ -5164,7 +5367,7 @@ function renderRiskDetail(det){
       <div class="chiprow">
         ${tks.map(t=>`<span class="chip" data-rtdel="${esc(t.id)}">${esc(t.ticketId||"ticket")} <span class="x">✕</span></span>`).join("")}
         <select id="rk-taddsel" style="width:auto;padding:3px 9px"><option value="">+ link a demand</option>
-          ${state.tickets.filter(t=>!r.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${esc(ticketLabel(t)).slice(0,50)}</option>`).join("")}</select></div>
+          ${state.tickets.filter(t=>!r.ticketIds.includes(t.id)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(t=>`<option value="${esc(t.id)}">${clip(ticketLabel(t),50)}</option>`).join("")}</select></div>
 
       <div class="sec-title" style="margin-top:20px"><h3>Linked epics</h3><div class="ln"></div></div>
       <div class="chiprow">
@@ -5363,8 +5566,9 @@ function renderPatternDetail(det){
         <h1 id="ptName" style="cursor:text">${esc(p.title||"(untitled)")}</h1></div>
         <button class="ghost" id="ptDel" title="Delete pattern">🗑</button></div>
       <div class="dh-dates">
-        <span>First seen <b>${esc(tks.length?(tks[tks.length-1].raisedDate||"—"):"—")}</b></span>
-        <span>Last seen <b>${esc(tks.length?(tks[0].raisedDate||"—"):"—")}</b></span>
+        ${(()=>{const rd=tks.map(t=>t.raisedDate).filter(Boolean).sort();
+          return `<span>First seen <b>${rd.length?fmtDate(rd[0]):"—"}</b></span>
+        <span>Last seen <b>${rd.length?fmtDate(rd[rd.length-1]):"—"}</b></span>`;})()}
         ${times.length?`<span>Typical effort <b>${esc(times[0])}</b></span>`:""}
       </div>
       <div class="tabs"></div>
@@ -5488,9 +5692,8 @@ function renderContactDetail(det){
   q("#ctDel").onclick=()=>{
     const n=ticketsForContact(c.id).length;
     if(!confirm("Delete "+c.name+"?"+(n?"\n\nThey're linked to "+n+" ticket(s); those links go too.":"")))return;
-    state.tickets.forEach(t=>{t.contactIds=t.contactIds.filter(x=>x!==c.id);});
-    state.patterns.forEach(p=>{p.contactIds=p.contactIds.filter(x=>x!==c.id);});
-    state.contacts=state.contacts.filter(x=>x.id!==c.id);activeContactId=null;markDirty();renderApp();};
+    state.contacts=state.contacts.filter(x=>x.id!==c.id);purgeDeadLinks(state);
+    activeContactId=null;markDirty();renderApp();};
   det.querySelectorAll("[data-ctgo]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.ctgo));
   det.querySelectorAll("[data-ctpat]").forEach(d=>d.onclick=()=>{
     activePatternId=d.dataset.ctpat;knowledgeTab="patterns";renderApp();});
@@ -5671,12 +5874,12 @@ function renderEpicDetail(){
   q("#ep-link").onclick=()=>openEpicLinkModal(e);
   q("#epDel").onclick=()=>{
     if(!confirm("Delete the epic “"+e.name+"”?\n\nIts tickets stay — they're just unlinked."))return;
-    state.tickets.forEach(t=>{if(t.epicId===e.id)t.epicId="";});
-    state.epics=state.epics.filter(x=>x.id!==e.id);activeEpicId=null;markDirty();renderApp();};
+    state.epics=state.epics.filter(x=>x.id!==e.id);purgeDeadLinks(state);
+    activeEpicId=null;markDirty();renderApp();};
   det.querySelectorAll("[data-goto2]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.goto2));
   det.querySelectorAll("[data-goh]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.goh,"hurdles"));
   q("#ep-meet").onclick=()=>openMeetingModal({kind:"epic",epicId:e.id,title:e.name+" — check-in"});
-  det.querySelectorAll("[data-epmt]").forEach(d=>d.onclick=()=>{activeMeetingId=d.dataset.epmt;activeSyncId=null;view="sync";renderApp();});
+  det.querySelectorAll("[data-epmt]").forEach(d=>d.onclick=()=>openCall("meeting",d.dataset.epmt));
   det.querySelectorAll("[data-epdep]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.epdep,"work"));
   det.querySelectorAll("[data-eprisk]").forEach(d=>d.onclick=()=>{activeRiskId=d.dataset.eprisk;knowledgeTab="risks";view="knowledge";renderApp();});
 }
@@ -5723,7 +5926,7 @@ function renderEffort(){
         :`<button class="primary" id="ef-newappr" style="width:100%">＋ Log an approval</button>`}
     </div>
     <div class="stats">
-      <div class="stat op"><b>${pendingEfforts().filter(e=>e.team===effortTeam).length}</b>hrs to approve</div>
+      <div class="stat op"><b>${sumHours(pendingEfforts().filter(e=>e.team===effortTeam))}</b>hrs to approve</div>
       <div class="stat ov"><b>${state.approvals.filter(a=>a.team===effortTeam&&a.status==="pending").length}</b>appr. pending</div>
     </div>
     <div class="listwrap"><p class="faint" style="font-size:12px;padding:10px;line-height:1.6">
@@ -5831,7 +6034,7 @@ function openEffortModal(team,q){
       <p class="faint" style="font-size:12px;margin-top:-8px">Enter the demand + hours lines from their monthly report. Everything you add starts as <b>pending your approval</b>.</p>
       <div class="field" style="max-width:200px"><label>Month</label><select id="em-month">${quarterMonths(q).concat(quarterMonths(shiftQuarter(q,-1))).filter((v,i,a)=>a.indexOf(v)===i).sort().reverse().map(m=>`<option value="${m}" ${m===month?"selected":""}>${monthLabel(m)}</option>`).join("")}</select></div>
       <div class="tbl-wrap"><table><thead><tr><th>Demand (optional)</th><th style="width:90px">Hours</th><th style="width:34px"></th></tr></thead><tbody>
-        ${rows.map((r,i)=>`<tr><td><select data-emtk="${i}"><option value="">— non-demand / general —</option>${tks.map(t=>`<option value="${esc(t.id)}" ${r.ticketId===t.id?"selected":""}>${esc(ticketLabel(t)).slice(0,46)}</option>`).join("")}</select>
+        ${rows.map((r,i)=>`<tr><td><select data-emtk="${i}"><option value="">— non-demand / general —</option>${tks.map(t=>`<option value="${esc(t.id)}" ${r.ticketId===t.id?"selected":""}>${clip(ticketLabel(t),46)}</option>`).join("")}</select>
           ${!r.ticketId?`<input data-emnote="${i}" value="${esc(r.note)}" placeholder="label (e.g. support)" style="margin-top:4px">`:""}</td>
           <td><input data-emhrs="${i}" value="${esc(r.hours)}" placeholder="0" style="text-align:right"></td>
           <td>${rows.length>1?`<button class="ghost sm" data-emdel="${i}">✕</button>`:""}</td></tr>`).join("")}
@@ -5886,7 +6089,7 @@ function openApprovalModal(team,prefTicketId){
     <p class="faint" style="font-size:12px;margin-top:-8px">Something the vendor needs your sign-off on — a Production move, a weekend patch, or other. Mark it approved when you send the mail.</p>
     <div class="row"><div class="field"><label>Kind</label><select id="ap-kind">${Object.entries(APPROVAL_KINDS).map(([k,v])=>`<option value="${k}">${v.icon} ${v.label}</option>`).join("")}</select></div>
       <div class="field" style="flex:0 0 150px"><label>Requested on</label><input type="date" id="ap-req" value="${todayStr()}"></div></div>
-    <div class="field"><label>Demand (optional)</label><select id="ap-tk"><option value="">— none / non-demand —</option>${tks.map(t=>`<option value="${t.id}" ${prefTicketId===t.id?"selected":""}>${esc(ticketLabel(t)).slice(0,50)}</option>`).join("")}</select></div>
+    <div class="field"><label>Demand (optional)</label><select id="ap-tk"><option value="">— none / non-demand —</option>${tks.map(t=>`<option value="${t.id}" ${prefTicketId===t.id?"selected":""}>${clip(ticketLabel(t),50)}</option>`).join("")}</select></div>
     <div class="field"><label>What (title / description)</label><input id="ap-title" placeholder="e.g. Move MYIN-2345 launchpad fix to Prod"></div>
     <div class="field"><label>Note (optional)</label><input id="ap-note" placeholder="e.g. CAB window Sat 02:00"></div>
     <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;letter-spacing:0;color:var(--txt)">
@@ -5913,14 +6116,14 @@ function weeksBack(n){
   for(let i=n-1;i>=0;i--){
     const st=new Date(thisMon.getTime()-i*7*86400000);
     out.push({start:dstr(st),end:dstr(new Date(st.getTime()+6*86400000)),
-      label:dstr(st).slice(5).replace("-","/")});
+      label:st.getDate()+" "+MONTH_ABBR[st.getMonth()]});
   }
   return out;
 }
 function medianOf(a){if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;
   return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2);}
 function cycleDays(t){
-  if(!t.closedDate||!t.raisedDate)return null;
+  if(!isClosed(t)||!t.raisedDate)return null;
   const d=Math.round((new Date(t.closedDate+"T00:00:00")-new Date(t.raisedDate+"T00:00:00"))/86400000);
   return d>=0?d:null;
 }
@@ -5930,7 +6133,7 @@ function insightsData(weeks){
   /* 1 — throughput */
   const wk=weeksBack(weeks);
   const throughput=wk.map(w=>{const row={label:w.label};
-    teams.forEach(tm=>{row[tm.id]=state.tickets.filter(t=>t.team===tm.id&&t.closedDate&&t.closedDate>=w.start&&t.closedDate<=w.end).length;});
+    teams.forEach(tm=>{row[tm.id]=state.tickets.filter(t=>t.team===tm.id&&isClosed(t)&&t.closedDate>=w.start&&t.closedDate<=w.end).length;});
     return row;});
   /* 2 — ageing of open work */
   const buckets=[["≤ 7 days",0,7],["8–14 days",8,14],["15–30 days",15,30],["over 30 days",31,1e9]];
@@ -5959,8 +6162,8 @@ function insightsData(weeks){
   /* 6 — commitment reliability: slip bands per team */
   const rel=teams.map(tm=>{
     const ts=state.tickets.filter(t=>t.team===tm.id&&t.promises.length);
-    return {label:tm.name,b0:ts.filter(t=>slipCount(t)===0).length,
-      b1:ts.filter(t=>slipCount(t)===1).length,b2:ts.filter(t=>slipCount(t)>=2).length};
+    return {label:tm.name,b0:ts.filter(t=>brokenETAs(t)===0).length,
+      b1:ts.filter(t=>brokenETAs(t)===1).length,b2:ts.filter(t=>brokenETAs(t)>=2).length};
   }).filter(r=>r.b0+r.b1+r.b2>0);
   /* 7 — conduct: which KIND of failure each team has.
      Deliberately the cross-team cut. The Performance tab's Patterns view goes deep
@@ -5984,7 +6187,7 @@ function insightsData(weeks){
     const rs=rollRecorded(tm.id).slice(-12);
     if(rs.length<2)return null;
     const names=[...new Set(rs.flatMap(r=>r.demands.counts.map(c=>c.status)))];
-    const rows=rs.map(r=>{const row={label:fmtDate(r.date).slice(0,6),date:r.date,
+    const rows=rs.map(r=>{const row={label:fmtDate(r.date).slice(0,5),date:r.date,
       s_total:rollTotal(r.demands),s_inc:rollTotal(r.incidents)};
       names.forEach(nm=>{row["s_"+nm]=laneCount(r.demands,nm)||0;});return row;});
     const cur=rs[rs.length-1],prev=rs[rs.length-2];
@@ -6012,7 +6215,7 @@ function insightsData(weeks){
     hasIncidents:state.incidents.length>0,
     kpi:{open:open.length,blocked:open.filter(t=>openHurdles(t).length).length,
       median:closed.length?medianOf(closed.map(cycleDays)):null,
-      onTime:withP.length?Math.round(withP.filter(t=>slipCount(t)===0).length/withP.length*100):null,
+      onTime:withP.length?Math.round(withP.filter(t=>brokenETAs(t)===0).length/withP.length*100):null,
       failDays:state.incidents.reduce((a,x)=>a+num(x.costDays),0),
       incidents:state.incidents.length}};
 }
@@ -6029,7 +6232,7 @@ function renderInsights(){
         <input type="checkbox" id="inTable" style="width:auto" ${f._table?"checked":""}> Show data as tables</label>
     </div>
     <div class="listwrap"><p class="faint" style="font-size:12px;padding:10px;line-height:1.6">
-      Six questions worth asking of the data you've been keeping. Each chart answers exactly one.
+      Questions worth asking of the data you've been keeping. Each chart answers exactly one.
       <br><br>Every chart has a table view — tick the box above if you'd rather read the numbers,
       or need to paste them somewhere.</p></div>`;
   side.querySelector("#inBrief").onclick=openBossBrief;
@@ -6501,7 +6704,7 @@ function briefData(sinceDate){
   const since=sinceDate||"1970-01-01";
   const sinceTs=new Date(since+"T00:00:00").getTime();
   const changedSince=t=>
-    (t.closedDate&&t.closedDate>=since)||
+    (isClosed(t)&&t.closedDate>=since)||
     (t.createdAt>=sinceTs)||
     t.updates.some(u=>u.ts>=sinceTs)||
     t.promises.some(p=>p.givenOn>=since)||
@@ -6509,13 +6712,13 @@ function briefData(sinceDate){
   const epics=state.epics.filter(e=>!e.closed).map(e=>{
     const s=epicSignals(e);
     return {e,s,
-      closed:s.ts.filter(t=>t.closedDate&&t.closedDate>=since),
+      closed:s.ts.filter(t=>isClosed(t)&&t.closedDate>=since),
       hurdles:s.blocked.flatMap(t=>openHurdles(t).map(h=>({t,h})))};
   }).sort((a,b)=>HEALTH_ORDER.indexOf(b.e.health)-HEALTH_ORDER.indexOf(a.e.health));
   const loose=state.tickets.filter(t=>!t.epicId);
   const byTeam=state.settings.teams.map(tm=>{
     const all=loose.filter(t=>t.team===tm.id);
-    return {tm,open:all.filter(isOpen),closed:all.filter(t=>t.closedDate&&t.closedDate>=since),
+    return {tm,open:all.filter(isOpen),closed:all.filter(t=>isClosed(t)&&t.closedDate>=since),
       boss:all.filter(t=>t.bossRelevant&&isOpen(t))};
   }).filter(x=>x.open.length||x.closed.length);
   /* decisions he needs FROM his boss — the asks, not the status */
@@ -6561,7 +6764,7 @@ function briefData(sinceDate){
   const notesUnexplained=state.mentions.filter(m=>m.status==="unexplained"&&m.mentionedOn>=since).length;
   return {since,epics,byTeam,decisions,taken,landing,risks,register,obs,vendorEffort,rolls,notes,notesUnexplained,
     changed:state.tickets.filter(changedSince),
-    closedAll:state.tickets.filter(t=>t.closedDate&&t.closedDate>=since)};
+    closedAll:state.tickets.filter(t=>isClosed(t)&&t.closedDate>=since)};
 }
 function briefMarkdown(d,opts){
   const L=[];
@@ -6813,17 +7016,17 @@ function runGlobalSearch(qraw){
       push("Contact",c.name,c.stack||c.org,()=>{activeContactId=c.id;knowledgeTab="contacts";view="knowledge";renderApp();});});
   state.decisions.forEach(x=>{
     if((x.text+" "+x.by).toLowerCase().includes(q))
-      push("Decision",x.text.slice(0,70),x.date+(x.by?" · "+x.by:""),
+      push("Decision",x.text.slice(0,70),fmtDate(x.date)+(x.by?" · "+x.by:""),
         ()=>{knowledgeTab="decisions";view="knowledge";renderApp();
           setTimeout(()=>{const el=document.getElementById("dec-"+x.id);if(el)el.scrollIntoView({block:"center"});},60);});});
   state.people.forEach(p=>p.talkingPoints.forEach(tp=>{
     if(tp.text.toLowerCase().includes(q))
-      push("Talking point",p.name+" — "+tp.text.slice(0,50),tp.done?"raised "+tp.doneOn:"open",
+      push("Talking point",p.name+" — "+tp.text.slice(0,50),tp.done?"raised "+fmtDate(tp.doneOn):"open",
         ()=>{activePersonId=p.id;peopleMatrix=false;view="people";renderApp();});}));
   state.agenda.forEach(a=>{
     if(a.text.toLowerCase().includes(q))
       push("Agenda",a.text.slice(0,60),teamOf(a.team).name+(a.done?" · raised":" · to raise"),
-        ()=>{view="sync";activeSyncId=null;syncFocusId=null;renderApp();});});
+        ()=>openCall(null,null));});
   state.patterns.forEach(p=>{
     if([p.title,p.symptom,p.cause,p.steps,p.notes,p.tags.join(" ")].join(" ").toLowerCase().includes(q))
       push("Pattern",p.title,"seen "+p.ticketIds.length+"×",
@@ -6834,17 +7037,17 @@ function runGlobalSearch(qraw){
         ()=>{activeEpicId=e.id;view="epics";renderApp();});});
   state.people.forEach(p=>p.observations.forEach(o=>{
     if((o.text+" "+o.source).toLowerCase().includes(q))
-      push("Observation",p.name+" — "+o.text.slice(0,60),OBS_KINDS[o.kind].label+" · "+o.date,
+      push("Observation",p.name+" — "+o.text.slice(0,60),OBS_KINDS[o.kind].label+" · "+fmtDate(o.date),
         ()=>{activePersonId=p.id;peopleMatrix=false;view="people";renderApp();});}));
   state.syncs.forEach(s=>{
     const hay=[s.title,s.attendees,s.notes,s.points.map(p=>p.text+" "+p.by).join(" "),
       s.actions.map(a=>a.text+" "+a.owner+" "+a.resolution).join(" ")].join(" ").toLowerCase();
-    if(hay.includes(q))push("Sync",s.title||teamOf(s.team).name,s.date,()=>{activeSyncId=s.id;activeMeetingId=null;syncFocusId=null;view="sync";renderApp();});});
+    if(hay.includes(q))push("Sync",s.title||teamOf(s.team).name,fmtDate(s.date),()=>openCall("sync",s.id));});
   state.meetings.forEach(m=>{
     const hay=[m.title,m.attendees,m.notes,m.points.map(p=>p.text+" "+p.by).join(" "),
       m.actions.map(a=>a.text+" "+a.owner+" "+a.resolution).join(" ")].join(" ").toLowerCase();
-    if(hay.includes(q))push("Meeting",m.title||MEETING_KINDS[m.kind].label,MEETING_KINDS[m.kind].label+" · "+m.date,
-      ()=>{activeMeetingId=m.id;activeSyncId=null;syncFocusId=null;view="sync";renderApp();});});
+    if(hay.includes(q))push("Meeting",m.title||MEETING_KINDS[m.kind].label,MEETING_KINDS[m.kind].label+" · "+fmtDate(m.date),
+      ()=>openCall("meeting",m.id));});
   state.incidents.forEach(x=>{
     const hay=[x.title,x.narrative,x.inference,x.vendorResponse,
       x.kinds.map(k=>FAIL_KINDS[k].label).join(" "),
@@ -6853,6 +7056,11 @@ function runGlobalSearch(qraw){
     if(hay.includes(q))push("Incident",x.title||"(untitled)",
       fmtDate(x.date)+(x.team?" · "+teamOf(x.team).name:""),
       ()=>{activeIncidentId=x.id;perfView="log";view="perf";renderApp();});});
+  state.mentions.forEach(m=>{
+    if((mentionText(m)+" "+m.ref).toLowerCase().includes(q))
+      push("Incident note",m.title||"(unnamed incident)",
+        teamOf(m.team).name+" · "+fmtDate(m.mentionedOn)+" · "+MENTION_STATUS[m.status].label,
+        ()=>{activeMentionId=m.id;knowledgeTab="mentions";view="knowledge";renderApp();});});
   state.risks.forEach(r=>{
     if((r.title+" "+r.detail+" "+r.owner+" "+r.mitigation).toLowerCase().includes(q))
       push("Risk",r.title||"(untitled)",RISK_SEV[r.severity].label+" · "+RISK_STATUS[r.status].label,
@@ -6964,14 +7172,31 @@ function openMenu(){
   root.querySelector("#mn-forget").onclick=async()=>{await forgetHandle();close();toast("Forgot the remembered file");};
   root.querySelector("#mn-close").onclick=()=>{close();renderApp();};
 }
+/* Three explicit choices. The old OK/Cancel confirm mapped Cancel to "remove
+   encryption" — the opposite of what Cancel means everywhere else. */
+function chooseEncryptionAction(){
+  return new Promise(resolve=>{
+    const root=document.getElementById("modalRoot");
+    root.innerHTML=`<div class="modal-bg"><div class="modal" style="width:420px"><h2>🔒 Master password</h2>
+      <p class="faint" style="font-size:12.5px;margin-top:-6px;line-height:1.6">Your data is encrypted. What would you like to do?</p>
+      <div class="modal-foot" style="flex-wrap:wrap;gap:8px">
+        <button id="ec-x" class="ghost">Cancel</button>
+        <button id="ec-rm" class="ghost danger">Remove encryption</button>
+        <button id="ec-ch" class="primary">Change password</button></div></div></div>`;
+    const done=v=>{root.innerHTML="";resolve(v);};
+    root.querySelector("#ec-x").onclick=()=>done(null);
+    root.querySelector("#ec-rm").onclick=()=>done("remove");
+    root.querySelector("#ec-ch").onclick=()=>done("change");
+  });
+}
 async function setMasterPassword(){
   const old=masterPassword;
   if(state.settings.encryption){
-    const choice=confirm("OK = change the password.\nCancel = remove encryption entirely.");
-    if(choice){
+    const choice=await chooseEncryptionAction();
+    if(choice==="change"){
       const pw=await promptPassword("New master password",true);if(pw===null)return;
       masterPassword=pw;await recryptSnapshots(old,pw);markDirty();renderApp();toast("Password changed 🔒");
-    }else{
+    }else if(choice==="remove"){
       if(!confirm("Remove encryption? The file will be saved as plain readable JSON."))return;
       state.settings.encryption=false;await recryptSnapshots(old,null);masterPassword=null;markDirty();renderApp();toast("Encryption removed");
     }
@@ -6987,44 +7212,107 @@ async function openSnapshots(){
   const arr=(await getSnapshots()).slice().reverse();
   const root=document.getElementById("modalRoot");
   root.innerHTML=`<div class="modal-bg"><div class="modal"><h2>Daily snapshots</h2>
-    <p class="faint" style="font-size:12px;margin-top:-8px">Taken automatically on the first save of each day. Last 14 kept.</p>
+    <p class="faint" style="font-size:12px;margin-top:-8px">Taken automatically on the first save of each day, and just before anything replaces what's on screen. The current data is snapshotted before a restore, too.</p>
     ${arr.length?`<div class="picklist">${arr.map((s,i)=>`<div class="pickrow" data-i="${i}">
-      <span class="tid">${fmtDate(s.date)}</span><span style="flex:1">${s.enc?"🔒 encrypted":"plain"}</span>
+      <span class="tid">${s.ts?fmtTs(s.ts):fmtDate(s.date)}</span>
+      <span style="flex:1">${s.kind==="before-replace"?"before a load/restore · ":""}${s.enc?"🔒 encrypted":"plain"}</span>
       <span class="faint">${(s.data.length/1024).toFixed(1)} KB</span></div>`).join("")}</div>`
       :`<p class="faint">No snapshots yet.</p>`}
     <div class="modal-foot"><button id="sn-x" class="primary">Close</button></div></div></div>`;
   root.querySelector("#sn-x").onclick=()=>root.innerHTML="";
   root.querySelectorAll(".pickrow").forEach(r=>r.onclick=async()=>{
     const s=arr[+r.dataset.i];
-    if(!confirm("Restore the snapshot from "+s.date+"?\n\nYour current data will be replaced (it stays in the file until you save)."))return;
+    const when=s.ts?fmtTs(s.ts):fmtDate(s.date);
+    if(!confirm("Restore the snapshot from "+when+"?\n\nWhat's on screen now is snapshotted first, so this can be undone the same way."))return;
     try{
-      if(s.enc){const pw=await promptPassword("Snapshot is encrypted — password");if(pw===null)return;
-        state=migrate(await decryptEnvelope(JSON.parse(s.data),pw));masterPassword=pw;}
-      else state=migrate(JSON.parse(s.data));
-      activeId=activeSyncId=syncFocusId=activeMeetingId=activePersonId=activeEpicId=activePatternId=activeContactId=activeRiskId=activeIncidentId=null;activeMentionId=null;syncSelectReset();
-      dirty=true;markDirty();root.innerHTML="";renderApp();toast("Restored snapshot "+s.date);
+      let raw,pw=null;
+      if(s.enc){pw=await promptPassword("Snapshot is encrypted — password");if(pw===null)return;
+        raw=await decryptEnvelope(JSON.parse(s.data),pw);}
+      else raw=JSON.parse(s.data);
+      if(!looksLikeTeamDesk(raw)){toast("That snapshot isn't readable Team Desk data",true);return;}
+      /* a snapshot is DATA, not a decision about protection — restoring one taken
+         before encryption was switched on must not quietly switch it off */
+      const keepPw=isEncrypted()?masterPassword:null;
+      await snapshotNow();
+      state=migrate(raw);
+      if(pw)masterPassword=pw;
+      if(keepPw&&!state.settings.encryption){state.settings.encryption=true;masterPassword=keepPw;}
+      resetSelection();
+      markDirty();root.innerHTML="";renderApp();toast("Restored the snapshot from "+when);
     }catch(e){toast("Couldn't restore: "+e.message,true);}
   });
 }
 
 /* ===================== WIRE UP ===================== */
-document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>{view=b.dataset.view;peopleMatrix=false;activeMeetingId=null;activeSyncId=null;syncFocusId=null;renderApp();});
+document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>{view=b.dataset.view;peopleMatrix=false;activeMeetingId=null;activeSyncId=null;syncSelectReset();renderApp();});
 document.getElementById("btnOpen").onclick=openFile;
 document.getElementById("btnSave").onclick=saveFile;
 document.getElementById("btnMenu").onclick=openMenu;
-document.getElementById("btnReconnect").onclick=reconnectFile;
+document.getElementById("btnReconnect").onclick=()=>reconnectFile();
 document.getElementById("btnTheme").onclick=toggleTheme;
+document.getElementById("saveState").onclick=()=>{if(diskConflict)openConflictModal();};
 applyTheme(currentTheme());   /* set the button icon now the header exists */
 const gs=document.getElementById("globalSearch");
 gs.oninput=e=>{clearTimeout(gs._t);gs._t=setTimeout(()=>runGlobalSearch(e.target.value),150);};
 gs.onblur=()=>setTimeout(()=>document.getElementById("gsearchResults").classList.add("hide"),200);
 gs.onfocus=()=>{if(gs.value)runGlobalSearch(gs.value);};
+/* A field's `change` only fires on blur, so text typed and never tabbed out of is
+   invisible to the save path: lost on close, and not even counted as unsaved.
+   Blurring the focused field commits it through its own handler. */
+function flushEdits(){const a=document.activeElement;
+  if(!(a&&a!==document.body&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=="password"))return null;
+  const id=a.id;a.blur();return id||null;}
+/* after a Ctrl+S mid-sentence, put him back where he was typing */
+function refocus(id){if(!id)return;const el=document.getElementById(id);if(!el)return;
+  el.focus();if(typeof el.value==="string"&&el.setSelectionRange&&el.type!=="date"){const n=el.value.length;try{el.setSelectionRange(n,n);}catch(e){}}}
+/* Esc closes the open dialog — but not over typing he hasn't committed. */
+function modalEdited(root){
+  return [...root.querySelectorAll("textarea,input:not([type=checkbox]):not([type=radio]):not([type=password])")]
+    .some(el=>!el.disabled&&el.value!==el.defaultValue);}
 document.addEventListener("keydown",e=>{
+  /* while locked the app underneath is inert — its shortcuts must be too, or Alt+N
+     quietly builds a ticket into the locked placeholder */
+  if(screenLocked||pendingEncrypted)return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveFile();}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();gs.focus();}
   if(e.altKey&&!e.ctrlKey&&!e.metaKey&&e.key.toLowerCase()==="n"){e.preventDefault();openQuickAdd();}
+  if(e.key==="Escape"&&!e.defaultPrevented){const root=document.getElementById("modalRoot");
+    if(root.firstElementChild&&!root.querySelector("#pw1")){
+      if(modalEdited(root)&&!confirm("Close this and discard what you've typed?"))return;
+      root.innerHTML="";}}
 });
-window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+window.addEventListener("beforeunload",e=>{if(!pendingEncrypted)flushEdits();if(dirty){e.preventDefault();e.returnValue="";}});
+
+/* ---------- two copies open at once ----------
+   Two tabs share one local backup and one data file, and whichever saves last
+   silently wins. Say so. BroadcastChannel where it exists, plus a localStorage
+   heartbeat, because file:// pages don't reliably get BroadcastChannel. */
+const TAB_ID=uid(),PRESENCE_KEY="teamdesk.presence",PEER_TTL=40000;
+const peers={};
+let bc=null;try{bc=new BroadcastChannel("teamdesk");}catch(e){bc=null;}
+function presencePing(bye){const msg={id:TAB_ID,ts:Date.now(),bye:!!bye};
+  try{localStorage.setItem(PRESENCE_KEY,JSON.stringify(msg));}catch(e){}
+  if(bc)try{bc.postMessage(msg);}catch(e){}}
+function peerAlive(){const now=Date.now();return Object.values(peers).some(t=>now-t<PEER_TTL);}
+function renderPeerWarn(){
+  let el=document.getElementById("peerWarn");
+  if(!el){el=document.createElement("div");el.id="peerWarn";el.className="peerwarn hide";
+    el.innerHTML=`⚠ <b>Team Desk is open in another tab or window.</b> Edits in both will overwrite each other — close one of them.`;
+    document.body.appendChild(el);}
+  el.classList.toggle("hide",!peerAlive());
+}
+function presenceSeen(msg){
+  if(!msg||msg.id===TAB_ID)return;
+  if(msg.bye){delete peers[msg.id];renderPeerWarn();return;}
+  const isNew=!peers[msg.id]||Date.now()-peers[msg.id]>=PEER_TTL;
+  peers[msg.id]=Date.now();renderPeerWarn();
+  if(isNew)presencePing();   /* answer a newcomer at once, so both tabs warn */
+}
+if(bc)bc.onmessage=e=>presenceSeen(e.data);
+window.addEventListener("storage",e=>{if(e.key!==PRESENCE_KEY||!e.newValue)return;
+  try{presenceSeen(JSON.parse(e.newValue));}catch(err){}});
+window.addEventListener("pagehide",()=>presencePing(true));
+presencePing();setInterval(()=>{presencePing();renderPeerWarn();},15000);
 
 /* ---------- day-first date pickers ----------
    A native <input type="date"> always renders in the BROWSER's locale — mm/dd/yyyy on
@@ -7058,8 +7346,13 @@ const IDLE_MS=15*60*1000;
 let lastActivity=Date.now(),screenLocked=false;
 ["mousemove","keydown","mousedown","wheel","touchstart"].forEach(ev=>document.addEventListener(ev,()=>{lastActivity=Date.now();},{passive:true}));
 setInterval(()=>{if(!screenLocked&&isEncrypted()&&Date.now()-lastActivity>IDLE_MS)lockScreen();},30000);
+/* The app underneath a lock is made inert — not just covered. A veil alone still
+   let Tab move focus to the controls behind it, and keyboard shortcuts reach them. */
+function setInert(on){["app","modalRoot"].forEach(id=>{const el=document.getElementById(id);if(el)el.inert=on;});}
 function lockScreen(){
-  if(screenLocked)return;screenLocked=true;
+  if(screenLocked)return;
+  flushEdits();   /* commit a half-typed field before the page goes inert */
+  screenLocked=true;setInert(true);
   const veil=document.createElement("div");veil.className="lockveil";
   veil.innerHTML=`<div class="modal" style="width:360px"><h2>🔒 Locked (idle)</h2>
     <p class="faint" style="font-size:12px">Locked after 15 minutes of inactivity. Nothing was lost — unsaved changes are kept.</p>
@@ -7068,17 +7361,45 @@ function lockScreen(){
     <div class="modal-foot"><button id="lk-ok" class="primary" style="width:100%">Unlock</button></div></div>`;
   document.body.appendChild(veil);
   const pw=veil.querySelector("#lk-pw");pw.focus();
-  const tryUnlock=()=>{if(pw.value===masterPassword){veil.remove();screenLocked=false;lastActivity=Date.now();renderApp();}
+  const tryUnlock=()=>{if(pw.value===masterPassword){veil.remove();screenLocked=false;setInert(false);lastActivity=Date.now();renderApp();}
     else{veil.querySelector("#lk-err").textContent="Wrong password.";pw.value="";pw.focus();}};
   veil.querySelector("#lk-ok").onclick=tryUnlock;
   pw.onkeydown=e=>{if(e.key==="Enter")tryUnlock();};
 }
-async function unlockStartup(){
-  while(true){const pw=await promptPassword("🔒 Enter master password to unlock Team Desk");
-    if(pw===null){document.getElementById("detail").innerHTML=nopick("🔒 Locked. <button class='sm' id='retry' style='margin-top:10px'>Unlock</button>");
-      const r=document.getElementById("retry");if(r)r.onclick=unlockStartup;return;}
-    try{state=migrate(await decryptEnvelope(pendingEncrypted,pw));masterPassword=pw;pendingEncrypted=null;renderApp();toast("Unlocked 🔒");return;}
-    catch(e){toast("Wrong password — try again",true);}}
+/* Startup lock: a full veil over an inert app, not a dismissable prompt over a live
+   one. The prompt's Cancel used to leave the app usable with an empty placeholder
+   state standing in for the encrypted data — see safeToPersist(). The only ways out
+   are the right password or deliberately opening a different file. */
+let startupUnlocked=null;
+function showStartupLock(){
+  screenLocked=true;setInert(true);
+  const veil=document.createElement("div");veil.className="lockveil";veil.id="startLock";
+  veil.innerHTML=`<div class="modal" style="width:380px"><h2>🔒 Team Desk is locked</h2>
+    <p class="faint" style="font-size:12px;line-height:1.6">Your data is encrypted with a master password.</p>
+    <div class="field"><label>Master password</label><input type="password" id="sl-pw" autocomplete="off"></div>
+    <div id="sl-err" style="color:var(--red);font-size:12px;min-height:14px"></div>
+    <div class="modal-foot" style="justify-content:space-between">
+      <button id="sl-open" class="ghost" title="Open another Team Desk file instead">📂 Open a different file</button>
+      <button id="sl-ok" class="primary">Unlock</button></div></div>`;
+  document.body.appendChild(veil);
+  const pw=veil.querySelector("#sl-pw"),err=veil.querySelector("#sl-err");pw.focus();
+  const tryUnlock=async()=>{
+    if(!pw.value)return;
+    let raw;try{raw=await decryptEnvelope(pendingEncrypted,pw.value);}
+    catch(e){err.textContent="Wrong password.";pw.value="";pw.focus();return;}
+    if(!looksLikeTeamDesk(raw)){err.textContent="That backup isn't Team Desk data — open your file instead.";return;}
+    state=migrate(raw);masterPassword=pw.value;pendingEncrypted=null;dirty=false;
+    closeStartupLock();renderApp();toast("Unlocked 🔒");};
+  veil.querySelector("#sl-ok").onclick=tryUnlock;
+  pw.onkeydown=e=>{if(e.key==="Enter")tryUnlock();};
+  /* the veil sits above the (inert) header, so it carries its own Open */
+  veil.querySelector("#sl-open").onclick=()=>{setInert(false);openFile().finally(()=>{if(document.getElementById("startLock"))setInert(true);});};
+  return new Promise(res=>{startupUnlocked=res;});
+}
+function closeStartupLock(){
+  const v=document.getElementById("startLock");if(!v)return;
+  v.remove();screenLocked=false;setInert(false);lastActivity=Date.now();
+  if(startupUnlocked){startupUnlocked();startupUnlocked=null;}
 }
 
 /* ---------- seed ---------- */
@@ -7367,7 +7688,7 @@ function seedDemo(){
 async function boot(){
   await initStore();
   const res=await loadBackup();
-  if(res==="encrypted"){ renderApp(); await unlockStartup(); }
+  if(res==="encrypted"){ renderApp(); await showStartupLock(); }
   else {
     if(!res){ state=emptyState(); }
     renderApp();
