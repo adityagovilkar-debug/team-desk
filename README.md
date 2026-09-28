@@ -659,9 +659,47 @@ always renders in the **browser's** locale (`mm/dd/yyyy` on an en-US machine), a
 the native text and paints a `dd-mm-yyyy` label over it. The input element itself is untouched,
 so its value stays ISO and the calendar picker still works normally.
 
+## Bench — the default look (Paper + Backlit)
+
+Team Desk now opens in **Bench**, the same look Demand Desk uses: an icon rail on the left
+(with live counts — open tickets, live syncs, pending vendor approvals, incidents awaiting a
+close-out), a status bar along the bottom (which file, saved or not, the auto-save countdown,
+record counts), an animated dot wordmark that sweeps when a save lands, and a clock. **Paper**
+is light, **Backlit** is dark; by default it follows Windows. The ☀/🌙 button flips light ↔
+dark inside whichever family you picked; ⋯ Settings → Appearance picks any theme (Bench or the
+three classic ones), the motion level, and an optional first name for the greeting.
+
+**Today is a cockpit.** A greeting over a flow field whose streams are coloured by where your
+tickets stand; Ctrl K search; one-click New ticket / Start or Resume sync / Point to raise /
+Boss brief / Scorecard. Then four instruments read from your data: **Open tickets** (a dot ring
+split by status), **ETAs & due dates** (a radar — distance from the centre is days past the
+latest ETA), **Next sync** (countdown gauge + tickets queued), and **Vendor hours** (this
+quarter's approved hours as dots, pending as rings, against the contract — or live risks by
+severity if no team is outsourced). Below: a **delivery pipeline** (one lane per team, tickets
+parked at New → In progress → Review → Done-in-30-days; red ring = blocked, red pulse = past its
+ETA), **epic rings** (share of tickets done, in the epic's health colour), and a **10-week
+calendar** (sync days, ETAs/due dates, action-point dues, risk reviews). Every "needs
+attention" card from before sits underneath, unchanged.
+
+**Pages.** A ticket opens with a header of readouts — raised, due, age, ETA (with slips),
+gates, subtasks, open hurdles, last update — a segmented control for *my status* (the change
+flies to its card in the list), and bands for a missed ETA, a blocker, or a boss flag. Updates
+read as a timeline with month headers (ochre dot = captured in a sync, blue = typed by hand).
+An epic page has a health segment, readouts (tickets/done/blocked/missed ETA/overdue/slipping/
+target), the headline as an editable band, a disagreement band when the tickets read worse than
+your call, and a two-column body: tickets by team and the dependency chain on the left; open
+hurdles, risks and meetings beside them. Across every view, each titled section is framed as
+its own panel.
+
+Motion is decorative and optional: Settings → Motion *Off*, or Windows' "reduce animations",
+stops all of it. Team colours were re-validated for both surfaces (Paper `#1B4FA0`/`#B07500`,
+Backlit `#5B8DEF`/`#BB8514` — Bench's own ochre sat just outside the dark lightness band), and
+the team mark keeps its shape (Portal a dot, P&C a ring). The classic themes render exactly as
+before — no rail, no cockpit. Theme, motion and name live in `localStorage` only.
+
 ## Themes — dark, light, instrument
 
-The ☀/▦/🌙 button cycles three themes. **Instrument** is a scientific-plotter look adapted
+The classic themes, still available in ⋯ Settings. **Instrument** is a scientific-plotter look adapted
 from the `instrument-white/` design system: warm-white paper with an engineering dot-grid,
 hairline rules, registration tics on every panel, silkscreen micro-labels, mono tabular
 figures, and **quantities drawn as discrete dots rather than filled bars**.
