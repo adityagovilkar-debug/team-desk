@@ -92,32 +92,33 @@ slices of it at 300, 600 and 1,200 tickets.
 9. **The app's own dialogs and Undo** — 23 browser confirm boxes and 4 prompt boxes.
    Deletes become "Deleted · Undo"; only irreversible ones still ask.
 
-## Phase 2 — The sync loop (where most of your time in the app goes) — MOCKUP BUILT 12 Nov 2026, not applied yet
+## Phase 2 — The sync loop (where most of your time in the app goes) — DONE 12 Nov 2026 (data v3)
 
-All of it is in `mockups/sync-rehaul.html` (compare `mockups/sync-current.html`); the change is
-`mockups/sync-rehaul.patch.py` and goes into the app once approved. Data v3 (adds fields only).
+Approved from the mockup (`mockups/sync-rehaul.html`) and applied with `mockups/sync-rehaul.patch.py`.
+Found while applying: a roll-call with incident lines but unconfirmed numbers was dropped on
+load (the draft clean-up) — such a roll-call is now kept.
 
-10. ◐ **An agenda on Today** — under the greeting, one ordered list, late first: today's (or the
+10. ✓ **An agenda on Today** — under the greeting, one ordered list, late first: today's (or the
     live) sync with what's waiting in it, action points due, ETAs passed or due tomorrow (*Ask next
     sync* parks a point), approvals waiting, risk reviews (*Reviewed*), incident notes without a
     close-out. Ticking one offers Undo. The approvals, risk-review and incident-note cards fold
     into it; what remains is the **Watchlist**.
-11. ◐ **Sync as an instrument** — a header over the call: live, team, title (click to rename),
+11. ✓ **Sync as an instrument** — a header over the call: live, team, title (click to rename),
     the buttons; covered as dots (the open ticket ringed); what's been captured this call
     (updates, ETAs, hurdles raised/cleared, actions, incident notes, roll-call); a running
     timer; and **Next up**.
-12. ◐ **Keys during a call** — J / K next and previous, C covered, U type, E new ETA, H hurdle,
+12. ✓ **Keys during a call** — J / K next and previous, C covered, U type, E new ETA, H hurdle,
     A action, R roll-call, L last time, N notes, ? the sheet; while typing Alt+↓ / Alt+↑ move and
     Ctrl+Enter covers. A half-typed note is kept whichever way you move.
-13a. ◐ **Last time, for the roll-call's incidents** — a *What they were* list (one line each,
+13a. ✓ **Last time, for the roll-call's incidents** — a *What they were* list (one line each,
     never marks the numbers recorded) and, below it, the previous call's lines with **Still
     there** (carries the line into today's list), **Gone**, or **Ask** (keeps their answer).
-13. ◐ **Last time** — the first row of every sync's queue opens the previous call with that team:
+13. ✓ **Last time** — the first row of every sync's queue opens the previous call with that team:
     what changed on the tickets, what they said ticket by ticket, what they read out (with today's
     follow-ups on its incident lines), points, actions, decisions, incident notes.
-13b. ◐ **A close sheet** instead of the confirm box — what changed in this call and what carries
+13b. ✓ **A close sheet** instead of the confirm box — what changed in this call and what carries
     over; the recap is kept on the sync, and that is what the next call's Last time shows.
-13c. ◐ **On a ticket, without leaving the call** — the ETA history (dates, slips), clear a hurdle
+13c. ✓ **On a ticket, without leaving the call** — the ETA history (dates, slips), clear a hurdle
     in place (with how), add a hurdle or an action inline, my status as a segment, ‹ Prev / Skip ›.
 
 ## Phase 3 — People

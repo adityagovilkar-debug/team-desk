@@ -49,6 +49,11 @@ function normRecap(r){const A=x=>Array.isArray(x)?x:[];
     Object.entries(l.followups).forEach(([k,v])=>{if(v&&["still","gone","ask"].includes(v.state))followups[k]={state:v.state,answer:String(v.answer||"")};});
   return {counts,closed:optNum(l.closed),added:optNum(l.added),items,followups};''')
 
+    rep('''  d.rollcalls=d.rollcalls.filter(r=>r.recorded||(r.syncId&&openSids.has(r.syncId)));''',
+        '''  /* a draft whose numbers were never confirmed goes — unless it holds what the incidents
+     were (or what became of last call's), which is kept even though it stays out of the trend */
+  d.rollcalls=d.rollcalls.filter(r=>r.recorded||(r.syncId&&openSids.has(r.syncId))
+    ||r.incidents.items.length||Object.keys(r.incidents.followups).length);''')
     # ------------------------------------------------------------------ sync v2 helpers
     rep("function renderSync(){", SYNC_HELPERS + "\nfunction renderSync(){")
     rep("function syncSelect(kind,id){\n  syncSelectReset();",

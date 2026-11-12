@@ -520,6 +520,40 @@ restored when you come back. A demand is covered only when you click **✓ Mark 
 Ctrl+Enter), and you can **↩ Reopen** one. Any notes typed but never marked covered are still
 committed to their ticket when you close the sync, so nothing is lost.
 
+## The sync as an instrument (Nov 2026)
+
+Syncs are most of the use, so the call has its own instrument.
+
+- **A header over the call** — live, the team, the title (click to rename) and the buttons;
+  tickets covered as dots (the one you're on is ringed); what you've captured this call
+  (updates, ETAs, hurdles raised and cleared, actions, incident notes, roll-call); a running
+  timer; and **Next up**.
+- **Keys** — `J` / `K` next and previous ticket, `C` covered, `U` type what they said, `E` new
+  ETA, `H` hurdle, `A` action, `R` roll-call, `L` last time, `N` notes, `?` the sheet. While
+  typing: `Alt+↓` / `Alt+↑` move and `Ctrl+Enter` covers; `Esc` leaves the field. A half-typed
+  note is kept whichever way you move.
+- **Last time** — the first row of every sync's queue opens the previous call with that team:
+  what changed on the tickets, what they said ticket by ticket, what they read out (with today's
+  follow-ups on its incident lines), points, actions, decisions and incident notes.
+- **On a ticket, without leaving the call** — the ETA history (each date, how often it
+  slipped), clear a hurdle in place (and how), add a hurdle or an action inline, my status as a
+  segment, ‹ Prev / Skip ›.
+- **What the incidents were** — in the roll-call's Incidents section, one line each for what
+  they read out. Below it, the previous call's lines with **Still there** (carried into today's
+  list), **Gone**, or **Ask** (their answer is kept). The count can stay the same while the
+  incidents change; these are the minor ones that never become demands. Lines never confirm the
+  numbers — a roll-call with lines but unconfirmed numbers is kept, and stays out of the trend.
+- **Closing** — a sheet with what changed in the call and what carries over. That recap is
+  kept on the sync and becomes the next call's *Last time*. (The call records the team's open
+  tickets when it starts, so changes made on the full ticket page mid-call count too.)
+- **Today's agenda** — under the greeting, one ordered list, late first: today's (or the
+  live) sync with what's waiting in it, action points due, ETAs passed or due tomorrow (*Ask
+  next sync* parks a point for that team), approvals waiting, risk reviews (*Reviewed*), and
+  incident notes without a close-out. Ticking one offers **Undo**. The other cards are the
+  **Watchlist** below.
+
+Data version 3 (adds fields only — a version-2 file opens and upgrades as it saves).
+
 ## Quarterly vendor scorecard
 
 **Effort → 📋 Quarterly scorecard** (also in the capacity header and the ⋯ menu). One team's
