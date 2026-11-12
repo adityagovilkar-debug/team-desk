@@ -92,23 +92,33 @@ slices of it at 300, 600 and 1,200 tickets.
 9. **The app's own dialogs and Undo** — 23 browser confirm boxes and 4 prompt boxes.
    Deletes become "Deleted · Undo"; only irreversible ones still ask.
 
-## Phase 2 — The sync loop (where most of your time in the app goes) — PRIORITY, mockup first
+## Phase 2 — The sync loop (where most of your time in the app goes) — MOCKUP BUILT 12 Nov 2026, not applied yet
 
-10. **An agenda on Today** — one ordered list instead of 20+ separate cards: today's
-    syncs and what to ask in them, action points due (yours first), ETAs falling due,
-    approvals waiting, risk reviews, incident notes to chase. Done in place, with Undo.
-    The cards that remain become a quieter "Watchlist" below.
-11. **Sync as an instrument** — a live header for the call: covered / to go as a dot
-    bar, a call timer, "next up", ETAs and hurdles captured so far.
-12. **Keys during a call** — J / K next and previous ticket, C covered, E new ETA,
-    H hurdle, U update. Calls are where speed matters most.
-13a. **Last time, for the roll-call's incidents** — the incidents they read out change from call
-    to call even when the count doesn't, and they aren't demands. A short list of what they were
-    (one line each), and in the next call the previous call's list beside this one: still there,
-    gone, or *ask about it* with the answer kept.
-13. **Since the last sync** — when you close a sync, it keeps a short record of what
-    changed (new ETAs, slips, hurdles raised and cleared, tickets closed) on the sync
-    itself, so the next call opens with it.
+All of it is in `mockups/sync-rehaul.html` (compare `mockups/sync-current.html`); the change is
+`mockups/sync-rehaul.patch.py` and goes into the app once approved. Data v3 (adds fields only).
+
+10. ◐ **An agenda on Today** — under the greeting, one ordered list, late first: today's (or the
+    live) sync with what's waiting in it, action points due, ETAs passed or due tomorrow (*Ask next
+    sync* parks a point), approvals waiting, risk reviews (*Reviewed*), incident notes without a
+    close-out. Ticking one offers Undo. The approvals, risk-review and incident-note cards fold
+    into it; what remains is the **Watchlist**.
+11. ◐ **Sync as an instrument** — a header over the call: live, team, title (click to rename),
+    the buttons; covered as dots (the open ticket ringed); what's been captured this call
+    (updates, ETAs, hurdles raised/cleared, actions, incident notes, roll-call); a running
+    timer; and **Next up**.
+12. ◐ **Keys during a call** — J / K next and previous, C covered, U type, E new ETA, H hurdle,
+    A action, R roll-call, L last time, N notes, ? the sheet; while typing Alt+↓ / Alt+↑ move and
+    Ctrl+Enter covers. A half-typed note is kept whichever way you move.
+13a. ◐ **Last time, for the roll-call's incidents** — a *What they were* list (one line each,
+    never marks the numbers recorded) and, below it, the previous call's lines with **Still
+    there** (carries the line into today's list), **Gone**, or **Ask** (keeps their answer).
+13. ◐ **Last time** — the first row of every sync's queue opens the previous call with that team:
+    what changed on the tickets, what they said ticket by ticket, what they read out (with today's
+    follow-ups on its incident lines), points, actions, decisions, incident notes.
+13b. ◐ **A close sheet** instead of the confirm box — what changed in this call and what carries
+    over; the recap is kept on the sync, and that is what the next call's Last time shows.
+13c. ◐ **On a ticket, without leaving the call** — the ETA history (dates, slips), clear a hurdle
+    in place (with how), add a hurdle or an action inline, my status as a segment, ‹ Prev / Skip ›.
 
 ## Phase 3 — People
 
