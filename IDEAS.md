@@ -56,31 +56,31 @@ slices of it at 300, 600 and 1,200 tickets.
 6. **Readout grids with holes.** Insights (3 + 2 tiles) and Effort (3 + 1) wrap into
    uneven rows; the legends use squares while the charts use dots and rings.
 
-## Decisions to make
+## Decisions (answered 12 Nov 2026)
 
-A. **Retire the three classic themes?** Demand Desk did (v48). Here, 16 places in the
-   code branch on Bench, and Today, the ticket page and the epic page each exist twice.
-   Every new screen is designed twice or looks wrong in one of them.
-B. **Rename the colliding names.** Suggestion: Performance log entries become
-   **Failures**; Knowledge's become **Incident notes**; Knowledge patterns stay
-   **Patterns**, the Performance log's become **Failure trends**.
-C. **Where Risks and Decisions live.** Knowledge is reference material (patterns,
-   contacts, incident notes). Risks are live and get reviewed; decisions come out of
-   calls. Options: Risks get their own rail item; Decisions move under Meetings/Sync.
-D. **A per-person review pack** (see Phase 3) holds judgements about named colleagues.
-   Wanted? Only if you're ever asked for input on their appraisals.
+- **A — retire the classic themes: YES — done.** Bench (Paper / Backlit / Follow Windows) is the
+  only look; a saved classic choice opens as Bench; the second copies of Today, the ticket header,
+  the epic page and the Updates list are gone, with the classic colour blocks.
+- **B — rename: YES — done.** Performance log entries are **Failures** (their rollup **Failure
+  trends**); Knowledge's are **Incident notes**; "Incidents" is left only for the roll-call count.
+- **C — Risks get their own place: YES — done.** A ⚠ item in the rail (count = reviews due);
+  Knowledge keeps patterns, contacts, decisions and incident notes.
+- **D — per-person review pack: NO.** Dropped.
+- **Syncs are ~90% of the use** — Phase 2 is the priority, all of it, plus *last time* for the
+  roll-call's incidents (below). Goes to a mockup first.
 
-## Phase 0 — Fix what's broken (no visible change)
+## Phase 0 — Fix what's broken (no visible change) — DONE 12 Nov 2026
 
-1. Search results above the page (bug 1).
-2. A data version and a "this file is from a newer Team Desk" guard (bug 2).
-3. Lookalike index built once per change, not once per ticket (Today back to tens of
-   milliseconds at any size).
-4. Ticket list: done tickets older than 30 days folded behind "Show older"; an edit
-   redraws its own card, not the whole list.
-5. Backup about a second after changes stop, time-stamped, the newer copy loads,
+1. ✓ Search results above the page (bug 1).
+2. ✓ A data version and a "this file is from a newer Team Desk" guard (bug 2).
+3. ✓ Lookalike index built once per change, not once per ticket — identical matches; at five
+   years of data the whole Today screen draws in ~0.2 s (was 2.7 s).
+4. ✓ Ticket list: done tickets older than 30 days folded behind "Show older". That alone made
+   the whole-list redraw after an edit cheap (0.9 s → 0.07 s at five years), so the edit still
+   redraws the list rather than only its card.
+5. ✓ Backup about a second after changes stop, time-stamped, the newer copy loads,
    flushed when the window hides (Demand Desk v45).
-6. The calmer animation loop (Demand Desk v45).
+6. ✓ The calmer animation loop (Demand Desk v45).
 
 ## Phase 1 — Foundations
 
@@ -92,7 +92,7 @@ D. **A per-person review pack** (see Phase 3) holds judgements about named colle
 9. **The app's own dialogs and Undo** — 23 browser confirm boxes and 4 prompt boxes.
    Deletes become "Deleted · Undo"; only irreversible ones still ask.
 
-## Phase 2 — The sync loop (where most of your time in the app goes)
+## Phase 2 — The sync loop (where most of your time in the app goes) — PRIORITY, mockup first
 
 10. **An agenda on Today** — one ordered list instead of 20+ separate cards: today's
     syncs and what to ask in them, action points due (yours first), ETAs falling due,
@@ -102,6 +102,10 @@ D. **A per-person review pack** (see Phase 3) holds judgements about named colle
     bar, a call timer, "next up", ETAs and hurdles captured so far.
 12. **Keys during a call** — J / K next and previous ticket, C covered, E new ETA,
     H hurdle, U update. Calls are where speed matters most.
+13a. **Last time, for the roll-call's incidents** — the incidents they read out change from call
+    to call even when the count doesn't, and they aren't demands. A short list of what they were
+    (one line each), and in the next call the previous call's list beside this one: still there,
+    gone, or *ask about it* with the answer kept.
 13. **Since the last sync** — when you close a sync, it keeps a short record of what
     changed (new ETAs, slips, hurdles raised and cleared, tickets closed) on the sync
     itself, so the next call opens with it.
@@ -114,9 +118,7 @@ D. **A per-person review pack** (see Phase 3) holds judgements about named colle
 15. **1:1 prep** — open points from the last 1:1, observations since, their tickets'
     slips and wins, in one panel when you start a 1:1 meeting.
 16. **Person workload forecast** — agreed earlier, still queued.
-17. **A per-person review pack** — only if decision D is yes: a year of dated
-    evidence (commendations, concerns, ETAs kept, tickets closed, skill movement),
-    in the style of Demand Desk's year in review.
+17. ~~A per-person review pack~~ — not wanted (decision D).
 
 ## Phase 4 — One coherent look
 

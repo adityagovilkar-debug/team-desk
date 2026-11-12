@@ -207,11 +207,11 @@ Six charts, each answering exactly one question. Hand-rolled SVG — no CDN, off
 | Failure trend | Is their conduct improving? |
 
 The last two appear only once something is logged in the Performance log, and they take the
-cross-team cut deliberately — Performance → Patterns goes deep on one team, Insights compares
+cross-team cut deliberately — Performance → Failure trends goes deep on one team, Insights compares
 them and shows the trend.
 
 Plus a KPI row (open / blocked / median days to close / first-ETA-met rate, and days lost to
-failures once incidents exist). Every chart has hover + keyboard-focus tooltips and a
+failures once any are logged). Every chart has hover + keyboard-focus tooltips and a
 **table view** toggle for reading or pasting the numbers.
 
 **On colour.** The team palette was validated with a contrast/CVD checker against this app's
@@ -336,19 +336,22 @@ their demands.
 
 ## Performance log
 
+*Called “incidents” until Nov 2026 — renamed **failures** so it no longer shares a word with the
+incident notes from calls. Same records, same data.*
+
 Everything else in the app records *state*. This records **conduct** — how a team actually
 fails, over months, with evidence.
 
-The unit is an **incident**, and one real episode usually carries several distinct failures.
+The unit is a **failure** (an episode), and one real episode usually carries several distinct failure modes.
 A single late delivery might be `late-response` → `missed-eta` → `false-done` → `untested` →
 `misdiagnosis` → `deflection` → `escalation-only` → `customer-visible`. Tagging all of them is
-what makes the pattern emerge: after ten incidents you can say *"seven involved a 'done' that
-wasn't"* — with the incidents behind it.
+what makes the pattern emerge: after ten failures you can say *"seven involved a 'done' that
+wasn't"* — with the failures behind it. The **Failure trends** view is that rollup.
 
 Failure modes are grouped into **Communication · Commitment · Quality · Analysis · Effort ·
 Process · Impact**, so the rollup answers *which kind* of failure this team has.
 
-**Evidence assembles itself.** Link a demand and the incident automatically cites that demand's
+**Evidence assembles itself.** Link a demand and the failure automatically cites that demand's
 ETA history, the hours logged against it, its hurdles and its dates — always current, straight
 from your own records. You add only what the app can't know: the quote, the third party's
 finding, what you saw.
@@ -363,10 +366,10 @@ comparable work, a demand with repeated broken ETAs, and work that sat for weeks
 within a day or two of the final commitment.
 
 **Evidence pack** — a dated document (Markdown or print/PDF): totals, recurring modes, then
-each incident with its sequence, evidence and cost. Deliberately separate from the Boss Brief,
+each failure with its sequence, evidence and cost. Deliberately separate from the Boss Brief,
 so conduct never rides along in a routine status update.
 
-One care taken throughout: an incident usually carries several modes, so per-mode day counts
+One care taken throughout: a failure usually carries several modes, so per-mode day counts
 **overlap and must not be summed**. Both the UI and the pack say so, and the headline totals are
 the non-overlapping figures.
 
@@ -375,7 +378,7 @@ the non-overlapping figures.
 Hurdles belong to a ticket. Risks don't — *"the AD team is reliably slow"*, *"cutting Q4 hours
 before LUCA is sized"*. Without a home those stay in a meeting note and resurface as a surprise.
 
-Lives as a fourth tab in **Knowledge**: severity, status (open / mitigating / accepted / closed),
+Has its own place in the rail (the ⚠ triangle, with a count of reviews due): severity, status (open / mitigating / accepted / closed),
 owner, what it is, what you're doing about it, and links to demands and epics.
 
 - A **review date** — the register's whole value is that risks resurface. Overdue reviews land
@@ -522,7 +525,7 @@ committed to their ticket when you close the sync, so nothing is lost.
 **Effort → 📋 Quarterly scorecard** (also in the capacity header and the ⋯ menu). One team's
 quarter on one page, for the contract or governance call, with every headline figure set against
 the previous quarter so the conversation is about the trend: hours used against the contract,
-demands delivered, share of ETAs met, incidents logged, and days lost.
+demands delivered, share of ETAs met, failures logged, and days lost.
 
 Below the headline figures: hours by demand and next quarter's forecast; delivery (raised, delivered,
 open, median days to close); **commitments** — every ETA that fell due in the quarter, judged one
@@ -659,15 +662,16 @@ always renders in the **browser's** locale (`mm/dd/yyyy` on an en-US machine), a
 the native text and paints a `dd-mm-yyyy` label over it. The input element itself is untouched,
 so its value stays ISO and the calendar picker still works normally.
 
-## Bench — the default look (Paper + Backlit)
+## Bench — the look (Paper + Backlit)
 
-Team Desk now opens in **Bench**, the same look Demand Desk uses: an icon rail on the left
-(with live counts — open tickets, live syncs, pending vendor approvals, incidents awaiting a
-close-out), a status bar along the bottom (which file, saved or not, the auto-save countdown,
-record counts), an animated dot wordmark that sweeps when a save lands, and a clock. **Paper**
-is light, **Backlit** is dark; by default it follows Windows. The ☀/🌙 button flips light ↔
-dark inside whichever family you picked; ⋯ Settings → Appearance picks any theme (Bench or the
-three classic ones), the motion level, and an optional first name for the greeting.
+Team Desk has one look, **Bench**, the same as Demand Desk: an icon rail on the left (with live
+counts — open tickets, live syncs, pending vendor approvals, risk reviews due, incident notes
+awaiting a close-out), a status bar along the bottom (which file, saved or not, the auto-save
+countdown, record counts), an animated dot wordmark that sweeps when a save lands, and a clock.
+**Paper** is light, **Backlit** is dark; by default it follows Windows. The ☀/🌙 button flips
+between them; ⋯ Settings → Appearance also sets the motion level and an optional first name for
+the greeting. *The three classic themes (dark, light, Instrument White) were retired in Nov 2026;
+a saved classic choice opens as Bench.*
 
 **Today is a cockpit.** A greeting over a flow field whose streams are coloured by where your
 tickets stand; Ctrl K search; one-click New ticket / Start or Resume sync / Point to raise /
@@ -679,65 +683,46 @@ severity if no team is outsourced). Below: a **delivery pipeline** (one lane per
 parked at New → In progress → Review → Done-in-30-days; red ring = blocked, red pulse = past its
 ETA), **epic rings** (share of tickets done, in the epic's health colour), and a **10-week
 calendar** (sync days, ETAs/due dates, action-point dues, risk reviews). Every "needs
-attention" card from before sits underneath, unchanged.
+attention" card sits underneath.
 
 **Pages.** A ticket opens with a header of readouts — raised, due, age, ETA (with slips),
 gates, subtasks, open hurdles, last update — a segmented control for *my status* (the change
 flies to its card in the list), and bands for a missed ETA, a blocker, or a boss flag. Updates
 read as a timeline with month headers (ochre dot = captured in a sync, blue = typed by hand).
-An epic page has a health segment, readouts (tickets/done/blocked/missed ETA/overdue/slipping/
-target), the headline as an editable band, a disagreement band when the tickets read worse than
-your call, and a two-column body: tickets by team and the dependency chain on the left; open
-hurdles, risks and meetings beside them. Across every view, each titled section is framed as
-its own panel.
+An epic page has a health segment, readouts, the headline as an editable band, a disagreement
+band when the tickets read worse than your call, and a two-column body. Across every view, each
+titled section is framed as its own panel.
 
 Motion is decorative and optional: Settings → Motion *Off*, or Windows' "reduce animations",
-stops all of it. Team colours were re-validated for both surfaces (Paper `#1B4FA0`/`#B07500`,
-Backlit `#5B8DEF`/`#BB8514` — Bench's own ochre sat just outside the dark lightness band), and
-the team mark keeps its shape (Portal a dot, P&C a ring). The classic themes render exactly as
-before — no rail, no cockpit. Theme, motion and name live in `localStorage` only.
+stops all of it. The animations run at 30 frames a second with the window focused, 10 behind
+other windows and none when hidden, and charts that have settled are left alone. Team colours
+are validated for both surfaces (Paper `#1B4FA0`/`#B07500`, Backlit `#5B8DEF`/`#BB8514`), and
+the team mark keeps its shape (Portal a dot, P&C a ring). In the Insights charts quantities are
+drawn as dots, the unlit track always shown, and small integer counts get one dot per unit.
 
-## Themes — dark, light, instrument
+## Names
 
-The classic themes, still available in ⋯ Settings. **Instrument** is a scientific-plotter look adapted
-from the `instrument-white/` design system: warm-white paper with an engineering dot-grid,
-hairline rules, registration tics on every panel, silkscreen micro-labels, mono tabular
-figures, and **quantities drawn as discrete dots rather than filled bars**.
+Two words used to mean two things each. Now:
 
-In instrument mode the six Insights charts and the vendor capacity meter re-render as dots —
-verified as zero `<rect>` elements. The unlit track is always drawn, because it shows the
-scale: the contract meter reads as *30 of 120 cells*, with approved hours filled and pending
-hours as **rings** (claimed but not yet yours).
+- **Failures** — the Performance log's entries (what the vendor did wrong, with evidence).
+  Their rollup is **Failure trends**.
+- **Incident notes** — Knowledge's notes on operational incidents mentioned in a call.
+- **Incidents** — only the count they read out in the roll-call.
+- **Patterns** — Knowledge's fix write-ups.
 
-Two deliberate deviations from the source system, both forced by the data:
+## Data safety and speed (Nov 2026)
 
-- **Its palette can't serve this app unmodified.** It has six pens, but three double as its
-  state colours, and the warm three are mutually indistinguishable (ochre↔cinnabar measures
-  ΔE 1.7 under deuteranopia). There's no way to get two team colours *and* three state colours
-  all separable by hue. So they're split by **role**: prussian + ochre carry team identity
-  (validated CVD ΔE 27.2, normal-vision 31.9), warm pens are reserved for state, and the team
-  tick also differs in **shape** — Portal a filled dot, P&C a ring — so identity survives
-  without relying on hue at all.
-- **Its dot-column form is built for hundreds of dense samples.** Twelve weekly counts of 0–5
-  rendered that way read as scattered specks, and a count of 1 against a max of 1 drew a *full*
-  run. Small integer counts now get **one dot per unit** against a floor of 4, so "1 of 4" looks
-  like 1 of 4.
-
-Themes are presentational only — the choice lives in `localStorage`, never in your data file.
-
-## Light / dark theme
-
-A ☀/🌙 toggle in the header. The whole app is driven by CSS variables, so the switch
-redefines one `[data-theme]` block and touches **no execution logic** — no function, data
-model, or persistence path reads a colour. The choice lives in its own plain-localStorage key
-(`teamdesk.theme`), deliberately **not** in the encrypted data file, so it applies on the
-lock screen and never sits behind the master password.
-
-The light palette isn't a naive flip: surfaces invert (white cards on a grey plane), hues are
-deepened so they stay legible on white, and the six charts' colours were **re-validated
-against a white surface** with the contrast/CVD checker — team pair `#2a78d6`/`#c1367a`,
-ordinal ramp `#6da7ec`/`#2a78d6`/`#16457e`. The Boss Brief / Tech-Spec "paper" stays light in
-both themes by design.
+- **A newer file can't be damaged by an older copy.** The data carries the version of Team Desk
+  that wrote it (now 2). An older copy refuses newer data — file, backup or snapshot — instead
+  of loading it and silently dropping what it doesn't understand.
+- **The browser backup** is written about a second after changes stop (not on every keystroke),
+  flushed when the window hides or closes, time-stamped, and the newer of the two copies loads.
+- **Search results** sit above the page — they used to be painted under it, so a click went to
+  the page behind (broken in Bench since September).
+- **Speed with years of data** (measured on ~five years: 2,500 tickets, 1,000 syncs): the
+  "solved this before" matcher builds its word index once per change instead of once per ticket
+  (Today 2.7 s → ~0.2 s, identical results); the ticket list folds done tickets older than 30
+  days behind one row (list 0.7 s → 0.06 s, any edit 0.9 s → 0.07 s).
 
 ## Notes
 

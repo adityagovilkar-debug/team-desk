@@ -54,30 +54,7 @@
      are deepened so they stay legible as text on white and carry white ink as
      fills. Chart hues re-validated against a WHITE surface, not flipped:
      team pair #2a78d6/#c1367a (CVD ΔE 15.9), ordinal #6da7ec/#2a78d6/#16457e. */
-  :root[data-theme="light"]{
-    color-scheme:light;
-    --bg:#eef1f6; --bg2:#e6eaf1; --panel:#ffffff; --panel2:#eff3f8;
-    --line:#dde2ea; --line2:#c8d0dc;
-    --txt:#1a2230; --muted:#586170; --faint:#6e7784;
-    --accent:#1668c4; --accent2:#6a3fce;
-    --green:#1a7f37; --amber:#9a6700; --red:#cf222e; --teal:#0f766e;
-    --chip:#eef2f8;
-    --on-accent:#ffffff;
-    --err-ink:#b3261e;
-    --tint-amber-bd:#e6cf93; --tint-amber-bg:#fdf6e3;
-    --tint-red-bd:#f0b4b4;   --tint-red-bg:#fdeeee;
-    --tint-green-bd:#a8d5b5; --tint-green-bg:#eef8f1;
-    --tint-blue-bd:#b3d0ef;  --tint-teal-bd:#9fd3cd;
-    --tint-violet-bd:#cdbdf0; --tint-pnc-bd:#eec0d3;
-    --grad-blue:linear-gradient(180deg,#e9f2fd,#f5f9ff);
-    --grad-violet:linear-gradient(180deg,#f3ecfc,#f8f5fe);
-    --grad-amber:linear-gradient(180deg,#fbf3df,#fbf7ef);
-    --team-portal:#2a78d6; --team-pnc:#c1367a;
-    --chart-bar:#2a78d6;
-    --ord-1:#6da7ec; --ord-2:#2a78d6; --ord-3:#16457e;
-    --grid:#e4e9ef; --axis:#c8d0dc;
-  }
-  /* ---- INSTRUMENT WHITE ----
+    /* ---- INSTRUMENT WHITE ----
      A scientific-plotter look: warm-white paper, hairlines, drafting pens, and
      quantities drawn as discrete dots rather than filled bars. Adapted from the
      instrument-white/ design system.
@@ -90,34 +67,7 @@
      reserved for state, and the team tick also differs in SHAPE (Portal a filled
      dot, P&C a ring) so identity survives without relying on hue at all.
      Team pair validated on paper: CVD ΔE 27.2 protan, normal-vision 31.9. */
-  :root[data-theme="instrument"]{
-    color-scheme:light;
-    --bg:#FFFFFF; --bg2:#FFFFFF; --panel:#FFFFFF; --panel2:#F7F7F4;
-    --line:#E7E6DF; --line2:#D6D5CC;
-    --txt:#12141A; --muted:#5A5E68; --faint:#9A9EA8;
-    --accent:#1B4FA0; --accent2:#6B3FA0;
-    --green:#0E7C63; --amber:#B07500; --red:#D93A1E; --teal:#0E7C63;
-    --chip:#FFFFFF;
-    --on-accent:#FFFFFF;
-    --err-ink:#D93A1E;
-    --tint-amber-bd:#E4D3A6; --tint-amber-bg:#FDF8EC;
-    --tint-red-bd:#F0C0B6;   --tint-red-bg:#FDF1EE;
-    --tint-green-bd:#B4D8CE; --tint-green-bg:#F0F7F5;
-    --tint-blue-bd:#BFD0E6;  --tint-teal-bd:#B4D8CE;
-    --tint-violet-bd:#D0C4E4; --tint-pnc-bd:#E4D3A6;
-    /* the system forbids surface gradients — flat paper everywhere */
-    --grad-blue:#FBFCFE; --grad-violet:#FCFBFE; --grad-amber:#FDFBF5;
-    --radius:3px;
-    --mono:ui-monospace,"Cascadia Mono","JetBrains Mono","SF Mono",Consolas,monospace;
-    --sans:"Inter","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
-    --team-portal:#1B4FA0; --team-pnc:#B07500;
-    --chart-bar:#1B4FA0;
-    --ord-1:#8FB0D6; --ord-2:#1B4FA0; --ord-3:#0C2C5C;
-    --grid:#E7E6DF; --axis:#D6D5CC;
-    --rule-strong:#D6D5CC; --grid-dot:#DEDDD6;
-    --label:var(--mono);   /* structure (labels, tabs, controls) — mono here, sans in Bench */
-  }
-  *{box-sizing:border-box}
+    *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14px;line-height:1.45;overflow:hidden}
   button{font-family:inherit;font-size:13px;color:var(--txt);background:var(--panel2);border:1px solid var(--line2);border-radius:7px;padding:6px 11px;cursor:pointer;transition:.12s}
@@ -1136,7 +1086,9 @@
   :root[data-theme="bench"] #app::before{-webkit-mask-image:radial-gradient(ellipse 130% 100% at 50% 0%,#000 30%,transparent 92%);mask-image:radial-gradient(ellipse 130% 100% at 50% 0%,#000 30%,transparent 92%)}
   /* shell: title bar · icon rail · content · status bar */
   :root[data-theme="bench"] #app{display:grid;grid-template-columns:58px minmax(0,1fr);grid-template-rows:42px minmax(0,1fr) 26px}
-  :root[data-theme="bench"] header{grid-column:1/-1;grid-row:1;height:42px;padding:0 10px 0 16px;gap:16px;background:var(--paper);border-bottom:1px solid var(--rule)}
+  :root[data-theme="bench"] header{grid-column:1/-1;grid-row:1;height:42px;padding:0 10px 0 16px;gap:16px;background:var(--paper);border-bottom:1px solid var(--rule);position:relative;z-index:6}
+  /* the title bar sits ABOVE the page: its search results drop down over the page, and with
+     both on one layer the page (later in the document) painted over them and took the clicks */
   :root[data-theme="bench"] .nav,:root[data-theme="bench"] header .spacer,:root[data-theme="bench"] #fileLabel,:root[data-theme="bench"] .logo .dot{display:none}
   :root[data-theme="bench"] main{grid-column:2;grid-row:2;min-height:0}
   :root[data-theme="bench"] main.wide aside{display:none}
@@ -1334,9 +1286,10 @@
   .bh-acts{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
   .bh-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .bro{display:flex;flex-wrap:wrap;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:14px}
-  .bro-i{flex:1 1 92px;background:var(--paper);padding:8px 10px 9px;min-width:0}
+  .bro-i{flex:1 1 98px;background:var(--paper);padding:8px 8px 9px;min-width:0}
   .bro-i .k{display:block;font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
-  .bro-i .v{display:block;font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+  .bro-i .v{display:block;font-family:var(--mono);font-size:13.5px;font-variant-numeric:tabular-nums;line-height:1.15;white-space:normal;overflow-wrap:normal;color:var(--ink)}
+  .bro-i .v small{white-space:nowrap}
   .bro-i .v small{font-size:9.5px;color:var(--ink-3);margin-left:4px;font-weight:400}
   .bro-i.bad .v{color:var(--bad)} .bro-i.warn .v{color:var(--watch)} .bro-i.good .v{color:var(--good)}
   .bband{--pen:var(--ink-3);position:relative;display:flex;align-items:center;gap:12px;margin-top:12px;padding:7px 10px 7px 12px;border:1px solid var(--rule);border-radius:3px;font-size:12px;color:var(--ink-2);background:var(--paper)}
@@ -1405,6 +1358,8 @@
   .dem2-team:first-of-type{margin-top:0}
   .bempty{font-size:11.5px;color:var(--ink-3);padding:10px 0;text-align:center;line-height:1.6}
   .dbar{display:block;flex:none}
+  .foldrow{padding:10px 14px;border-top:1px dotted var(--rule-strong);font-size:11.5px;color:var(--accent);cursor:pointer;text-align:center}
+  .foldrow:hover{background:var(--paper-2)}
   @media (max-width:1150px){.ep2{grid-template-columns:1fr}}
 
   #printArea{display:none}
@@ -1419,9 +1374,10 @@
 </style>
 </head>
 <body>
-<script>(function(){var e=document.documentElement;try{var t=localStorage.getItem("teamdesk.theme");if(!localStorage.getItem("teamdesk.themeV2")||!t)t="bench";
-  if(t.indexOf("bench")===0){e.setAttribute("data-theme","bench");e.setAttribute("data-mode",t==="bench-backlit"||(t==="bench"&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light");}
-  else if(t==="light"||t==="instrument"||t==="dark")e.setAttribute("data-theme",t);
+<script>(function(){var e=document.documentElement;e.setAttribute("data-theme","bench");try{var t=localStorage.getItem("teamdesk.theme");
+  /* one look: Bench. A saved classic theme from before opens as Bench, following Windows */
+  if(t!=="bench-paper"&&t!=="bench-backlit")t="bench";
+  e.setAttribute("data-mode",t==="bench-backlit"||(t==="bench"&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light");
   var m=localStorage.getItem("teamdesk.motion");if(m==="off"||(m!=="full"&&matchMedia("(prefers-reduced-motion: reduce)").matches))e.classList.add("nomotion");}
   catch(x){e.setAttribute("data-theme","bench");e.setAttribute("data-mode","light");}})();</script>
 <div id="app">
@@ -1466,8 +1422,9 @@
     <button class="rb hide" data-view="effort" id="railEffort" style="--pen:var(--pen-6)"><svg viewBox="0 0 18 18"><circle cx="9" cy="9.5" r="6"/><path d="M9 6.5v3l2 1.5M7.5 2.5h3"/></svg><span class="pd"></span><span class="cnt" id="rcEffort"></span><span class="tip">Effort · approvals pending</span></button>
     <button class="rb hide" data-view="perf" id="railPerf" style="--pen:var(--pen-1)"><svg viewBox="0 0 18 18"><path d="M4 15.5V3M4 3.5h9l-2 3 2 3H4"/></svg><span class="pd"></span><span class="tip">Performance</span></button>
     <div class="sep"></div>
+    <button class="rb" data-view="risks" style="--pen:var(--watch)"><svg viewBox="0 0 18 18"><path d="M9 2.8l6.8 12H2.2z"/><path d="M9 7.2v3.6"/><circle cx="9" cy="13" r=".5"/></svg><span class="pd"></span><span class="cnt" id="rcRisks"></span><span class="tip">Risks · due for review</span></button>
     <button class="rb" data-view="insights" style="--pen:var(--ink-2)"><svg viewBox="0 0 18 18"><path d="M3 15.5h12"/><circle cx="5" cy="11" r="1.2"/><circle cx="9" cy="7" r="1.2"/><circle cx="13" cy="4.5" r="1.2"/><path d="M5 11l4-4 4-2.5"/></svg><span class="pd"></span><span class="tip">Insights</span></button>
-    <button class="rb" data-view="knowledge" style="--pen:var(--ink-2)"><svg viewBox="0 0 18 18"><path d="M3 3.5h5v11H3zM10 3.5h5v11h-5z"/><path d="M5.5 6.5v5"/></svg><span class="pd"></span><span class="cnt" id="rcKnow"></span><span class="tip">Knowledge · incidents to close out</span></button>
+    <button class="rb" data-view="knowledge" style="--pen:var(--ink-2)"><svg viewBox="0 0 18 18"><path d="M3 3.5h5v11H3zM10 3.5h5v11h-5z"/><path d="M5.5 6.5v5"/></svg><span class="pd"></span><span class="cnt" id="rcKnow"></span><span class="tip">Knowledge · incident notes to close out</span></button>
     <div class="grow"></div>
     <button class="rb" id="railMenu" style="--pen:var(--ink-3)"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="2.3"/><path d="M9 2v2M9 14v2M2 9h2M14 9h2M4 4l1.4 1.4M12.6 12.6L14 14M4 14l1.4-1.4M12.6 5.4L14 4"/></svg><span class="pd"></span><span class="tip">Settings · data &amp; backup</span></button>
   </nav>
@@ -1726,7 +1683,7 @@ function noteContent(){if(isValidState(state)&&contentCount()>0)hadContent=true;
    sits encrypted in pendingEncrypted. Nothing may be persisted from it: cancelling
    the unlock and adding one ticket used to overwrite the encrypted backup with a
    plaintext one-ticket state — and auto-save then wrote that over the data file. */
-function safeToPersist(){return !pendingEncrypted&&isValidState(state)&&!(hadContent&&contentCount()===0);}
+function safeToPersist(){return !pendingEncrypted&&!blockedNewer&&isValidState(state)&&!(hadContent&&contentCount()===0);}
 /* editSeq counts edits. A write only clears `dirty` if the count didn't move while
    it was in flight — otherwise an edit made mid-write was marked saved without ever
    reaching the disk, and the next auto-save had nothing to do. */
@@ -1825,23 +1782,37 @@ async function initStore(){
     if((await idbGet("backup"))==null){const ls=localStorage.getItem(LS_KEY);if(ls){await idbSet("backup",ls);const sn=localStorage.getItem(SNAP_KEY);if(sn)await idbSet("snapshots",sn);await idbSet("hadfile","1");}}
   }catch(e){}}
 }
-let encBackupTimer=null;
-function persistBackup(str){
-  try{localStorage.setItem(LS_KEY,str);localStorage.setItem(LS_HANDLE_HINT,"1");}catch(e){/* quota — IDB still covers it */}
-  if(useIdb){idbSet("backup",str).catch(()=>{});idbSet("hadfile","1").catch(()=>{});}
+/* Written about a second after changes stop (not on every change — after a few years
+   of data that was a full copy per keystroke), to IndexedDB when the browser has it,
+   else localStorage. When the window hides or closes it is written at once, and to
+   localStorage too because that write can't be cut short. Each copy carries the time
+   it was taken, and loading uses the newer of the two. */
+let backupTimer=null;
+const LS_AT=LS_KEY+".at";
+function persistBackup(str,closing){const at=Date.now();
+  if(!useIdb||closing){try{localStorage.setItem(LS_KEY,str);localStorage.setItem(LS_AT,String(at));}catch(e){/* quota — IDB still covers it */}}
+  try{localStorage.setItem(LS_HANDLE_HINT,"1");}catch(e){}
+  if(useIdb){idbSet("backup",str).catch(()=>{});idbSet("backupAt",at).catch(()=>{});idbSet("hadfile","1").catch(()=>{});}
 }
-function backupLocal(){
+async function backupNow(closing){clearTimeout(backupTimer);backupTimer=null;
   if(!safeToPersist())return; /* never let a corrupt/emptied state clobber the good backup */
-  if(isEncrypted()){clearTimeout(encBackupTimer);encBackupTimer=setTimeout(async()=>{if(!safeToPersist())return;try{persistBackup(await encryptStateStr(masterPassword));}catch(e){}},1000);return;}
-  persistBackup(JSON.stringify(state));
-}
+  try{persistBackup(isEncrypted()?await encryptStateStr(masterPassword):JSON.stringify(state),closing);}catch(e){}}
+function backupLocal(){if(!safeToPersist())return;clearTimeout(backupTimer);backupTimer=setTimeout(()=>backupNow(false),1000);}
+/* the window is going away or out of sight: don't leave a pending backup behind */
+function flushBackup(){if(backupTimer)backupNow(true);}
+/* the newer of the two browser copies; with no times, IndexedDB's as before */
+function pickBackup(idb,ls){if(idb.raw==null)return ls.raw;if(ls.raw==null)return idb.raw;return (+ls.at||0)>(+idb.at||0)?ls.raw:idb.raw;}
 async function loadBackup(){
-  let raw=null;
-  if(useIdb){try{const v=await idbGet("backup");if(v!=null)raw=v;}catch(e){}}
-  if(raw==null){try{raw=localStorage.getItem(LS_KEY);}catch(e){}}
+  const idb={raw:null,at:0},ls={raw:null,at:0};
+  if(useIdb){try{const v=await idbGet("backup");if(v!=null){idb.raw=v;idb.at=+(await idbGet("backupAt"))||0;}}catch(e){}}
+  try{ls.raw=localStorage.getItem(LS_KEY);ls.at=+localStorage.getItem(LS_AT)||0;}catch(e){}
+  const raw=pickBackup(idb,ls);
   if(raw==null)return false;
   try{const p=JSON.parse(raw);if(p&&p._encrypted){pendingEncrypted=p;return "encrypted";}
     if(!looksLikeTeamDesk(p))throw new Error("not Team Desk data");
+    /* a newer copy's backup: start empty and write NOTHING until a file is opened,
+       or the empty screen would replace it */
+    if(newerThanMe(p)){blockedNewer=+p.version;setTimeout(()=>warnNewer(p,"The browser backup"),600);return false;}
     state=migrate(p);return true;}
   catch(e){
     /* Don't let the next edit overwrite it — an unreadable backup may still be
@@ -2095,7 +2066,7 @@ function normMention(m){return {id:m.id||uid(),team:m.team||"portal",
   ticketId:m.ticketId||"",incidentId:m.incidentId||"",
   createdAt:m.createdAt||Date.now(),updatedAt:m.updatedAt||Date.now()};}
 function migrate(d){
-  d.version=1;
+  d.version=DATA_VERSION;
   d.settings=d.settings||{};
   const S=d.settings;
   S.teams=(S.teams&&S.teams.length)?S.teams.map(t=>({id:t.id,name:t.name||t.id,mode:t.mode==="observed"?"observed":"managed",note:t.note||"",outsourced:!!t.outsourced,vendorName:t.vendorName||""})):JSON.parse(JSON.stringify(DEF_TEAMS));
@@ -2189,6 +2160,15 @@ function purgeDeadLinks(d){
    file, even a package.json, opened as an empty Team Desk and became the save
    target, and the next auto-save wrote Team Desk data over it. Every Team Desk file
    since Phase 1 carries both of these arrays. */
+/* The data carries the version of Team Desk that wrote it. Records are rebuilt field by
+   field on load, so an OLDER copy of the app would silently drop whatever it doesn't know
+   about — and save it back that way. So an older copy refuses newer data instead. */
+const DATA_VERSION=2;
+let blockedNewer=0;
+function newerThanMe(p){return !!p&&typeof p==="object"&&+p.version>DATA_VERSION;}
+function warnNewer(p,what){
+  toast(what+" was saved by a newer Team Desk (data v"+(+p.version)+"); this copy reads up to v"+DATA_VERSION+
+    ". Nothing was opened or changed — use the newer TeamDesk.html.",true);}
 function looksLikeTeamDesk(p){return !!p&&typeof p==="object"&&!Array.isArray(p)&&Array.isArray(p.tickets)&&Array.isArray(p.people);}
 async function loadFromText(txt,name){
   let parsed;try{parsed=JSON.parse(txt);}catch(e){toast("Not valid JSON — nothing was changed",true);return false;}
@@ -2200,13 +2180,15 @@ async function loadFromText(txt,name){
       if(pw===null)return false;
       let raw;try{raw=await decryptEnvelope(parsed,pw);}catch(e){toast("Wrong password — try again",true);continue;}
       if(!looksLikeTeamDesk(raw)){toast("That file isn't Team Desk data — nothing was changed",true);return false;}
+      if(newerThanMe(raw)){warnNewer(raw,name||"That file");return false;}
       state=migrate(raw);masterPassword=pw;break;}
   }else{
     if(!looksLikeTeamDesk(parsed)){toast("That isn't a Team Desk data file — nothing was changed",true);return false;}
+    if(newerThanMe(parsed)){warnNewer(parsed,name||"That file");return false;}
     state=migrate(parsed);masterPassword=null;
   }
   /* whatever was locked is superseded by the file he chose to open */
-  pendingEncrypted=null;hadContent=false;noteContent();
+  pendingEncrypted=null;blockedNewer=0;hadContent=false;noteContent();
   return true;
 }
 function resetSelection(){
@@ -2644,25 +2626,30 @@ function ticketText(t){
     t.hurdles.map(h=>h.text).join(" ")].join(" ");
 }
 function patternText(p){return [p.title,p.symptom,p.cause,p.steps].join(" ");}
-/* document frequency across every ticket + pattern; recomputed per call — the corpus is
-   small enough that caching would only add a staleness bug */
-function buildDF(){
-  const df=Object.create(null);let n=0;
-  const add=txt=>{n++;new Set(tokenize(txt)).forEach(w=>{df[w]=(df[w]||0)+1;});};
-  state.tickets.forEach(t=>add(ticketText(t)));
-  state.patterns.forEach(p=>add(patternText(p)));
-  return {df,n:Math.max(1,n)};
+/* Document frequency and each record's words, across every ticket + pattern. Built once
+   per change (keyed on the edit counter and the state object, so it can't go stale): it
+   used to be rebuilt for every ticket asked about, and Today asks about every open one —
+   with a few years of tickets that alone took seconds. */
+let _lkIdx=null;
+function lookIndex(){
+  if(_lkIdx&&_lkIdx.seq===editSeq&&_lkIdx.st===state)return _lkIdx;
+  const df=Object.create(null),tok=new Map(),ptok=new Map();let n=0;
+  const add=txt=>{n++;const w=new Set(tokenize(txt));w.forEach(x=>{df[x]=(df[x]||0)+1;});return w;};
+  state.tickets.forEach(t=>tok.set(t.id,add(ticketText(t))));
+  state.patterns.forEach(p=>ptok.set(p.id,add(patternText(p))));
+  _lkIdx={seq:editSeq,st:state,df,n:Math.max(1,n),tok,ptok,inPattern:new Set(state.patterns.flatMap(p=>p.ticketIds))};
+  return _lkIdx;
 }
+function buildDF(){const I=lookIndex();return {df:I.df,n:I.n};}
 function idf(w,D){return Math.log(1+D.n/(1+(D.df[w]||0)));}
 /* query = {title, description, tags, team}; returns ranked {kind, item, score, shared} */
 function findLookalikes(query,excludeId,limit){
   const qTokens=new Set(tokenize((query.title||"")+" "+(query.description||"")));
   const qTags=new Set(query.tags||[]);
   if(!qTokens.size&&!qTags.size)return [];
-  const D=buildDF();
+  const I=lookIndex(),D={df:I.df,n:I.n};
   const norm=Math.sqrt(Math.max(1,qTokens.size));
-  const score=(txt,tags,bonus)=>{
-    const toks=new Set(tokenize(txt));
+  const score=(toks,tags,bonus)=>{
     let s=0,shared=[];
     qTokens.forEach(w=>{if(toks.has(w)){s+=idf(w,D);shared.push(w);}});
     s/=norm;
@@ -2677,16 +2664,16 @@ function findLookalikes(query,excludeId,limit){
   const out=[];
   state.patterns.forEach(p=>{
     /* patterns rank above raw tickets — the hardened write-up beats the original */
-    const r=score(patternText(p),p.tags,1.5);
+    const r=score(I.ptok.get(p.id)||new Set(),p.tags,1.5);
     if(r.s>0)out.push({kind:"pattern",item:p,score:r.s,shared:r.shared});
   });
   state.tickets.forEach(t=>{
     if(t.id===excludeId)return;
-    if(patternForTicket(t.id))return;      /* its pattern already represents it */
+    if(I.inPattern.has(t.id))return;      /* its pattern already represents it */
     let bonus=1;
     if(t.resolution)bonus*=1.3;            /* a solved one is actionable */
     if(query.team&&t.team===query.team)bonus*=1.05;
-    const r=score(ticketText(t),t.tags,bonus);
+    const r=score(I.tok.get(t.id)||new Set(),t.tags,bonus);
     if(r.s>0)out.push({kind:"ticket",item:t,score:r.s,shared:r.shared});
   });
   return out.filter(x=>x.score>=1.2).sort((a,b)=>b.score-a.score).slice(0,limit||4);
@@ -2832,7 +2819,7 @@ function renderApp(){
     if(view==="today"){renderToday();}
     else if(view==="tickets"){renderTicketSidebar();renderTicketDetail();}
     else if(view==="epics"){renderEpicSidebar();renderEpicDetail();}
-    else if(view==="knowledge"){renderKnowledgeSidebar();renderKnowledgeDetail();}
+    else if(view==="knowledge"||view==="risks"){renderKnowledgeSidebar();renderKnowledgeDetail();}
     else if(view==="insights"){renderInsights();}
     else if(view==="effort"){renderEffort();}
     else if(view==="perf"){renderPerf();}
@@ -2945,15 +2932,15 @@ function renderToday(){
   const hiRisks=liveRisks().filter(r=>r.severity==="high");
   cards.push(dashCard("⚠ High risks",hiRisks.map(r=>({
     main:r.title||"(untitled)",sub:RISK_STATUS[r.status].label+(r.owner?" · "+r.owner:""),
-    go:()=>{activeRiskId=r.id;knowledgeTab="risks";view="knowledge";renderApp();}})),"alert"));
+    go:()=>{activeRiskId=r.id;view="risks";renderApp();}})),"alert"));
   const dueRisks=state.risks.filter(riskNeedsReview);
   cards.push(dashCard("🔁 Risks due for review",dueRisks.map(r=>({
     main:r.title||"(untitled)",sub:"review was "+fmtDate(r.reviewOn),
-    go:()=>{activeRiskId=r.id;knowledgeTab="risks";view="knowledge";renderApp();}})),"warn"));
+    go:()=>{activeRiskId=r.id;view="risks";renderApp();}})),"warn"));
   const rsug=suggestRisks();
   cards.push(dashCard("⚠ Possible systemic risk",rsug.map(x=>({
     main:x.title,sub:x.why,
-    go:()=>{activeRiskId=null;knowledgeTab="risks";view="knowledge";renderApp();}})),""));
+    go:()=>{activeRiskId=null;view="risks";renderApp();}})),""));
   /* a blocker finished — the dependent can move, and nobody else will notice */
   const unblocked=state.tickets.filter(nowUnblocked);
   cards.push(dashCard("✅ Unblocked — blocker is done",unblocked.map(t=>({
@@ -3031,32 +3018,11 @@ function renderToday(){
 
   const live=state.syncs.filter(s=>!s.closed);
   const shown=cards.filter(Boolean);
-  if(benchOn()){
-    const attn=shown.reduce((n,c)=>n+c.n,0);
-    det.innerHTML=`<div class="dash cockpit"><div class="ck-in">${cockpitHTML()}<div class="ck-sech"><span class="ck-lbl">Needs attention · ${attn}</span></div>
-      ${shown.length?`<div class="dash-grid">${shown.map(c=>c.html).join("")}</div>`
-        :`<div class="dashcard good" style="max-width:440px"><h3>✓ All clear</h3><div class="dash-empty">Nothing needs your attention right now.</div></div>`}</div></div>`;
-    shown.forEach(c=>c.wire());mountCockpit(det);return;}
-  det.innerHTML=`<div class="dash">
-    <div class="dash-head"><h1>Today</h1><span class="faint">${fmtDate(todayStr())}</span></div>
-    ${state.settings.encryption?"":`<div class="banner" id="encBanner">
-      <span>🔓 <b>Not encrypted.</b> This file holds named colleagues, skill ratings and commitment history — worth protecting on a work laptop.</span>
-      <button class="primary sm" id="bnEnc">Set master password</button></div>`}
-    ${live.length?`<div class="banner blue">
-      <span>🎙 <b>Sync in progress</b> — ${esc(live[0].title||teamOf(live[0].team).name)} (${fmtDate(live[0].date)})</span>
-      <button class="primary sm" id="bnResume">Resume</button></div>`:""}
-    ${ncBits.map(b=>`<div class="nextcall">
-        <div class="nc-main"><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px">Next ${esc(b.team.name)} sync</div>
-        <div class="nc-when">${b.nx.inDays===0?"Today":b.nx.inDays===1?"Tomorrow":b.nx.dow+" · in "+b.nx.inDays+" days"}</div>
-        <div class="faint" style="font-size:12px">${fmtDate(b.nx.date)} · ${queueFor(b.team.id).length} tickets to ask about</div></div>
-        <button class="primary" data-prep="${esc(b.team.id)}">🎙 Prep this sync</button></div>`).join("")}
+  const attn=shown.reduce((n,c)=>n+c.n,0);
+  det.innerHTML=`<div class="dash cockpit"><div class="ck-in">${cockpitHTML()}<div class="ck-sech"><span class="ck-lbl">Needs attention · ${attn}</span></div>
     ${shown.length?`<div class="dash-grid">${shown.map(c=>c.html).join("")}</div>`
-      :`<div class="dashcard good"><h3>✓ All clear</h3><div class="dash-empty">Nothing needs your attention right now.</div></div>`}
-  </div>`;
-  shown.forEach(c=>c.wire());
-  const be=det.querySelector("#bnEnc");if(be)be.onclick=setMasterPassword;
-  const br=det.querySelector("#bnResume");if(br)br.onclick=()=>openCall("sync",live[0].id);
-  det.querySelectorAll("[data-prep]").forEach(b=>b.onclick=()=>startSync(b.dataset.prep));
+      :`<div class="dashcard good" style="max-width:440px"><h3>✓ All clear</h3><div class="dash-empty">Nothing needs your attention right now.</div></div>`}</div></div>`;
+  shown.forEach(c=>c.wire());mountCockpit(det);
 }
 let _dashSeq=0;
 function dashCard(title,items,cls){
@@ -3161,6 +3127,13 @@ function renderTicketSidebar(){
     <div class="stat op"><b>${open}</b>open</div>
     <div class="stat bl"><b>${list.filter(t=>openHurdles(t).length).length}</b>blocked</div>
     <div class="stat dl"><b>${list.filter(t=>t.myStatus==="done").length}</b>done</div>`;
+  /* Done tickets closed more than 30 days ago fold behind one row. After a few years
+     they are most of the list, and drawing them all made every single edit slow.
+     Picking "Done" in the status chips shows them all. */
+  const cut30=addDays(-30);let older=[];
+  if(!(f._sts||[]).includes("done")&&!f._older){
+    older=list.filter(t=>!isOpen(t)&&t.id!==activeId&&(t.closedDate||dstr(new Date(t.updatedAt||0)))<cut30);
+    if(older.length){const o=new Set(older);list=list.filter(t=>!o.has(t));}}
 
   const wrap=side.querySelector("#tkList");
   if(!list.length){wrap.innerHTML=`<div class="empty">No tickets match.<br><br><button class="sm" id="clr">Clear filters</button></div>`;
@@ -3185,8 +3158,11 @@ function renderTicketSidebar(){
         ${isStalled(t)?`<span class="warnchip bad">🧊 ${daysSince(lastMovementTs(t))}d</span>`
           :isOpen(t)&&stale>=state.settings.staleDays?`<span class="warnchip info">🕰 ${stale}d</span>`:""}
         ${t.bossRelevant?`<span class="bossflag">BOSS</span>`:""}
-      </div></div>`;}).join("");
+      </div></div>`;}).join("")
+    +(older.length?`<div class="foldrow" id="tkOlder">Show ${older.length} older done ticket${older.length===1?"":"s"}</div>`
+      :f._older?`<div class="foldrow" id="tkOlder">Fold done tickets older than 30 days</div>`:"");
   wrap.querySelectorAll(".tcard").forEach(c=>c.onclick=()=>{activeId=c.dataset.id;renderApp();});
+  const fo=wrap.querySelector("#tkOlder");if(fo)fo.onclick=()=>{f._older=!f._older;renderTicketSidebar();};
 }
 
 function openQuickAdd(prefTeam){
@@ -3285,25 +3261,7 @@ function renderTicketDetail(){
     const b=det.querySelector("#np");if(b)b.onclick=()=>openQuickAdd();return;}
   const tabs=[["work","Work",0],["updates","Updates",t.updates.length],["hurdles","Hurdles",openHurdles(t).length],
     ["people","People &amp; POCs",t.assignees.length+t.contactIds.length],["resolution","Resolution",t.resolution?1:0]];
-  det.innerHTML=benchOn()?ticketHeadBench(t,tabs)+`<div class="detail-body" id="tkBody"></div>`:`
-    <div class="detail-head">
-      <div class="dh-top"><div style="flex:1;min-width:0">
-        <div class="dh-id ${teamCls(t.team)}"><span style="color:${teamColor(t.team)}">${esc(t.ticketId||"—")}</span>
-          ${teamPill(t.team)}<span class="faint" style="font-weight:400">${esc(t.source)}</span>
-          ${t.bossRelevant?`<span class="bossflag">BOSS</span>`:""}</div>
-        <h1 id="tkTitle" style="cursor:text">${esc(t.title||"(untitled)")}</h1></div>
-        <button class="ghost" id="tkDup" title="Duplicate — reuse this ticket's subtasks/steps for another system">⧉</button>
-        <button class="ghost" id="tkDel" title="Delete ticket">🗑</button>
-      </div>
-      <div class="dh-dates">
-        <span>Raised <b>${t.raisedDate?fmtDate(t.raisedDate):"—"}</b></span>
-        <span>Due <b class="due ${dueClass(t.dueDate,t.myStatus)}">${t.dueDate?fmtDate(t.dueDate):"—"}</b></span>
-        ${t.closedDate?`<span>Closed <b>${fmtDate(t.closedDate)}</b></span>`:""}
-        <span>Last update <b>${t.updates.length?fmtTs(lastUpdateTs(t)):"never"}</b></span>
-      </div>
-      <div class="tabs">${tabs.map(([k,l,c])=>`<button class="tab ${activeTab===k?"active":""}" data-tab="${k}">${l}${c?`<span class="count">${c}</span>`:""}</button>`).join("")}</div>
-    </div>
-    <div class="detail-body" id="tkBody"></div>`;
+  det.innerHTML=ticketHeadBench(t,tabs)+`<div class="detail-body" id="tkBody"></div>`;
   det.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{activeTab=b.dataset.tab;renderTicketDetail();enterPulse("detail");});
   det.querySelectorAll("#tk-seg [data-s]").forEach(b=>b.onclick=()=>setTicketStatusBench(t,b.dataset.s,b));
   det.querySelectorAll("[data-goep]").forEach(a=>a.onclick=()=>{activeEpicId=a.dataset.goep;view="epics";renderApp();});
@@ -3594,12 +3552,7 @@ function tabUpdates(body,t){
     <div class="add-upd">
       <textarea id="u-new" placeholder="What did they tell you? (Ctrl+Enter to add)"></textarea>
       <button class="primary" id="u-add">Add update</button></div>
-    ${ups.length&&benchOn()?updatesTimelineHTML(ups):ups.length?ups.map(u=>{
-      const s=u.syncId?state.syncs.find(x=>x.id===u.syncId):null;
-      return `<div class="upd"><div class="uts">${fmtTs(u.ts)}</div><div class="ubody">
-        <div class="utxt" data-utxt="${u.id}">${linkify(u.text)}</div>
-        <div class="usrc">${s?`🎙 from ${esc(s.title||teamOf(s.team).name)} · ${fmtDate(s.date)}`:"manual entry"}${u.by?" · "+esc(u.by):""}</div>
-      </div><button class="ghost sm nact" data-udel="${u.id}">✕</button></div>`;}).join("")
+    ${ups.length?updatesTimelineHTML(ups)
       :`<p class="faint" style="font-size:12px">No updates yet. Anything captured during a sync lands here automatically.</p>`}`;
   const ta=body.querySelector("#u-new");
   const add=()=>{const v=ta.value.trim();if(!v)return;
@@ -3996,7 +3949,7 @@ function renderSync(){
         <div class="faint" style="font-size:11.5px">${pending.length} left · ${done.length} covered</div>
         <div class="quickadd">
           <button class="sm primary" id="sq-new">＋ Ticket</button>
-          <button class="sm" id="sq-ment">＋ Incident</button>
+          <button class="sm" id="sq-ment">＋ Incident note</button>
           <button class="sm" id="sq-agenda">📋 Add point</button>
           <button class="sm" id="sq-notes">📝 Meeting notes</button>
           <button class="sm" id="sq-close">✓ Close sync</button>
@@ -4532,7 +4485,7 @@ function mentionFormHtml(m){
     ${inc?`<div class="banner good">⚑ Promoted to the performance log — <b>${esc(inc.title)}</b>.
       <button class="sm" id="mn-goinc" style="margin-left:auto">Open it</button></div>`
       :`<div class="lookwrap"><div class="lk-h">⚑ Was the handling the problem?</div>
-        <p class="faint" style="font-size:12px;margin:0 0 9px">Operational incidents live here and stay out of the performance log on purpose — otherwise “N incidents this quarter”
+        <p class="faint" style="font-size:12px;margin:0 0 9px">Operational incidents live here and stay out of the performance log on purpose — otherwise “N failures this quarter”
           stops meaning anything. Promote only when how they handled it is the story: a false “closed”, a missed callback, no explanation at all.</p>
         <button class="primary sm" id="mn-promote">⚑ Promote to the performance log</button></div>`}
     <div class="row" style="margin-top:6px"><button class="ghost danger" id="mn-del" style="flex:0 0 auto">🗑 Delete this note</button><span style="flex:1"></span></div>`;
@@ -5309,8 +5262,8 @@ function renderPerf(){
     <div class="side-tools">
       <div class="segmented">
         <button class="${perfView==="log"?"on":""}" data-pv="log">Log</button>
-        <button class="${perfView==="patterns"?"on":""}" data-pv="patterns">Patterns</button></div>
-      <button class="primary" id="pf-new" style="width:100%">＋ Log an incident</button>
+        <button class="${perfView==="patterns"?"on":""}" data-pv="patterns">Failure trends</button></div>
+      <button class="primary" id="pf-new" style="width:100%">＋ Log a failure</button>
       <div class="filters">
         <select id="pf-team"><option value="">All teams</option>${teams.map(t=>`<option value="${esc(t.id)}" ${perfTeam===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select>
         <select id="pf-since"><option value="">All time</option>
@@ -5347,21 +5300,21 @@ function renderPerf(){
 function newIncident(pre){
   const x=normIncident(Object.assign({team:(vendorTeams()[0]||{}).id||"",date:todayStr()},pre||{}));
   state.incidents.unshift(x);activeIncidentId=x.id;perfView="log";view="perf";markDirty();renderApp();
-  toast("Incident logged — give it a title");
+  toast("Failure logged — give it a title");
 }
 function renderPerfOverview(det,cands){
   det.innerHTML=`<div class="dash">
     <div class="dash-head"><h1>Performance log</h1><span class="faint">how this team actually fails, with evidence</span>
-      <span style="flex:1"></span><button class="primary sm" id="pf-new2">＋ Log an incident</button></div>
+      <span style="flex:1"></span><button class="primary sm" id="pf-new2">＋ Log a failure</button></div>
     <p class="muted" style="font-size:12.5px;max-width:660px">One episode usually contains several distinct failures — a late ETA, then a "done" that wasn't, then a wrong root cause. Tag them all and the pattern emerges over months. Evidence from your own records is attached automatically.</p>
     ${cands.length?`<div class="sec-title" style="margin-top:20px"><h3>Detected from your data</h3><div class="ln"></div></div>
       ${cands.map(c=>`<div class="sugg">
         <div class="sg-why">${esc(FAIL_KINDS[c.kind].label)} — ${esc(c.why)}</div>
         <div class="sg-txt"><b>${esc(c.title)}</b><br>${esc(c.detail)}</div>
-        <div class="sg-act"><button class="sm primary" data-pfacc="${esc(c.key)}">Log as an incident</button>
+        <div class="sg-act"><button class="sm primary" data-pfacc="${esc(c.key)}">Log as a failure</button>
           <button class="sm ghost" data-pfdis="${esc(c.key)}">Not an issue</button></div></div>`).join("")}`:""}
     ${state.incidents.length?`<div class="sec-title" style="margin-top:20px"><h3>Recent</h3><div class="ln"></div>
-        <button class="sm" id="pf-pat">▦ See patterns</button></div>
+        <button class="sm" id="pf-pat">▦ See failure trends</button></div>
       ${state.incidents.slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,12).map(x=>`<div class="dashitem" data-igo="${x.id}">
         <span class="pill ${INC_SEV[x.severity].cls}">${INC_SEV[x.severity].label}</span>
         <span class="di-main">${esc(x.title||"(untitled)")}</span>
@@ -5393,8 +5346,8 @@ function renderIncidentDetail(det){
           ${x.team?teamPill(x.team):""}
           ${x.customerVisible?`<span class="warnchip bad">reached the end user</span>`:""}
           ${x.escalated?`<span class="warnchip">escalated</span>`:""}</div>
-        <h1 id="in-title" style="cursor:text">${esc(x.title||"(untitled incident)")}</h1></div>
-        <button class="sm" id="in-back">← All incidents</button>
+        <h1 id="in-title" style="cursor:text">${esc(x.title||"(untitled failure)")}</h1></div>
+        <button class="sm" id="in-back">← All failures</button>
         <button class="ghost" id="in-del" title="Delete">🗑</button></div>
       <div class="dh-dates"><span>Occurred <b>${fmtDate(x.date)}</b></span>
         ${x.costDays?`<span>Cost <b>${x.costDays} days</b></span>`:""}
@@ -5479,7 +5432,7 @@ function renderIncidentDetail(det){
   const q=s=>det.querySelector(s);
   q("#in-back").onclick=()=>{activeIncidentId=null;renderApp();};
   q("#in-title").onclick=e=>editInline(e.target,x.title,v=>{x.title=v;touch(x);renderApp();});
-  q("#in-del").onclick=()=>{if(!confirm("Delete this incident and its evidence?"))return;
+  q("#in-del").onclick=()=>{if(!confirm("Delete this failure and its evidence?"))return;
     state.incidents=state.incidents.filter(y=>y.id!==x.id);purgeDeadLinks(state);
     activeIncidentId=null;markDirty();renderApp();};
   q("#in-date").onchange=e=>{x.date=e.target.value;touch(x);renderApp();};
@@ -5521,12 +5474,12 @@ function renderPerfPatterns(det){
      mode would look equally dominant */
   const maxN=Math.max(3,...r.kinds.map(k=>k.n));
   det.innerHTML=`<div class="dash">
-    <div class="dash-head"><h1>Patterns</h1>
+    <div class="dash-head"><h1>Failure trends</h1>
       <span class="faint">${perfTeam?esc(teamOf(perfTeam).name):"all teams"}${perfSince?" · since "+fmtDate(perfSince):" · all time"}</span>
       <span style="flex:1"></span><button class="primary sm" id="pp-pack">📄 Evidence pack</button></div>
     ${r.totals.n?`
       <div class="kpirow">
-        <div class="kpi"><b>${r.totals.n}</b><span>incidents</span></div>
+        <div class="kpi"><b>${r.totals.n}</b><span>failures</span></div>
         <div class="kpi bad"><b>${r.totals.days}</b><span>days lost</span></div>
         <div class="kpi warn"><b>${r.totals.etas}</b><span>ETAs burned</span></div>
         <div class="kpi ${r.totals.customer?"bad":""}"><b>${r.totals.customer}</b><span>reached the end user</span></div>
@@ -5542,21 +5495,21 @@ function renderPerfPatterns(det){
           <span class="patbar">${Array.from({length:10},(_,i)=>`<i class="${i<Math.round(k.n/maxN*10)?"on":""}"></i>`).join("")}</span>
           <span class="pr-n">${k.n}</span><span class="pr-d">${k.days?k.days+"d":"—"}</span></div>`).join("")}
         <p class="faint" style="font-size:11px;margin-top:9px">Click a mode to filter the log to it.
-          <b>“In those”</b> is the days lost by the incidents carrying that mode — one incident usually carries several, so these overlap and must not be added up. The headline figure is ${r.totals.days} days across ${r.totals.n} incidents.</p></div>
+          <b>“In those”</b> is the days lost by the failures carrying that mode — one failure usually carries several, so these overlap and must not be added up. The headline figure is ${r.totals.days} days across ${r.totals.n} failures.</p></div>
       <div class="chgrid">
         <div class="dashcard"><h3>By area</h3>
           ${r.groups.map(g=>`<div class="patrow"><span class="pr-k">${esc(g.group)}</span>
             <span class="pr-n">${g.n}</span><span class="pr-d">${g.days?g.days+"d":"—"}</span></div>`).join("")}</div>
         <div class="dashcard chcard"><h3>When they happened</h3><p class="chq">Is it getting better or worse?</p>
-          ${r.months.length>1?chCols(r.months.map(m=>({label:m.label,n:m.n})),[{key:"n",label:"Incidents",color:"var(--red)"}],{w:520,h:170,unit:""}):`<div class="dash-empty">Needs a couple of months of data.</div>`}</div>
+          ${r.months.length>1?chCols(r.months.map(m=>({label:m.label,n:m.n})),[{key:"n",label:"Failures",color:"var(--red)"}],{w:520,h:170,unit:""}):`<div class="dash-empty">Needs a couple of months of data.</div>`}</div>
       </div>
-      <div class="sec-title" style="margin-top:20px"><h3>Incidents behind these numbers</h3><div class="ln"></div></div>
+      <div class="sec-title" style="margin-top:20px"><h3>Failures behind these numbers</h3><div class="ln"></div></div>
       ${r.list.sort((a,b)=>a.date<b.date?1:-1).map(x=>`<div class="dashitem" data-igo2="${x.id}">
         <span class="pill ${INC_SEV[x.severity].cls}">${INC_SEV[x.severity].label}</span>
         <span class="di-main">${esc(x.title||"(untitled)")}</span>
         <span class="di-sub">${fmtDate(x.date)}${x.costDays?" · "+x.costDays+"d":""}${x.kinds.length?" · "+x.kinds.length+" modes":""}</span></div>`).join("")}
       `:`<div class="nopick" style="height:auto;padding:50px 20px"><div>
-        <p style="color:var(--muted);max-width:440px;line-height:1.7">No incidents in this window.<br><br>
+        <p style="color:var(--muted);max-width:440px;line-height:1.7">No failures in this window.<br><br>
         Log them as they happen and this becomes the answer to "how does this team keep failing?" — with the dated evidence behind every number.</p></div></div>`}
   </div>`;
   det.querySelector("#pp-pack").onclick=()=>openEvidencePack(perfTeam,perfSince);
@@ -5569,10 +5522,10 @@ function packMarkdown(team,since){
   const L=[];
   L.push("# Performance evidence pack — "+(team?teamOf(team).name:"all teams"));
   L.push("");
-  L.push("_Compiled "+fmtDate(todayStr())+". Covering "+(since?"since "+fmtDate(since):"all recorded incidents")+"._");
+  L.push("_Compiled "+fmtDate(todayStr())+". Covering "+(since?"since "+fmtDate(since):"all recorded failures")+"._");
   L.push("");
   L.push("## Summary");L.push("");
-  L.push("- **"+r.totals.n+" incidents** logged");
+  L.push("- **"+r.totals.n+" failures** logged");
   L.push("- **"+r.totals.days+" days** lost");
   L.push("- **"+r.totals.etas+" committed ETAs** missed");
   L.push("- **"+r.totals.customer+"** reached the end user");
@@ -5580,13 +5533,13 @@ function packMarkdown(team,since){
   L.push("");
   L.push("## Recurring failure modes");L.push("");
   r.kinds.forEach(k=>L.push("- **"+FAIL_KINDS[k.kind].label+"** ("+FAIL_KINDS[k.kind].group+") — "+
-    k.n+" incident"+(k.n===1?"":"s")));
+    k.n+" failure"+(k.n===1?"":"s")));
   L.push("");
   /* one incident usually carries several modes, so per-mode day counts overlap and
      must never be presented as if they add up */
-  L.push("_A single incident usually involves several of these, so the counts overlap. The totals above are the non-overlapping figures._");
+  L.push("_A single failure usually involves several of these, so the counts overlap. The totals above are the non-overlapping figures._");
   L.push("");
-  L.push("## Incidents");L.push("");
+  L.push("## Failures");L.push("");
   r.list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(x=>{
     L.push("### "+fmtDate(x.date)+" — "+(x.title||"(untitled)"));
     L.push("");
@@ -5618,12 +5571,12 @@ function packMarkdown(team,since){
 function packHtml(team,since){
   const r=perfRollup(team,since);
   const H=[];
-  H.push(`<h1>Performance evidence pack</h1><div class="meta">${esc(team?teamOf(team).name:"All teams")} · compiled ${fmtDate(todayStr())} · ${since?"since "+fmtDate(since):"all recorded incidents"}</div>`);
-  H.push(`<h3>Summary</h3><p class="nums"><b>${r.totals.n}</b> incidents · <b>${r.totals.days}</b> days lost ·
+  H.push(`<h1>Performance evidence pack</h1><div class="meta">${esc(team?teamOf(team).name:"All teams")} · compiled ${fmtDate(todayStr())} · ${since?"since "+fmtDate(since):"all recorded failures"}</div>`);
+  H.push(`<h3>Summary</h3><p class="nums"><b>${r.totals.n}</b> failures · <b>${r.totals.days}</b> days lost ·
     <b>${r.totals.etas}</b> ETAs missed · <b>${r.totals.customer}</b> reached the end user · <b>${r.totals.escalated}</b> needed escalation</p>`);
-  H.push(`<h3>Recurring failure modes</h3><ul>${r.kinds.map(k=>`<li><b>${esc(FAIL_KINDS[k.kind].label)}</b> <i>(${esc(FAIL_KINDS[k.kind].group)})</i> — ${k.n} incident${k.n===1?"":"s"}</li>`).join("")}</ul>
-    <p class="nums"><i>A single incident usually involves several of these, so the counts overlap. The totals above are the non-overlapping figures.</i></p>`);
-  H.push(`<h3>Incidents</h3>`);
+  H.push(`<h3>Recurring failure modes</h3><ul>${r.kinds.map(k=>`<li><b>${esc(FAIL_KINDS[k.kind].label)}</b> <i>(${esc(FAIL_KINDS[k.kind].group)})</i> — ${k.n} failure${k.n===1?"":"s"}</li>`).join("")}</ul>
+    <p class="nums"><i>A single failure usually involves several of these, so the counts overlap. The totals above are the non-overlapping figures.</i></p>`);
+  H.push(`<h3>Failures</h3>`);
   r.list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(x=>{
     const dv=derivedEvidence(x);
     H.push(`<div class="bblock"><h4>${fmtDate(x.date)} — ${esc(x.title||"(untitled)")}</h4>
@@ -5799,7 +5752,7 @@ function scoreKpis(D){
   out.push(k("demands delivered",String(c.delivery.closed.length),c.delivery.closed.length,p.delivery.closed.length,"up"));
   out.push(k(c.etas.due?"ETAs met ("+c.etas.met.length+" of "+c.etas.due+")":"ETAs met — none fell due",
     c.etas.rate===null?"—":c.etas.rate+"%",c.etas.rate,p.etas.rate,"up"," pts"));
-  out.push(k("incidents logged",String(c.conduct.list.length),c.conduct.list.length,p.conduct.list.length,"down"));
+  out.push(k("failures logged",String(c.conduct.list.length),c.conduct.list.length,p.conduct.list.length,"down"));
   out.push(k("days lost to failures",String(c.conduct.days),c.conduct.days,p.conduct.days,"down","d"));
   return out;
 }
@@ -5828,8 +5781,8 @@ function scoreHtml(D,o){
     H.push(e.due?`<p class="nums">Of <b>${e.due}</b> ETA${e.due===1?"":"s"} that fell due, <b>${e.met.length}</b> ${e.met.length===1?"was":"were"} met and <b>${e.broken.length}</b> broken.</p>`:empty("No committed dates fell due this quarter."));
     if(e.broken.length)H.push(`<ul>${e.broken.map(x=>`<li><b>${esc(x.t.ticketId||"—")}</b> ${esc(x.t.title)} — due ${fmtDate(x.p.eta)} <i>(given ${fmtDate(x.p.givenOn)}; ${esc(x.how)})</i></li>`).join("")}</ul>`);}
   if(o.conduct){const c=d.conduct;H.push(`<h3>Performance log</h3>`);
-    if(!c.list.length)H.push(empty("No incidents logged this quarter."));
-    else{H.push(`<p class="nums"><b>${c.list.length}</b> incident${c.list.length===1?"":"s"} · <b>${c.days}</b> days lost · <b>${c.burned}</b> ETAs burned · <b>${c.escalated}</b> needed escalation · <b>${c.customer}</b> reached the end user</p>`);
+    if(!c.list.length)H.push(empty("No failures logged this quarter."));
+    else{H.push(`<p class="nums"><b>${c.list.length}</b> failure${c.list.length===1?"":"s"} · <b>${c.days}</b> days lost · <b>${c.burned}</b> ETAs burned · <b>${c.escalated}</b> needed escalation · <b>${c.customer}</b> reached the end user</p>`);
       if(c.modes.length)H.push(`<p class="nums">Most frequent: ${c.modes.slice(0,5).map(([k2,n])=>esc(FAIL_KINDS[k2].label)+" ×"+n).join(" · ")}</p>`);
       H.push(`<ul>${c.list.map(x=>`<li>${fmtDate(x.date)} — ${esc(x.title||"(untitled)")}${x.kinds.length?` <i>(${esc(x.kinds.map(k2=>FAIL_KINDS[k2].label).join(", "))})</i>`:""}</li>`).join("")}</ul>
         <p class="nums"><i>Narratives and evidence are in the separate evidence pack.</i></p>`);}}
@@ -5881,8 +5834,8 @@ function scoreMarkdown(D,o){
     e.broken.forEach(x=>L.push("- **"+(x.t.ticketId||"—")+"** "+x.t.title+" — due "+fmtDate(x.p.eta)+" (given "+fmtDate(x.p.givenOn)+"; "+x.how+")"));
     if(e.broken.length)bl();}
   if(o.conduct){const c=d.conduct;L.push("## Performance log");bl();
-    if(!c.list.length)L.push("_No incidents logged this quarter._");
-    else{L.push(c.list.length+" incidents · "+c.days+" days lost · "+c.burned+" ETAs burned · "+c.escalated+" needed escalation · "+c.customer+" reached the end user");
+    if(!c.list.length)L.push("_No failures logged this quarter._");
+    else{L.push(c.list.length+" failures · "+c.days+" days lost · "+c.burned+" ETAs burned · "+c.escalated+" needed escalation · "+c.customer+" reached the end user");
       if(c.modes.length)L.push("","Most frequent: "+c.modes.slice(0,5).map(([k2,n])=>FAIL_KINDS[k2].label+" ×"+n).join(" · "));
       bl();c.list.forEach(x=>L.push("- "+fmtDate(x.date)+" — "+(x.title||"(untitled)")+(x.kinds.length?" ("+x.kinds.map(k2=>FAIL_KINDS[k2].label).join(", ")+")":"")));
       bl();L.push("_Narratives and evidence are in the separate evidence pack._");}
@@ -5943,7 +5896,7 @@ function openScorecard(team,q){
 function activeRisk(){return state.risks.find(r=>r.id===activeRiskId);}
 function newRisk(pre){
   const r=normRisk(Object.assign({title:"",reviewOn:addDays(RISK_REVIEW_DAYS)},pre||{}));
-  state.risks.unshift(r);activeRiskId=r.id;knowledgeTab="risks";view="knowledge";markDirty();renderApp();
+  state.risks.unshift(r);activeRiskId=r.id;view="risks";markDirty();renderApp();
   toast("Risk added — give it a title");
 }
 function renderRiskDetail(det){
@@ -6049,7 +6002,10 @@ function activeContact(){return state.contacts.find(c=>c.id===activeContactId);}
 function renderKnowledgeSidebar(){
   const side=document.getElementById("side");
   const f=renderKnowledgeSidebar;
-  const isPat=knowledgeTab==="patterns",isDec=knowledgeTab==="decisions",isRisk=knowledgeTab==="risks",isMent=knowledgeTab==="mentions";
+  /* Risks are live and reviewed on a date, so they have their own place in the rail;
+     Knowledge keeps the reference material */
+  const riskView=view==="risks",kt=riskView?"risks":(knowledgeTab==="risks"?"patterns":knowledgeTab);
+  const isPat=kt==="patterns",isDec=kt==="decisions",isRisk=kt==="risks",isMent=kt==="mentions";
   let ments=mentionsFor("");
   let rks=state.risks.slice().sort((a,b)=>(a.status==="closed"?1:0)-(b.status==="closed"?1:0)||sevRank(a)-sevRank(b)||(a.reviewOn||"9999")<(b.reviewOn||"9999")?-1:1);
   let decs=state.decisions.slice().sort((a,b)=>a.date<b.date?1:-1);
@@ -6066,25 +6022,27 @@ function renderKnowledgeSidebar(){
   const stacks=distinct(state.contacts.map(c=>c.stack));
   side.innerHTML=`
     <div class="side-tools">
-      <div class="segmented">
-        <button class="${knowledgeTab==="patterns"?"on":""}" data-kt="patterns">Patterns</button>
-        <button class="${knowledgeTab==="contacts"?"on":""}" data-kt="contacts">Contacts</button>
-        <button class="${knowledgeTab==="decisions"?"on":""}" data-kt="decisions">Decisions</button>
-        <button class="${knowledgeTab==="risks"?"on":""}" data-kt="risks">Risks</button>
-        <button class="${knowledgeTab==="mentions"?"on":""}" data-kt="mentions">Incidents</button></div>
-      <button class="primary" id="kNew" style="width:100%">＋ ${knowledgeTab==="patterns"?"New pattern":knowledgeTab==="contacts"?"New contact":knowledgeTab==="risks"?"New risk":knowledgeTab==="mentions"?"Incident note":"Log a decision"}</button>
+      ${riskView?"":`<div class="segmented">
+        <button class="${kt==="patterns"?"on":""}" data-kt="patterns">Patterns</button>
+        <button class="${kt==="contacts"?"on":""}" data-kt="contacts">Contacts</button>
+        <button class="${kt==="decisions"?"on":""}" data-kt="decisions">Decisions</button>
+        <button class="${kt==="mentions"?"on":""}" data-kt="mentions">Incident notes</button></div>`}
+      <button class="primary" id="kNew" style="width:100%">＋ ${kt==="patterns"?"New pattern":kt==="contacts"?"New contact":kt==="risks"?"New risk":kt==="mentions"?"Incident note":"Log a decision"}</button>
       <input id="kSearch" placeholder="Filter…" value="${esc(f._q||"")}" autocomplete="off">
-      ${knowledgeTab==="contacts"&&stacks.length?`<div class="filters"><select id="kStack"><option value="">Any stack</option>
+      ${kt==="contacts"&&stacks.length?`<div class="filters"><select id="kStack"><option value="">Any stack</option>
         ${stacks.map(s=>`<option value="${esc(s)}" ${f._stack===s?"selected":""}>${esc(s)}</option>`).join("")}</select></div>`:""}
     </div>
-    <div class="stats">
+    ${riskView?`<div class="stats">
+      <div class="stat ov"><b>${liveRisks().length}</b>live</div>
+      <div class="stat bl"><b>${liveRisks().filter(r=>r.severity==="high").length}</b>high</div>
+      <div class="stat ${state.risks.filter(riskNeedsReview).length?"bl":""}"><b>${state.risks.filter(riskNeedsReview).length}</b>review due</div>
+      <div class="stat dl"><b>${state.risks.filter(r=>r.status==="closed").length}</b>closed</div></div>`:`<div class="stats">
       <div class="stat op"><b>${state.patterns.length}</b>patterns</div>
       <div class="stat dl"><b>${state.tickets.filter(t=>t.resolution).length}</b>resolutions</div>
       <div class="stat"><b>${state.contacts.length}</b>contacts</div>
       <div class="stat"><b>${state.decisions.length}</b>decisions</div>
-      <div class="stat ov"><b>${liveRisks().length}</b>live risks</div>
-      <div class="stat ${state.mentions.filter(mentionNeedsAnswer).length?"bl":""}"><b>${state.mentions.length}</b>incidents</div>
-    </div>
+      <div class="stat ${state.mentions.filter(mentionNeedsAnswer).length?"bl":""}"><b>${state.mentions.length}</b>incident notes</div>
+    </div>`}
     <div class="listwrap">
       ${isMent?(ments.length?ments.map(m=>`<div class="mcard ${m.id===activeMentionId?"active":""} ${mentionNeedsAnswer(m)?"needs":""}" data-mid="${m.id}">
           <div class="p2t">${esc(m.title||"(unnamed incident)")}</div>
@@ -6167,10 +6125,11 @@ function openPatternModal(seedFrom){
 }
 function renderKnowledgeDetail(){
   const det=document.getElementById("detail");
-  if(knowledgeTab==="patterns")renderPatternDetail(det);
-  else if(knowledgeTab==="decisions")renderDecisionLedger(det);
-  else if(knowledgeTab==="risks")renderRiskDetail(det);
-  else if(knowledgeTab==="mentions")renderMentionDetail(det);
+  const kt=view==="risks"?"risks":(knowledgeTab==="risks"?"patterns":knowledgeTab);
+  if(kt==="patterns")renderPatternDetail(det);
+  else if(kt==="decisions")renderDecisionLedger(det);
+  else if(kt==="risks")renderRiskDetail(det);
+  else if(kt==="mentions")renderMentionDetail(det);
   else renderContactDetail(det);
 }
 /* The standalone view of an incident note. Same form as the sync pane — one place
@@ -6413,102 +6372,7 @@ function renderEpicDetail(){
   /* group the rollup by team, then by person — the shape the question comes in */
   const byTeam={};
   s.ts.forEach(t=>{(byTeam[t.team]=byTeam[t.team]||[]).push(t);});
-  det.innerHTML=benchOn()?epicBenchHTML(e,s,dis,stale,byTeam):`
-    <div class="detail-head">
-      <div class="dh-top"><div style="flex:1;min-width:0">
-        <div class="dh-id"><span class="mono" style="color:var(--accent)">${esc(e.code||"EPIC")}</span>
-          ${s.teams.map(t=>teamPill(t)).join(" ")}
-          ${e.closed?`<span class="pill done">Closed</span>`:""}</div>
-        <h1 id="epName" style="cursor:text">${esc(e.name)}</h1></div>
-        <button class="sm" id="epSum" title="One page on this epic for its steering call">📄 Steering summary</button>
-        <button class="ghost" id="epDel" title="Delete epic">🗑</button></div>
-      <div class="dh-dates">
-        <span>Owner <b>${esc(e.owner||"—")}</b></span>
-        <span>Target <b class="due ${dueClass(e.targetDate,e.closed?"done":"")}">${e.targetDate?fmtDate(e.targetDate):"—"}</b></span>
-        <span>${s.ts.length} tickets across ${s.teams.length||0} team${s.teams.length===1?"":"s"}</span>
-        <span>${s.people.length} people</span>
-      </div>
-      <div class="tabs"></div>
-    </div>
-    <div class="detail-body">
-      <div class="headline ${stale?"stale":""}">
-        <div class="hl-h">If your boss asked right now, you'd say
-          ${stale?`<span class="warnchip">${e.headline.text?"needs refreshing":"not written yet"}</span>`:""}</div>
-        <div class="hl-t" id="ep-headline">${e.headline.text?esc(e.headline.text):`<span class="faint">Write the one sentence you'd actually say out loud. Click to add.</span>`}</div>
-        <div class="hl-m">${e.headline.on?`— you, ${fmtDate(e.headline.on)}${stale?" · over "+HEADLINE_STALE_DAYS+" days old":""}`:""}</div>
-      </div>
-
-      <div class="row" style="margin-bottom:16px;align-items:flex-end">
-        <div class="field" style="margin:0;flex:0 0 200px"><label>Health (your call)</label>
-          <select id="ep-health">${Object.entries(EPIC_HEALTH).map(([k,v])=>`<option value="${k}" ${e.health===k?"selected":""}>${v.label}</option>`).join("")}</select></div>
-        <div style="flex:1">${dis?`<div class="disagree" style="margin:0">⚠ You have this as <b>${EPIC_HEALTH[e.health].label}</b>, but the tickets read
-          <b style="color:${EPIC_HEALTH[dis].color}">${EPIC_HEALTH[dis].label}</b>${s.blocked.length?` — ${s.blocked.length} blocked`:""}${s.missed.length?`, ${s.missed.length} missed ETA`:""}${s.overdue.length?`, ${s.overdue.length} overdue`:""}.</div>`:""}</div>
-      </div>
-
-      <div class="erow">
-        <div class="ebox"><b>${s.ts.length}</b><span>tickets</span></div>
-        <div class="ebox good"><b>${s.done}</b><span>done</span></div>
-        <div class="ebox ${s.blocked.length?"bad":""}"><b>${s.blocked.length}</b><span>blocked</span></div>
-        <div class="ebox ${s.missed.length?"bad":""}"><b>${s.missed.length}</b><span>missed ETA</span></div>
-        <div class="ebox ${s.overdue.length?"warn":""}"><b>${s.overdue.length}</b><span>overdue</span></div>
-      </div>
-
-      ${s.blocked.length?`<div class="sec-title"><h3>Open hurdles across the epic</h3><div class="ln"></div></div>
-        ${s.blocked.flatMap(t=>openHurdles(t).map(h=>`<div class="hurdle" data-goh="${t.id}" style="cursor:pointer">
-          <div class="htop"><span class="kindtag">${HURDLE_KINDS[h.kind].label}</span>
-            <b style="font-size:12.5px">${esc(t.ticketId||"")}</b>
-            <span class="faint" style="font-size:11.5px">${esc(h.owner||"unowned")}</span>
-            <span style="flex:1"></span><span class="faint" style="font-size:11.5px">${Math.max(0,-daysUntil(h.raisedOn))}d open</span></div>
-          <div class="htxt">${esc(h.text||"(no detail)")}</div></div>`)).join("")}`:""}
-
-      <div class="sec-title" style="margin-top:22px"><h3>Tickets by team</h3><div class="ln"></div>
-        <button class="sm" id="ep-link">🔗 Link tickets</button></div>
-      ${s.ts.length?Object.entries(byTeam).map(([tm,list])=>`
-        <div style="margin-bottom:16px"><div style="margin-bottom:7px">${teamPill(tm)}
-          <span class="faint" style="font-size:11.5px">${list.length} ticket${list.length===1?"":"s"}</span></div>
-        ${list.sort((a,b)=>(isOpen(b)?1:0)-(isOpen(a)?1:0)).map(t=>`<div class="dashitem" data-goto2="${t.id}">
-          <span class="pill ${MY_STATUS[t.myStatus].cls}">${MY_STATUS[t.myStatus].label}</span>
-          <span class="di-main">${esc(ticketLabel(t))}</span>
-          <span class="di-sub">${t.assignees.length?esc(t.assignees.map(personName).join(", ")):"unassigned"}${subProg(t)?" · ☑ "+subProg(t).done+"/"+subProg(t).total+(subNext(t)?" — next: "+esc(subNext(t).title||""):""):""}${slipCount(t)?" · "+slipCount(t)+"× slipped":""}</span></div>`).join("")}</div>`).join("")
-        :`<p class="faint" style="font-size:12px">No tickets linked yet. Use 🔗 Link tickets, or set the epic on a ticket's Work tab.</p>`}
-
-      ${(()=>{const rs=risksForEpic(e.id).filter(r=>r.status!=="closed");
-        if(!rs.length)return "";
-        return `<div class="sec-title" style="margin-top:22px"><h3>Risks on this epic</h3><div class="ln"></div></div>
-        ${rs.sort((a,b)=>sevRank(a)-sevRank(b)).map(r=>`<div class="dashitem" data-eprisk="${r.id}">
-          <span class="pill ${RISK_SEV[r.severity].cls}">${RISK_SEV[r.severity].label}</span>
-          <span class="di-main">${esc(r.title)}</span>
-          <span class="di-sub">${esc(RISK_STATUS[r.status].label)}${r.owner?" · "+esc(r.owner):""}</span></div>`).join("")}`;})()}
-      ${(()=>{const edges=s.ts.filter(t=>(t.blockedBy||[]).length).flatMap(t=>blockersOf(t).map(b=>({t,b})));
-        if(!edges.length)return "";
-        const stuck=edges.filter(e=>isOpen(e.b)).length;
-        return `<div class="sec-title" style="margin-top:22px"><h3>Dependency chain</h3><div class="ln"></div>
-          ${stuck?`<span class="warnchip">${stuck} still waiting</span>`:`<span class="warnchip good">all cleared</span>`}</div>
-        ${edges.map(({t,b})=>`<div class="deprow ${isOpen(b)?"open":"closed"}" data-epdep="${esc(t.id)}">
-          <span class="dp-id" style="color:${teamColor(t.team)}">${esc(t.ticketId||"—")}</span>
-          <span class="faint" style="font-size:11.5px">waits on</span>
-          <span class="dp-id" style="color:${teamColor(b.team)}">${esc(b.ticketId||"—")}</span>
-          ${b.team!==t.team?`<span class="warnchip bad">cross-team</span>`:""}
-          <span class="dp-t">${esc(b.title||"")}</span>
-          <span class="pill ${MY_STATUS[b.myStatus].cls}">${MY_STATUS[b.myStatus].label}</span></div>`).join("")}`;})()}
-
-      <div class="sec-title" style="margin-top:22px"><h3>Meetings about this epic</h3><div class="ln"></div>
-        <button class="sm" id="ep-meet">＋ Log a meeting</button></div>
-      ${(()=>{const ms=meetingsForEpic(e.id).sort((a,b)=>a.date<b.date?1:-1);
-        return ms.length?ms.map(mm=>`<div class="callcard" data-epmt="${mm.id}">
-          <span class="mkind">${MEETING_KINDS[mm.kind].icon} ${MEETING_KINDS[mm.kind].label}</span>
-          <span class="cc-main">${esc(mm.title||MEETING_KINDS[mm.kind].label)}</span>
-          <span class="cc-sub">${fmtDate(mm.date)} · ${mm.actions.filter(a=>!a.done).length} open</span></div>`).join("")
-        :`<p class="faint" style="font-size:12px">None yet — log an impromptu check-in about this epic.</p>`;})()}
-
-      <div class="field" style="margin-top:20px"><label>Description</label><textarea id="ep-desc2" style="min-height:60px">${esc(e.description)}</textarea></div>
-      <div class="field"><label>Notes</label><textarea id="ep-notes" style="min-height:80px">${esc(e.notes)}</textarea></div>
-      <div class="row"><div class="field" style="flex:0 0 190px"><label>Owner</label><input id="ep-owner" value="${esc(e.owner)}"></div>
-        <div class="field" style="flex:0 0 190px"><label>Target date</label><input type="date" id="ep-target" value="${esc(e.targetDate)}"></div>
-        <div class="field" style="display:flex;align-items:flex-end">
-          <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;letter-spacing:0;color:var(--txt);margin:0">
-            <input type="checkbox" id="ep-closed" style="width:auto" ${e.closed?"checked":""}> Closed</label></div></div>
-    </div>`;
+  det.innerHTML=epicBenchHTML(e,s,dis,stale,byTeam);
   const q=s2=>det.querySelector(s2);
   q("#epName").onclick=ev=>editInline(ev.target,e.name,v=>{if(v.trim())e.name=v.trim();touch(e);renderApp();});
   q("#ep-headline").onclick=ev=>editInline(ev.target,e.headline.text,v=>{
@@ -6531,7 +6395,7 @@ function renderEpicDetail(){
   q("#ep-meet").onclick=()=>openMeetingModal({kind:"epic",epicId:e.id,title:e.name+" — check-in"});
   det.querySelectorAll("[data-epmt]").forEach(d=>d.onclick=()=>openCall("meeting",d.dataset.epmt));
   det.querySelectorAll("[data-epdep]").forEach(d=>d.onclick=()=>gotoTicket(d.dataset.epdep,"work"));
-  det.querySelectorAll("[data-eprisk]").forEach(d=>d.onclick=()=>{activeRiskId=d.dataset.eprisk;knowledgeTab="risks";view="knowledge";renderApp();});
+  det.querySelectorAll("[data-eprisk]").forEach(d=>d.onclick=()=>{activeRiskId=d.dataset.eprisk;view="risks";renderApp();});
 }
 function openEpicLinkModal(e){
   const root=document.getElementById("modalRoot");
@@ -7124,8 +6988,8 @@ function renderInsights(){
       ${d.hasIncidents?card("Failure trend","Is their conduct improving?",
         d.incMonths.length>1
           ? chLegend(d.S)+(T?chTable(["Month",...d.S.map(s=>s.label)],d.incMonths.map(r=>[r.label,...d.S.map(s=>r[s.key])]))
-            :chCols(d.incMonths,d.S,{unit:" incidents"}))
-          : null,"Needs incidents across at least two months."):""}
+            :chCols(d.incMonths,d.S,{unit:" failures"}))
+          : null,"Needs failures logged across at least two months."):""}
     </div>
 
     ${d.roll.length?`<div class="sec-title" style="margin-top:24px"><h3>📊 The roll-call they read out</h3><div class="ln"></div>
@@ -7870,7 +7734,7 @@ function runGlobalSearch(qraw){
       x.kinds.map(k=>FAIL_KINDS[k].label).join(" "),
       x.evidence.map(e=>e.text+" "+e.source).join(" "),
       x.timeline.map(t=>t.what+" "+t.who).join(" ")].join(" ").toLowerCase();
-    if(hay.includes(q))push("Incident",x.title||"(untitled)",
+    if(hay.includes(q))push("Failure",x.title||"(untitled)",
       fmtDate(x.date)+(x.team?" · "+teamOf(x.team).name:""),
       ()=>{activeIncidentId=x.id;perfView="log";view="perf";renderApp();});});
   state.mentions.forEach(m=>{
@@ -7881,7 +7745,7 @@ function runGlobalSearch(qraw){
   state.risks.forEach(r=>{
     if((r.title+" "+r.detail+" "+r.owner+" "+r.mitigation).toLowerCase().includes(q))
       push("Risk",r.title||"(untitled)",RISK_SEV[r.severity].label+" · "+RISK_STATUS[r.status].label,
-        ()=>{activeRiskId=r.id;knowledgeTab="risks";view="knowledge";renderApp();});});
+        ()=>{activeRiskId=r.id;view="risks";renderApp();});});
   state.approvals.forEach(a=>{const t=a.ticketId?ticketByRef(a.ticketId):null;
     if((a.title+" "+a.note+" "+(t?t.ticketId:"")).toLowerCase().includes(q))
       push("Approval",a.title||APPROVAL_KINDS[a.kind].label,APPROVAL_KINDS[a.kind].label+" · "+a.status,
@@ -7902,12 +7766,11 @@ function openMenu(){
     <div style="margin:0 0 14px;padding:10px 12px;border:1px solid var(--line2);border-radius:var(--radius,8px)">
       <label>Appearance</label>
       <div style="display:grid;grid-template-columns:62px 1fr;gap:6px 10px;align-items:center;font-size:12px">
-        <span class="faint">Bench</span><div style="display:flex;gap:5px;flex-wrap:wrap">${[["bench","Follow Windows"],["bench-paper","Paper"],["bench-backlit","Backlit"]].map(([k,l])=>`<button class="sm tpc ${tp===k?"primary":""}" data-t="${k}">${l}</button>`).join("")}</div>
-        <span class="faint">Classic</span><div style="display:flex;gap:5px;flex-wrap:wrap">${[["dark","Dark"],["light","Light"],["instrument","Instrument White"]].map(([k,l])=>`<button class="sm tpc ${tp===k?"primary":""}" data-t="${k}">${l}</button>`).join("")}</div>
+        <span class="faint">Look</span><div style="display:flex;gap:5px;flex-wrap:wrap">${[["bench","Follow Windows"],["bench-paper","Paper"],["bench-backlit","Backlit"]].map(([k,l])=>`<button class="sm tpc ${tp===k?"primary":""}" data-t="${k}">${l}</button>`).join("")}</div>
         <span class="faint">Motion</span><div style="display:flex;gap:5px;flex-wrap:wrap">${[["auto","Follow Windows"],["full","Full"],["off","Off"]].map(([k,l])=>`<button class="sm mpc ${mp===k?"primary":""}" data-m="${k}">${l}</button>`).join("")}</div>
         <span class="faint">Greeting</span><input id="mn-name" value="${esc(uiPref("userName",""))}" placeholder="Your first name, for the Today greeting (optional)" style="font-size:12px;padding:4px 8px">
       </div>
-      <p class="faint" style="font-size:11px;margin:8px 0 0">Bench is the default. The ☀/🌙 button in the title bar flips light ↔ dark within the family you pick. Theme, motion and the greeting are remembered in this browser only — never in your data file.</p>
+      <p class="faint" style="font-size:11px;margin:8px 0 0">Paper is light, Backlit is dark, and Follow Windows switches with your Windows setting. The ☀/🌙 button in the title bar flips between them. Look, motion and the greeting are remembered in this browser only — never in your data file.</p>
     </div>
     <div class="field"><label>Teams</label>
       ${state.settings.teams.map(t=>`<div style="margin-bottom:9px">
@@ -8063,6 +7926,7 @@ async function openSnapshots(){
         raw=await decryptEnvelope(JSON.parse(s.data),pw);}
       else raw=JSON.parse(s.data);
       if(!looksLikeTeamDesk(raw)){toast("That snapshot isn't readable Team Desk data",true);return;}
+      if(newerThanMe(raw)){warnNewer(raw,"That snapshot");return;}
       /* a snapshot is DATA, not a decision about protection — restoring one taken
          before encryption was switched on must not quietly switch it off */
       const keepPw=isEncrypted()?masterPassword:null;
@@ -8104,19 +7968,32 @@ const DK=(()=>{
     if("letterSpacing" in ctx)ctx.letterSpacing=spacing+"px";ctx.fillText(text,x,y);if("letterSpacing" in ctx)ctx.letterSpacing="0px";}
   function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
   /* one requestAnimationFrame loop for every canvas; a canvas that leaves the page drops out */
-  function scope(cv,draw,opts={}){if(!cv)return null;const s={cv,draw,ctx:cv.getContext("2d"),w:0,h:0,keep:!!opts.keep,dead:false,born:performance.now(),data:opts.data};scopes.push(s);return s;}
-  let last=performance.now();
-  function frame(t){const dt=Math.min(64,t-last);last=t;const dpr=window.devicePixelRatio||1;
+  /* A chart whose drawing settles says so with data-still="ms" on its canvas (or opts.still):
+     once that long after it appears it is left as drawn, and redrawn only on a resize, a
+     theme change or wake(). Canvases without it keep animating. */
+  function scope(cv,draw,opts={}){if(!cv)return null;const st=opts.still!=null?opts.still:cv.dataset.still!=null?+cv.dataset.still:null;
+    const s={cv,draw,ctx:cv.getContext("2d"),w:0,h:0,keep:!!opts.keep,dead:false,born:performance.now(),data:opts.data,still:st,dirty:false};scopes.push(s);return s;}
+  /* the share of the way to move this frame, for an easing tuned at 60 fps: frame-rate independent */
+  const ease=(dt,k)=>1-Math.pow(1-k,(dt||16.7)/16.7);
+  function wake(cv){scopes.forEach(s=>{if(!cv||s.cv===cv)s.dirty=true;});}
+  /* one loop, capped like Bench and Demand Desk: 30 frames a second while the window has
+     focus, 10 behind other windows, none while hidden. Animations run on elapsed time,
+     so a lower rate only looks calmer — it used to redraw at the full screen rate forever. */
+  let last=performance.now(),lastDraw=0;
+  function frame(t){requestAnimationFrame(frame);
+    if(document.hidden){last=t;return;}
+    if(t-lastDraw<(document.hasFocus()?1000/30-2:1000/10-2))return;lastDraw=t;
+    const dt=Math.min(120,t-last);last=t;const dpr=window.devicePixelRatio||1;
     for(let i=scopes.length-1;i>=0;i--){const s=scopes[i];
       if(s.dead||!s.cv.isConnected){scopes.splice(i,1);continue;}
       if(s.cv.offsetParent===null)continue;
       const w=s.cv.clientWidth,h=s.cv.clientHeight;if(!w||!h)continue;
       if(w!==s.w||h!==s.h){s.w=w;s.h=h;s.cv.width=Math.round(w*dpr);s.cv.height=Math.round(h*dpr);s.fresh=true;}
+      if(s.still!=null&&t-s.born>s.still+100&&!s.fresh&&!s.dirty)continue;
       s.ctx.setTransform(dpr,0,0,dpr,0,0);if(!s.keep)s.ctx.clearRect(0,0,w,h);s.ctx.globalAlpha=1;
-      try{s.draw(s.ctx,w,h,t,dt,s);}catch(e){console.error(e);s.dead=true;}s.fresh=false;}
-    requestAnimationFrame(frame);}
+      try{s.draw(s.ctx,w,h,t,dt,s);}catch(e){console.error(e);s.dead=true;}s.fresh=false;s.dirty=false;}}
   requestAnimationFrame(frame);
-  return{TAU,C,readColors,dot,ring,dotArc,dotRing,label,rng,scope,get MONO(){return MONO;}};
+  return{TAU,C,readColors,dot,ring,dotArc,dotRing,label,rng,scope,wake,ease,get MONO(){return MONO;},get scopes(){return scopes;}};
 })();
 const benchOn=()=>document.documentElement.getAttribute("data-theme")==="bench";
 /* per-viewer UI preferences (greeting name) — this browser only, never the data file */
@@ -8184,6 +8061,7 @@ function syncRail(){const r=document.getElementById("rail");if(!r)return;
   set("rcSync",state.syncs.filter(s=>!s.closed).length);
   set("rcTickets",state.tickets.filter(isOpen).length);
   set("rcEffort",pendingApprovals().length+pendingEfforts().length);
+  set("rcRisks",state.risks.filter(riskNeedsReview).length);
   set("rcKnow",state.settings.teams.reduce((n,tm)=>n+openMentions(tm.id).length,0));}
 /* status bar: which file, whether it's saved, and when auto-save will write */
 function updateSb(){if(!benchOn())return;const f=document.getElementById("sbFile"),a=document.getElementById("sbAuto"),c=document.getElementById("sbCount"),r=document.getElementById("sbRight");if(!f)return;
@@ -8251,7 +8129,7 @@ function cockpitHTML(){const c=cockpitCounts(),worst=c.missed.reduce((m,t)=>Math
       <div class="ck-unit"><div class="ck-head"><h2>Epics</h2><span class="ck-meta">${state.epics.filter(e=>!e.closed).length} open</span></div>
         ${eps.length?eps.map(e=>{const s=epicSignals(e),dis=healthDisagrees(e);return `<div class="ck-ep" data-e="${e.id}" style="--pen:${EPIC_HEALTH[e.health].color}"><canvas></canvas><div style="min-width:0"><div class="ec">◆ ${esc(e.code||"EPIC")} · ${esc(EPIC_HEALTH[e.health].label.toLowerCase())}</div><div class="en">${esc(e.name||"(unnamed epic)")}</div>
           <div class="es">${s.done}/${s.ts.length} tickets done${e.targetDate?" · target "+fmtDate(e.targetDate):""}${s.blocked.length?` · <b>${s.blocked.length} blocked</b>`:""}${dis?` · <b>tickets read ${esc(EPIC_HEALTH[dis].label.toLowerCase())}</b>`:""}</div></div></div>`;}).join(""):`<div class="ck-empty">No open epics.</div>`}</div>
-      <div class="ck-unit"><div class="ck-head"><h2>Next 10 weeks</h2><span class="ck-meta">syncs · ETAs & due · actions · risk reviews</span></div><canvas id="ckCal" style="width:100%;height:158px;display:block"></canvas></div>
+      <div class="ck-unit"><div class="ck-head"><h2>Next 10 weeks</h2><span class="ck-meta">syncs · ETAs & due · actions · risk reviews</span></div><canvas id="ckCal" data-still="1700" style="width:100%;height:158px;display:block"></canvas></div>
     </div>`;}
 function mountCockpit(host){const {dot,ring,dotArc,dotRing,label,C,scope,rng,TAU}=DK;
   const q=s=>host.querySelector(s);
@@ -8288,10 +8166,10 @@ function mountCockpit(host){const {dot,ring,dotArc,dotRing,label,C,scope,rng,TAU
   tiles[0].onclick=()=>goTickets(OPEN_STATUSES.slice());
   tiles[1].onclick=()=>goTickets(OPEN_STATUSES.slice());
   tiles[2].onclick=()=>{if(c.ns)startSync(c.ns.tm.id);else{view="sync";renderApp();}};
-  tiles[3].onclick=()=>{if(c.vt){effortTeam=c.vt.id;effortTab="capacity";view="effort";}else{activeRiskId=null;knowledgeTab="risks";view="knowledge";}renderApp();};
-  {const st={v:mv?0:1};scope(tiles[0].querySelector("canvas"),(ctx,w,h,t)=>{
+  tiles[3].onclick=()=>{if(c.vt){effortTeam=c.vt.id;effortTab="capacity";view="effort";}else{activeRiskId=null;view="risks";}renderApp();};
+  {const st={v:mv?0:1};scope(tiles[0].querySelector("canvas"),(ctx,w,h,t,dt)=>{
     const segs=["blocked","progress","review","new"].map(s=>[s,state.tickets.filter(x=>x.myStatus===s).length]),tot=Math.max(1,segs.reduce((n,x)=>n+x[1],0));
-    st.v+=(1-st.v)*.05;const n=72,R=Math.min(w,h)/2-8,cx=w/2+22,cy=h/2,spin=mv?t*.00004:0;
+    st.v+=(1-st.v)*DK.ease(dt,.05);const n=72,R=Math.min(w,h)/2-8,cx=w/2+22,cy=h/2,spin=mv?t*.00004:0;
     for(let i=0;i<n;i++){const f=i/n,a=-Math.PI/2+f*TAU+spin;let pen=null,run=0;for(const [s,k] of segs){run+=k/tot;if(f<run){pen=MY_CK[s];break;}}
       const x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;if(pen&&f<st.v&&c.open.length)dot(ctx,x,y,2,C[pen],.9);else dot(ctx,x,y,1.05,C["ink-4"]);}
     label(ctx,String(c.open.length),cx,cy-5,{font:DK.MONO,size:24,weight:600,color:C.ink});
@@ -8309,8 +8187,8 @@ function mountCockpit(host){const {dot,ring,dotArc,dotRing,label,C,scope,rng,TAU
       dot(ctx,x,y,late?2.8:2.2,pen,glow);if(glow>.8)ring(ctx,x,y,6+(1-glow)*20,pen,.35);
       label(ctx,(tk.ticketId||tk.title||"").slice(-6),x+6,y-6,{font:DK.MONO,size:8,weight:400,align:"left",color:C["ink-3"]});});
     dot(ctx,cx,cy,1.6,C.ink);});
-  {const st={f:0},ns=c.ns,qn=ns?queueFor(ns.tm.id).length:0;scope(tiles[2].querySelector("canvas"),(ctx,w,h,t)=>{
-    const tgt=ns?1-Math.min(7,ns.nx.inDays)/7:0;st.f=mv?st.f+(tgt-st.f)*.05:tgt;
+  {const st={f:0},ns=c.ns,qn=ns?queueFor(ns.tm.id).length:0;scope(tiles[2].querySelector("canvas"),(ctx,w,h,t,dt)=>{
+    const tgt=ns?1-Math.min(7,ns.nx.inDays)/7:0;st.f=mv?st.f+(tgt-st.f)*DK.ease(dt,.05):tgt;
     const cx=w/2,cy=h/2+10,R=Math.min(w/2,h/1.55)-6;dotArc(ctx,cx,cy,R,st.f,40,ns&&ns.nx.inDays===0?C["pen-1"]:C["pen-4"]);
     label(ctx,ns?(ns.nx.inDays===0?"TODAY":ns.nx.inDays+" d"):"—",cx,cy+18,{font:DK.MONO,size:15,weight:600,color:C.ink});
     label(ctx,ns?ns.nx.dow.toUpperCase()+" · "+qn+" QUEUED":"NO SYNC DAYS",cx,cy+33,{size:7.5,spacing:2});
@@ -8356,7 +8234,7 @@ function mountCockpit(host){const {dot,ring,dotArc,dotRing,label,C,scope,rng,TAU
   },{data:pipelineData()});
   /* epic rings — share of the epic's tickets done, in the epic's health pen */
   host.querySelectorAll(".ck-ep").forEach(el=>{const e=state.epics.find(x=>x.id===el.dataset.e);if(!e)return;const s=epicSignals(e),f=s.ts.length?s.done/s.ts.length:0,st={v:mv?0:f};
-    scope(el.querySelector("canvas"),(ctx,w,h,t)=>{st.v+=(f-st.v)*.04;dotRing(ctx,w/2,h/2,w/2-5,st.v,32,C[HEALTH_CK[e.health]]||C["pen-5"],mv?t*.00008:0);
+    scope(el.querySelector("canvas"),(ctx,w,h,t,dt)=>{st.v+=(f-st.v)*DK.ease(dt,.04);dotRing(ctx,w/2,h/2,w/2-5,st.v,32,C[HEALTH_CK[e.health]]||C["pen-5"],mv?t*.00008:0);
       label(ctx,Math.round(st.v*100)+"%",w/2,h/2,{font:DK.MONO,size:10,color:C.ink});});});
   /* 10-week calendar: sync days, ETAs & due dates, action points, risk reviews */
   scope(q("#ckCal"),(ctx,w,h,t,dt,s)=>{const W=10,cw=(w-40)/W,ch=(h-30)/7,start=new Date(today+"T00:00:00");start.setDate(start.getDate()-((start.getDay()+6)%7));
@@ -8513,13 +8391,12 @@ function wrapSections(root){if(!benchOn()||!root)return;
    Windows) and the three classic themes. The title-bar button flips light ↔ dark
    inside the chosen family; Settings (⋯) picks any theme and the motion level. */
 const THEME_KEY="teamdesk.theme";
-const THEME_OPTS={"bench":"Bench · follow Windows","bench-paper":"Bench · Paper","bench-backlit":"Bench · Backlit","dark":"Classic dark","light":"Classic light","instrument":"Instrument White"};
+const THEME_OPTS={"bench":"Follow Windows","bench-paper":"Paper","bench-backlit":"Backlit"};
 try{if(!localStorage.getItem("teamdesk.themeV2")){localStorage.setItem("teamdesk.themeV2","1");localStorage.setItem(THEME_KEY,"bench");}}catch(e){}
 function currentTheme(){try{const t=localStorage.getItem(THEME_KEY);return THEME_OPTS[t]?t:"bench";}catch(e){return "bench";}}
 const darkMQ=matchMedia("(prefers-color-scheme: dark)");
-function applyTheme(t){t=t||currentTheme();const el=document.documentElement;
+function applyTheme(t){t=THEME_OPTS[t]?t:currentTheme();const el=document.documentElement;
   if(t.startsWith("bench")){el.setAttribute("data-theme","bench");el.setAttribute("data-mode",t==="bench-backlit"||(t==="bench"&&darkMQ.matches)?"dark":"light");}
-  else{el.setAttribute("data-theme",t);el.removeAttribute("data-mode");}
   /* Chromium doesn't reliably repaint persistent chrome when :root variables change;
      detaching and reattaching the root forces every element to re-resolve them */
   el.style.display="none";void el.offsetHeight;el.style.display="";
@@ -8529,8 +8406,7 @@ function applyTheme(t){t=t||currentTheme();const el=document.documentElement;
     b.textContent=dark?"☀":"🌙";b.title=(dark?"Switch to light":"Switch to dark")+" · every theme is in ⋯ Settings";}}
 function setTheme(t){try{localStorage.setItem(THEME_KEY,t);}catch(e){}applyTheme(t);lastTind=null;renderApp();}
 function toggleTheme(){const t=currentTheme();let nx;
-  if(t.startsWith("bench"))nx=document.documentElement.getAttribute("data-mode")==="dark"?"bench-paper":"bench-backlit";
-  else nx=t==="dark"?"light":"dark";
+  nx=document.documentElement.getAttribute("data-mode")==="dark"?"bench-paper":"bench-backlit";
   setTheme(nx);toast("Theme: "+THEME_OPTS[nx]);}
 darkMQ.addEventListener("change",()=>{if(currentTheme()==="bench"){applyTheme("bench");renderApp();}});
 
@@ -8573,7 +8449,7 @@ document.addEventListener("keydown",e=>{
       if(modalEdited(root)&&!confirm("Close this and discard what you've typed?"))return;
       root.innerHTML="";}}
 });
-window.addEventListener("beforeunload",e=>{if(!pendingEncrypted)flushEdits();if(dirty){e.preventDefault();e.returnValue="";}});
+window.addEventListener("beforeunload",e=>{if(!pendingEncrypted)flushEdits();flushBackup();if(dirty){e.preventDefault();e.returnValue="";}});
 
 /* ---------- two copies open at once ----------
    Two tabs share one local backup and one data file, and whichever saves last
@@ -8603,7 +8479,8 @@ function presenceSeen(msg){
 if(bc)bc.onmessage=e=>presenceSeen(e.data);
 window.addEventListener("storage",e=>{if(e.key!==PRESENCE_KEY||!e.newValue)return;
   try{presenceSeen(JSON.parse(e.newValue));}catch(err){}});
-window.addEventListener("pagehide",()=>presencePing(true));
+window.addEventListener("pagehide",()=>{flushBackup();presencePing(true);});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)flushBackup();});
 presencePing();setInterval(()=>{presencePing();renderPeerWarn();},15000);
 
 /* ---------- day-first date pickers ----------
@@ -8680,6 +8557,7 @@ function showStartupLock(){
     let raw;try{raw=await decryptEnvelope(pendingEncrypted,pw.value);}
     catch(e){err.textContent="Wrong password.";pw.value="";pw.focus();return;}
     if(!looksLikeTeamDesk(raw)){err.textContent="That backup isn't Team Desk data — open your file instead.";return;}
+    if(newerThanMe(raw)){err.textContent="This backup was saved by a newer Team Desk (data v"+(+raw.version)+") — open it with the newer TeamDesk.html.";return;}
     state=migrate(raw);masterPassword=pw.value;pendingEncrypted=null;dirty=false;
     closeStartupLock();renderApp();toast("Unlocked 🔒");};
   veil.querySelector("#sl-ok").onclick=tryUnlock;
